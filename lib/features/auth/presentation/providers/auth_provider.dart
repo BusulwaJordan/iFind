@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:ifind/features/auth/data/datasources/auth_remote_datasource.dart';
@@ -45,6 +46,29 @@ final logoutUseCaseProvider = Provider<Logout>((ref) {
 final getCurrentUserUseCaseProvider = Provider<GetCurrentUser>((ref) {
   return GetCurrentUser(ref.watch(authRepositoryProvider));
 });
+
+/// Shared Preferences provider
+final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
+  throw UnimplementedError(); // Should be overridden in main
+});
+
+/// Onboarding state provider
+final onboardingCompleteProvider = StateNotifierProvider<OnboardingNotifier, bool>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return OnboardingNotifier(prefs);
+});
+
+class OnboardingNotifier extends StateNotifier<bool> {
+  final SharedPreferences _prefs;
+  static const _key = 'onboarding_complete';
+
+  OnboardingNotifier(this._prefs) : super(_prefs.getBool(_key) ?? false);
+
+  Future<void> completeOnboarding() async {
+    await _prefs.setBool(_key, true);
+    state = true;
+  }
+}
 
 /// Auth state notifier
 class AuthNotifier extends StateNotifier<AsyncValue<User?>> {

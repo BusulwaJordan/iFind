@@ -62,9 +62,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.lightGreen.withOpacity(0.3),
+              AppColors.lightGreen.withValues(alpha: 0.3),
               AppColors.white,
-              AppColors.primaryGreen.withOpacity(0.2),
+              AppColors.primaryGreen.withValues(alpha: 0.2),
             ],
           ),
         ),
@@ -106,15 +106,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     // Glassmorphism Card
                     Container(
                       decoration: BoxDecoration(
-                        color: AppColors.white.withOpacity(0.7),
+                        color: AppColors.white.withValues(alpha: 0.7),
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: AppColors.white.withOpacity(0.3),
+                          color: AppColors.white.withValues(alpha: 0.3),
                           width: 1.5,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primaryGreen.withOpacity(0.1),
+                            color: AppColors.primaryGreen.withValues(alpha: 0.1),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),

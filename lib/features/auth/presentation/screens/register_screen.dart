@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/constants/app_strings.dart';
 import 'package:ifind/core/utils/validators.dart';
@@ -60,6 +61,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       if (mounted) {
         final authState = ref.read(authProvider);
+        // Check if registration was successful (i.e., not an error state)
+        if (!authState.hasError) {
+          // Mark onboarding complete
+          await ref.read(onboardingCompleteProvider.notifier).completeOnboarding();
+        }
+
         authState.whenOrNull(
           error: (error, _) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -86,9 +93,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.lightGreen.withOpacity(0.3),
+              AppColors.lightGreen.withValues(alpha: 0.3),
               AppColors.white,
-              AppColors.primaryGreen.withOpacity(0.2),
+              AppColors.primaryGreen.withValues(alpha: 0.2),
             ],
           ),
         ),
@@ -116,10 +123,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     // Glassmorphism Card
                     Container(
                       decoration: BoxDecoration(
-                        color: AppColors.white.withOpacity(0.7),
+                        color: AppColors.white.withValues(alpha: 0.7),
                         borderRadius: BorderRadius.circular(24),
                         border: Border.all(
-                          color: AppColors.white.withOpacity(0.3),
+                          color: AppColors.white.withValues(alpha: 0.3),
                           width: 1.5,
                         ),
                       ),

@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
@@ -81,8 +83,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 // Buttons
                 if (_currentPage == _pages.length - 1)
                   ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushReplacementNamed(context, '/login');
+                    onPressed: () async {
+                      await ref.read(onboardingCompleteProvider.notifier).completeOnboarding();
+                      if (mounted) {
+                        Navigator.pushReplacementNamed(context, '/login');
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.deepGreen,

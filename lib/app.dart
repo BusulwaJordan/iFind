@@ -42,11 +42,12 @@ class AuthWrapper extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
+    final onboardingComplete = ref.watch(onboardingCompleteProvider);
 
     return authState.when(
       data: (user) {
         if (user == null) {
-          return const OnboardingScreen();
+          return onboardingComplete ? const LoginScreen() : const OnboardingScreen();
         }
         return HomeScreen(user: user);
       },
