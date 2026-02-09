@@ -1,0 +1,11 @@
+Analyzing iFind...                                              
+
+   info - Use 'const' for final variables initialized to a constant value - lib\core\utils\distance_calculator.dart:6:10 - prefer_const_declarations
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:82:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:142:47 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:191:41 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:212:46 - prefer_const_constructors
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\auth\presentation\screens\register_screen.dart:173:35 - deprecated_member_use
+warning - A value for optional parameter 'key' isn't ever given - lib\features\business\presentation\screens\business_discovery_screen.dart:170:11 - unused_element_parameter
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\business\presentation\screens\create_business_screen.dart:161:15 - deprecated_member_use
+

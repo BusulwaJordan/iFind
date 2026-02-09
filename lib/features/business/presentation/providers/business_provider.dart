@@ -1,0 +1,121 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ifind/core/constants/mock_data.dart';
+import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
+import 'package:ifind/features/business/data/datasources/business_remote_datasource.dart';
+import 'package:ifind/features/business/data/repositories/business_repository_impl.dart';
+import 'package:ifind/features/business/domain/entities/business.dart';
+import 'package:ifind/features/business/domain/repositories/business_repository.dart';
+import 'package:ifind/features/business/domain/usecases/get_nearby_businesses.dart';
+import 'package:geolocator/geolocator.dart';
+
+// Data Source Provider
+final businessRemoteDataSourceProvider = Provider<BusinessRemoteDataSource>((ref) {
+  return BusinessRemoteDataSource(
+    supabaseClient: ref.watch(supabaseClientProvider),
+  );
+});
+
+// Repository Provider
+final businessRepositoryProvider = Provider<BusinessRepository>((ref) {
+  return BusinessRepositoryImpl(
+    remoteDataSource: ref.watch(businessRemoteDataSourceProvider),
+  );
+});
+
+// Use Case Providers
+final getNearbyBusinessesProvider = Provider<GetNearbyBusinesses>((ref) {
+  return GetNearbyBusinesses(ref.watch(businessRepositoryProvider));
+});
+
+// State Providers for Filtering
+final selectedCategoryProvider = StateProvider<BusinessCategory?>((ref) => null);
+final searchRadiusProvider = StateProvider<double>((ref) => 10.0); // km
+final searchQueryProvider = StateProvider<String>((ref) => '');
+
+// Business List Logic
+class BusinessListNotifier extends StateNotifier<AsyncValue<List<Business>>> {
+  final GetNearbyBusinesses getNearbyBusinesses;
+  final double radius;
+  final BusinessCategory? category;
+  final Ref ref;
+
+  BusinessListNotifier({
+    required this.getNearbyBusinesses,
+    required this.radius,
+    required this.ref,
+    this.category,
+  }) : super(const AsyncValue.loading()) {
+    loadBusinesses();
+  }
+
+  Future<void> loadBusinesses() async {
+    state = const AsyncValue.loading();
+    
+    // Default: Kampala center
+    double latitude = 0.3476;
+    double longitude = 32.5825;
+
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (serviceEnabled) {
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+        
+        if (permission == LocationPermission.whileInUse || 
+            permission == LocationPermission.always) {
+          final position = await Geolocator.getCurrentPosition();
+          latitude = position.latitude;
+          longitude = position.longitude;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getting location: $e. Falling back to default.');
+    }
+
+    final result = await getNearbyBusinesses(
+      latitude: latitude,
+      longitude: longitude,
+      radiusKm: radius,
+      category: category,
+    );
+
+    result.fold(
+      (failure) {
+        // MOCK DATA FALLBACK
+        debugPrint('Failed to load businesses: ${failure.message}. Using Mock Data.');
+        state = AsyncValue.data(MockData.businesses);
+      },
+      (businesses) {
+        // Local filtering for search (if backend search not implemented)
+        final query = ref.read(searchQueryProvider).toLowerCase();
+        if (query.isEmpty) {
+          state = AsyncValue.data(businesses);
+        } else {
+          final filtered = businesses.where((b) => 
+            b.name.toLowerCase().contains(query) || 
+            b.description.toLowerCase().contains(query)
+          ).toList();
+          state = AsyncValue.data(filtered);
+        }
+      },
+    );
+  }
+}
+
+// Business List Provider
+final nearbyBusinessesProvider = 
+    StateNotifierProvider.autoDispose<BusinessListNotifier, AsyncValue<List<Business>>>((ref) {
+  final category = ref.watch(selectedCategoryProvider);
+  final radius = ref.watch(searchRadiusProvider);
+  ref.watch(searchQueryProvider); // Trigger rebuild on search change
+  
+  return BusinessListNotifier(
+    getNearbyBusinesses: ref.watch(getNearbyBusinessesProvider),
+    radius: radius,
+    category: category,
+    ref: ref,
+  );
+});

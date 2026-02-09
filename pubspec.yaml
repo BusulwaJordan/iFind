@@ -1,0 +1,61 @@
+name: ifind
+description: "AI-ready local business connection platform for Uganda"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.4.10
+  riverpod_annotation: ^2.3.3
+
+  # Backend & Database
+  supabase_flutter: ^2.7.0
+
+  # Maps & Location
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+  geolocator: ^10.1.0
+  geocoding: ^2.1.1
+
+  # UI Components
+  cached_network_image: ^3.3.0
+  shimmer: ^3.0.0
+  flutter_svg: ^2.0.9
+  google_fonts: ^6.1.0
+
+  # Utilities
+  intl: ^0.18.1
+  uuid: ^4.2.2
+  equatable: ^2.0.5
+  dartz: ^0.10.1
+
+  # Local Storage
+  shared_preferences: ^2.2.2
+
+  # Forms & Validation
+  formz: ^0.6.1
+
+  # Icons
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+  mockito: ^5.4.4
+  build_runner: ^2.4.7
+  riverpod_generator: ^2.3.9
+
+flutter:
+  uses-material-design: true
+  
+  # Assets will be added as needed
+  # assets:
+  #   - assets/images/
+  #   - assets/icons/
