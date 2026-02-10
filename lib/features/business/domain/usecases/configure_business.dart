@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:dartz/dartz.dart';
 import 'package:ifind/core/errors/failures.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
@@ -19,6 +20,8 @@ class ConfigureBusiness {
     String? phone,
     String? website,
     String? email,
+    File? logoFile,
+    File? coverFile,
   }) {
     return repository.createBusiness(
       ownerId: ownerId,
@@ -31,6 +34,8 @@ class ConfigureBusiness {
       phone: phone,
       website: website,
       email: email,
+      logoFile: logoFile,
+      coverFile: coverFile,
     );
   }
 }

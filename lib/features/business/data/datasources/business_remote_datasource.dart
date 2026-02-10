@@ -100,4 +100,16 @@ class BusinessRemoteDataSource {
       throw Exception('Failed to update business: $e');
     }
   }
+
+  /// Delete business
+  Future<void> deleteBusiness(String id) async {
+    try {
+      await supabaseClient
+          .from(ApiConstants.businessesTable)
+          .delete()
+          .eq('id', id);
+    } catch (e) {
+      throw Exception('Failed to delete business: $e');
+    }
+  }
 }

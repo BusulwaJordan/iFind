@@ -8,9 +8,7 @@ import 'package:ifind/features/onboarding/presentation/screens/onboarding_screen
 import 'package:ifind/features/auth/presentation/screens/login_screen.dart';
 import 'package:ifind/features/auth/presentation/screens/register_screen.dart';
 import 'package:ifind/features/business/presentation/screens/create_business_screen.dart';
-import 'package:ifind/features/home/presentation/screens/home_screen.dart';
 import 'package:ifind/core/widgets/main_scaffold.dart';
-import 'package:ifind/core/widgets/loading_widget.dart';
 
 /// Main App Entry Point
 class MyApp extends ConsumerWidget {
@@ -65,8 +63,27 @@ class LoadingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: LoadingWidget(),
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(seconds: 1),
+          builder: (context, value, child) {
+            return Opacity(
+              opacity: value,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset('assets/images/logo.png', height: 80, errorBuilder: (_, __, ___) => const Icon(Icons.rocket_launch_rounded, size: 64, color: AppColors.primaryGreen)),
+                  const SizedBox(height: 24),
+                  const CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(AppColors.primaryGreen)),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }

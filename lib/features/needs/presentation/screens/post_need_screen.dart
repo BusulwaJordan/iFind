@@ -1,3 +1,4 @@
+import 'dart:async' as java_timer;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -21,23 +22,44 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
   final _descController = TextEditingController();
   bool _hasAnalyzed = false;
   Map<String, dynamic>? _analysisResult;
+  java_timer.Timer? _debounce; // Added debounce timer
+
+  @override
+  void initState() {
+    super.initState();
+    _textController.addListener(_onTextChanged); // Added listener
+  }
 
   @override
   void dispose() {
+    _textController.removeListener(_onTextChanged); // Removed listener
     _textController.dispose();
     _descController.dispose();
+    _debounce?.cancel(); // Cancelled debounce timer
     super.dispose();
   }
 
-  void _analyze() async {
+  void _onTextChanged() {
+    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    _debounce = java_timer.Timer(const Duration(milliseconds: 800), () {
+      if (_textController.text.trim().length > 5) {
+        _analyze(silent: true);
+      }
+    });
+  }
+
+  void _analyze({bool silent = false}) async { // Modified signature
     if (_textController.text.trim().isEmpty) return;
     
     // Unfocus keyboard
-    FocusScope.of(context).unfocus();
+    if (!silent) { // Conditional unfocus
+      FocusScope.of(context).unfocus();
+    }
     
     await ref.read(postNeedProvider.notifier).analyzeText(_textController.text);
+    if (!mounted) return;
+
     final state = ref.read(postNeedProvider);
-    
     if (state.aiAnalysis != null) {
       setState(() {
         _hasAnalyzed = true;
@@ -131,7 +153,7 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             const Icon(Icons.auto_awesome, color: Colors.amber),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Text(
                               'Find Best Match', 
                               style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)

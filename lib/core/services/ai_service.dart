@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 
@@ -33,20 +34,19 @@ class AiService {
         final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(textResponse);
         if (jsonMatch != null) {
           final jsonStr = jsonMatch.group(0)!;
-          return json.decode(jsonStr) as Map<String, dynamic>;
+          final result = json.decode(jsonStr) as Map<String, dynamic>;
+          debugPrint('AI Analysis Success: $result');
+          return result;
         }
       }
-      return _mockParse(text); 
+      
+      // If we got a response but couldn't parse it, log and throw
+      debugPrint('AI returned unparseable response: $textResponse');
+      throw Exception('AI response could not be parsed as JSON');
     } catch (e) {
-      return _mockParse(text); // Fallback
+      debugPrint('AI Service Error: $e');
+      // Re-throw the error so caller can handle it
+      rethrow;
     }
-  }
-
-  // Fallback parser since we don't have a real API key yet usually
-  Map<String, dynamic> _mockParse(String text) {
-    if (text.toLowerCase().contains('cake') || text.toLowerCase().contains('food')) {
-      return {'category': 'food', 'urgency': 'medium', 'tags': ['food', 'cake']};
-    }
-    return {'category': 'service', 'urgency': 'low', 'tags': []};
   }
 }

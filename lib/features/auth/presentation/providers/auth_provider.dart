@@ -89,17 +89,27 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   }
 
   Future<void> _init() async {
-    final result = await getCurrentUserUseCase();
-    result.fold(
-      (failure) {
-        debugPrint('Auth check failed: ${failure.message}');
-        state = AsyncValue.error(failure.message, StackTrace.current);
-      },
-      (user) => state = AsyncValue.data(user),
-    );
+    // 1. Give time for Supabase to recover session from storage
+    // The Supabase initialization in main.dart is async, but we can double check here
+    final session = Supabase.instance.client.auth.currentSession;
+    
+    if (session != null) {
+      debugPrint('Found existing Supabase session for: ${session.user.id}');
+      final result = await getCurrentUserUseCase();
+      result.fold(
+        (failure) {
+          debugPrint('Profile fetch failed for existing session: ${failure.message}');
+          state = const AsyncValue.data(null);
+        },
+        (user) => state = AsyncValue.data(user),
+      );
+    } else {
+      state = const AsyncValue.data(null);
+    }
 
-    // Listen to auth state changes
+    // 2. Listen to auth state changes for real-time updates
     authRepository.authStateChanges.listen((user) {
+      debugPrint('Auth state changed. User: ${user?.id}');
       state = AsyncValue.data(user);
     });
   }

@@ -49,6 +49,7 @@ class AuthRemoteDataSource {
       final response = await supabaseClient.auth.signUp(
         email: email,
         password: password,
+        emailRedirectTo: 'ifind://auth/verify', // Deep link for mobile
         data: {
           'full_name': fullName,
           'role': _roleToString(role),

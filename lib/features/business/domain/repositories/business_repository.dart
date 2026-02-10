@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:dartz/dartz.dart';
 import 'package:ifind/core/errors/failures.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
@@ -32,6 +33,8 @@ abstract class BusinessRepository {
     String? phone,
     String? website,
     String? email,
+    File? logoFile,
+    File? coverFile,
   });
 
   /// Update business details
@@ -41,5 +44,10 @@ abstract class BusinessRepository {
     String? description,
     String? phone,
     String? address,
+    File? logoFile,
+    File? coverFile,
   });
+
+  /// Delete business
+  Future<Either<Failure, void>> deleteBusiness(String id);
 }

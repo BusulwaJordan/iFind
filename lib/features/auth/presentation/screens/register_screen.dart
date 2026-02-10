@@ -60,12 +60,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       if (mounted) {
         final authState = ref.read(authProvider);
-        // Check if registration was successful (i.e., not an error state)
-        if (!authState.hasError) {
-          // Mark onboarding complete
-          await ref.read(onboardingCompleteProvider.notifier).completeOnboarding();
-        }
-
+        
         authState.whenOrNull(
           error: (error, _) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -75,10 +70,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               ),
             );
           },
-          data: (user) {
-            if (user != null) {
-              // Navigate to root (AuthWrapper will show Home)
-              Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+          data: (_) async {
+            // Registration successful - mark onboarding complete and go to confirmation screen
+            await ref.read(onboardingCompleteProvider.notifier).completeOnboarding();
+            if (mounted) {
+              Navigator.of(context).pushNamedAndRemoveUntil(
+                '/confirmation',
+                (route) => false,
+                arguments: _emailController.text.trim(),
+              );
             }
           },
         );

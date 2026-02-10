@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
+import 'package:ifind/features/business/presentation/screens/business_details_screen.dart';
 import 'package:ifind/core/widgets/loading_widget.dart';
 import 'package:ifind/core/widgets/empty_state_widget.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -247,181 +248,191 @@ class BusinessCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BusinessDetailScreen(business: business),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Premium Cover Image Stack
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                child: SizedBox(
-                  height: 180,
-                  width: double.infinity,
-                  child: business.coverImageUrl != null
-                      ? Image.network(
-                          business.coverImageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 20),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Premium Cover Image Stack
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  child: SizedBox(
+                    height: 180,
+                    width: double.infinity,
+                    child: business.coverImageUrl != null
+                        ? Image.network(
+                            business.coverImageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: AppColors.lightGreen.withValues(alpha: 0.2),
+                              child: const Icon(Icons.store, size: 48, color: AppColors.primaryGreen),
+                            ),
+                          )
+                        : Container(
                             color: AppColors.lightGreen.withValues(alpha: 0.2),
-                            child: const Icon(Icons.store, size: 48, color: AppColors.primaryGreen),
+                            child: const Center(
+                              child: Icon(Icons.store, size: 48, color: AppColors.primaryGreen),
+                            ),
                           ),
-                        )
-                      : Container(
-                          color: AppColors.lightGreen.withValues(alpha: 0.2),
-                          child: const Center(
-                            child: Icon(Icons.store, size: 48, color: AppColors.primaryGreen),
+                  ),
+                ),
+                if (business.isVerified)
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.verified, size: 16, color: Colors.blue),
+                          SizedBox(width: 4),
+                          Text(
+                            'Verified',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                // Rating Badge
+                Positioned(
+                  bottom: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.star, size: 14, color: Colors.amber),
+                        const SizedBox(width: 4),
+                        Text(
+                          business.rating.toStringAsFixed(1),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                ),
-              ),
-              if (business.isVerified)
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.verified, size: 16, color: Colors.blue),
-                        SizedBox(width: 4),
+                        const SizedBox(width: 4),
                         Text(
-                          'Verified',
+                          '(${business.reviewCount})',
                           style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.8),
                             fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-              // Rating Badge
-              Positioned(
-                bottom: 12,
-                left: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.6),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
+              ],
+            ),
+            
+            // Details
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Icon(Icons.star, size: 14, color: Colors.amber),
-                      const SizedBox(width: 4),
-                      Text(
-                        business.rating.toStringAsFixed(1),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '(${business.reviewCount})',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.8),
-                          fontSize: 12,
+                      Expanded(
+                        child: Text(
+                          business.name,
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-                ),
-              ),
-            ],
-          ),
-          
-          // Details
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        business.name,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  business.description,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.lightText,
-                        height: 1.4,
-                      ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on_outlined, size: 18, color: AppColors.primaryGreen),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        business.address ?? 'No address',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.darkText,
+                  const SizedBox(height: 6),
+                  Text(
+                    business.description,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.lightText,
+                          height: 1.4,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (business.distance != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryGreen.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on_outlined, size: 18, color: AppColors.primaryGreen),
+                      const SizedBox(width: 6),
+                      Expanded(
                         child: Text(
-                          '${business.distance!.toStringAsFixed(1)} km',
+                          business.address ?? 'No address',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.primaryGreen,
-                                fontWeight: FontWeight.w600,
-                              ),
+                            color: AppColors.darkText,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                  ],
-                ),
-              ],
+                      if (business.distance != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '${business.distance!.toStringAsFixed(1)} km',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppColors.primaryGreen,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

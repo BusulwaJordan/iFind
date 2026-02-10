@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dartz/dartz.dart';
+import 'package:ifind/core/errors/failures.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/utils/validators.dart';
@@ -17,7 +19,7 @@ class CreateBusinessNotifier extends StateNotifier<AsyncValue<void>> {
   CreateBusinessNotifier({required this.configureBusiness}) 
       : super(const AsyncValue.data(null));
 
-  Future<void> createBusiness({
+  Future<void> saveBusiness({
     required String ownerId,
     required String name,
     required String description,
@@ -28,25 +30,60 @@ class CreateBusinessNotifier extends StateNotifier<AsyncValue<void>> {
     String? phone,
     String? website,
     String? email,
+    File? logoFile,
+    File? coverFile,
+    String? businessId, // If null, create new
   }) async {
     state = const AsyncValue.loading();
     
-    final result = await configureBusiness(
-      ownerId: ownerId,
-      name: name,
-      description: description,
-      category: category,
-      latitude: latitude,
-      longitude: longitude,
-      address: address,
-      phone: phone,
-      website: website,
-      email: email,
-    );
+    final result = businessId == null 
+        ? await configureBusiness(
+            ownerId: ownerId,
+            name: name,
+            description: description,
+            category: category,
+            latitude: latitude,
+            longitude: longitude,
+            address: address,
+            phone: phone,
+            website: website,
+            email: email,
+            logoFile: logoFile,
+            coverFile: coverFile,
+          )
+        : await _updateBusiness(
+            businessId: businessId,
+            name: name,
+            description: description,
+            phone: phone,
+            address: address,
+            logoFile: logoFile,
+            coverFile: coverFile,
+          );
     
     result.fold(
       (failure) => state = AsyncValue.error(failure.message, StackTrace.current),
       (_) => state = const AsyncValue.data(null),
+    );
+  }
+
+  Future<Either<Failure, Business>> _updateBusiness({
+    required String businessId,
+    String? name,
+    String? description,
+    String? phone,
+    String? address,
+    File? logoFile,
+    File? coverFile,
+  }) async {
+    return await configureBusiness.repository.updateBusiness(
+      businessId: businessId,
+      name: name,
+      description: description,
+      phone: phone,
+      address: address,
+      logoFile: logoFile,
+      coverFile: coverFile,
     );
   }
 }
@@ -59,7 +96,9 @@ final createBusinessProvider =
 });
 
 class CreateBusinessScreen extends ConsumerStatefulWidget {
-  const CreateBusinessScreen({super.key});
+  final Business? business;
+
+  const CreateBusinessScreen({super.key, this.business});
 
   @override
   ConsumerState<CreateBusinessScreen> createState() => _CreateBusinessScreenState();
@@ -82,6 +121,22 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
   File? _logoImage;
   File? _coverImage;
   final _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.business != null) {
+      _nameController.text = widget.business!.name;
+      _descriptionController.text = widget.business!.description;
+      _addressController.text = widget.business!.address ?? '';
+      _phoneController.text = widget.business!.phone ?? '';
+      _emailController.text = widget.business!.email ?? '';
+      _websiteController.text = widget.business!.website ?? '';
+      _selectedCategory = widget.business!.category;
+      _latitude = widget.business!.latitude;
+      _longitude = widget.business!.longitude;
+    }
+  }
 
   Future<void> _pickImage(bool isLogo) async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
@@ -141,7 +196,7 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
         return;
       }
 
-      await ref.read(createBusinessProvider.notifier).createBusiness(
+      await ref.read(createBusinessProvider.notifier).saveBusiness(
         ownerId: user.id,
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim(),
@@ -152,6 +207,9 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
         phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
         email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
         website: _websiteController.text.trim().isEmpty ? null : _websiteController.text.trim(),
+        logoFile: _logoImage,
+        coverFile: _coverImage,
+        businessId: widget.business?.id,
       );
 
       if (mounted) {
@@ -164,13 +222,20 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Shop created successfully!'),
-              backgroundColor: AppColors.success,
-            ),
-          );
-          Navigator.pop(context);
+          // Success: Invalidate providers to trigger UI updates
+          ref.invalidate(myBusinessesProvider(user.id));
+          ref.invalidate(nearbyBusinessesProvider);
+          ref.invalidate(featuredBusinessesProvider);
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(widget.business == null ? 'Shop created successfully!' : 'Shop updated successfully!'),
+                backgroundColor: AppColors.success,
+              ),
+            );
+            Navigator.pop(context);
+          }
         }
       }
     }
@@ -241,7 +306,7 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('Create Your Shop', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text(widget.business == null ? 'Create Your Shop' : 'Edit Shop Details', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
@@ -403,7 +468,7 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
               ),
               child: isLoading 
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Text('Launch My Shop', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                  : Text(widget.business == null ? 'Launch My Shop' : 'Save Changes', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 40),
           ],

@@ -2,12 +2,18 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ifind/core/constants/mock_data.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
+import 'package:ifind/core/services/storage_service.dart';
 import 'package:ifind/features/business/data/datasources/business_remote_datasource.dart';
 import 'package:ifind/features/business/data/repositories/business_repository_impl.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/domain/repositories/business_repository.dart';
 import 'package:ifind/features/business/domain/usecases/get_nearby_businesses.dart';
 import 'package:geolocator/geolocator.dart';
+
+// Storage Service Provider
+final storageServiceProvider = Provider<StorageService>((ref) {
+  return StorageService(ref.watch(supabaseClientProvider));
+});
 
 // Data Source Provider
 final businessRemoteDataSourceProvider = Provider<BusinessRemoteDataSource>((ref) {
@@ -20,6 +26,7 @@ final businessRemoteDataSourceProvider = Provider<BusinessRemoteDataSource>((ref
 final businessRepositoryProvider = Provider<BusinessRepository>((ref) {
   return BusinessRepositoryImpl(
     remoteDataSource: ref.watch(businessRemoteDataSourceProvider),
+    storageService: ref.watch(storageServiceProvider),
   );
 });
 
@@ -30,7 +37,7 @@ final getNearbyBusinessesProvider = Provider<GetNearbyBusinesses>((ref) {
 
 // State Providers for Filtering
 final selectedCategoryProvider = StateProvider<BusinessCategory?>((ref) => null);
-final searchRadiusProvider = StateProvider<double>((ref) => 10.0); // km
+final searchRadiusProvider = StateProvider<double>((ref) => 15.0); // km
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
 // Business List Logic
@@ -84,9 +91,12 @@ class BusinessListNotifier extends StateNotifier<AsyncValue<List<Business>>> {
 
     result.fold(
       (failure) {
-        // MOCK DATA FALLBACK
-        debugPrint('Failed to load businesses: ${failure.message}. Using Mock Data.');
-        state = AsyncValue.data(MockData.businesses);
+        // Show actual error instead of hiding with mock data
+        debugPrint('Failed to load businesses: ${failure.message}');
+        state = AsyncValue.error(
+          'Failed to load businesses: ${failure.message}. Check database connection and RPC function.',
+          StackTrace.current,
+        );
       },
       (businesses) {
         // Local filtering for search (if backend search not implemented)

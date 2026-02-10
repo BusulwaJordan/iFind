@@ -63,4 +63,13 @@ class PortfolioRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  Future<Either<Failure, void>> deletePortfolioItem(String itemId) async {
+    try {
+      await _client.from('portfolio_items').delete().eq('id', itemId);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }

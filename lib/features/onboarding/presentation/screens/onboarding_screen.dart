@@ -52,6 +52,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             },
           ),
           
+          // Skip/Login Button for returnees
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            right: 20,
+            child: TextButton(
+              onPressed: () async {
+                await ref.read(onboardingCompleteProvider.notifier).completeOnboarding();
+                if (context.mounted) {
+                  Navigator.pushReplacementNamed(context, '/login');
+                }
+              },
+              style: TextButton.styleFrom(
+                backgroundColor: Colors.black.withValues(alpha: 0.3),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              child: const Text(
+                'Sign In',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          
           // Navigation Bottom Area
           Positioned(
             bottom: 40,
