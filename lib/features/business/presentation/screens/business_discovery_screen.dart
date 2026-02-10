@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
+import 'package:ifind/core/widgets/loading_widget.dart';
+import 'package:ifind/core/widgets/empty_state_widget.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class BusinessDiscoveryScreen extends ConsumerWidget {
   const BusinessDiscoveryScreen({super.key});
@@ -98,25 +101,11 @@ class BusinessDiscoveryScreen extends ConsumerWidget {
           businessesState.when(
             data: (businesses) {
               if (businesses.isEmpty) {
-                return SliverFillRemaining(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.store_mall_directory_outlined,
-                          size: 64,
-                          color: AppColors.lightText.withValues(alpha: 0.5),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No businesses found nearby',
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: AppColors.lightText,
-                              ),
-                        ),
-                      ],
-                    ),
+                return const SliverFillRemaining(
+                  child: EmptyStateWidget(
+                    title: 'No shops found nearby',
+                    message: 'Try scanning a different category or arcade to see what\'s available.',
+                    icon: Icons.store_mall_directory_outlined,
                   ),
                 );
               }
@@ -126,7 +115,10 @@ class BusinessDiscoveryScreen extends ConsumerWidget {
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       final business = businesses[index];
-                      return BusinessCard(business: business);
+                      return BusinessCard(business: business)
+                        .animate()
+                        .fadeIn(delay: (index * 100).ms)
+                        .slideY(begin: 0.1);
                     },
                     childCount: businesses.length,
                   ),
@@ -134,11 +126,7 @@ class BusinessDiscoveryScreen extends ConsumerWidget {
               );
             },
             loading: () => const SliverFillRemaining(
-              child: Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryGreen),
-                ),
-              ),
+              child: LoadingWidget(),
             ),
             error: (error, stack) => SliverFillRemaining(
               child: Center(

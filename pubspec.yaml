@@ -44,6 +44,28 @@ dependencies:
   # Icons
   cupertino_icons: ^1.0.6
 
+  # AI & Machine Learning
+  google_generative_ai: ^0.4.0
+
+  # UI & Animations
+  flutter_animate: ^4.5.0
+  timeago: ^3.6.1
+
+  # Media & Storage
+  image_picker: ^1.0.7
+  video_player: ^2.8.2
+  chewie: ^1.7.4
+  flutter_image_compress: ^2.1.0
+  video_compress: ^3.1.2
+  path_provider: ^2.1.2
+
+  # Utils
+  package_info_plus: ^5.0.1
+  url_launcher: ^6.2.4
+  badges: ^3.1.2
+  path: ^1.9.0
+  flutter_dotenv: ^5.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -55,7 +77,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   
-  # Assets will be added as needed
-  # assets:
-  #   - assets/images/
-  #   - assets/icons/
+  assets:
+    - .env
+

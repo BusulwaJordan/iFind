@@ -177,3 +177,13 @@ final authProvider =
 final currentUserProvider = Provider<User?>((ref) {
   return ref.watch(authProvider).valueOrNull;
 });
+
+/// Fetch user profile by ID
+final userProfileProvider = FutureProvider.family<User, String>((ref, userId) async {
+  final repo = ref.watch(authRepositoryProvider);
+  final result = await repo.getUserById(userId);
+  return result.fold(
+    (failure) => throw failure.message,
+    (user) => user,
+  );
+});

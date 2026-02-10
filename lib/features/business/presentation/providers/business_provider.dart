@@ -119,3 +119,21 @@ final nearbyBusinessesProvider =
     ref: ref,
   );
 });
+
+final featuredBusinessesProvider = FutureProvider<List<Business>>((ref) async {
+  final repository = ref.watch(businessRepositoryProvider);
+  final result = await repository.getFeaturedBusinesses();
+  return result.fold(
+    (failure) => [],
+    (businesses) => businesses,
+  );
+});
+
+final myBusinessesProvider = FutureProvider.family<List<Business>, String>((ref, ownerId) async {
+  final repository = ref.watch(businessRepositoryProvider);
+  final result = await repository.getMyBusinesses(ownerId);
+  return result.fold(
+    (failure) => [],
+    (businesses) => businesses,
+  );
+});

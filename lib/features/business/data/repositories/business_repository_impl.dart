@@ -30,6 +30,20 @@ class BusinessRepositoryImpl implements BusinessRepository {
   }
 
   @override
+  Future<Either<Failure, List<Business>>> getFeaturedBusinesses() async {
+    try {
+      final businesses = await remoteDataSource.getNearbyBusinesses(
+        latitude: 0.3476,
+        longitude: 32.5825,
+        radiusKm: 50,
+      );
+      return Right(businesses.take(3).toList());
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, Business>> createBusiness({
     required String ownerId,
     required String name,

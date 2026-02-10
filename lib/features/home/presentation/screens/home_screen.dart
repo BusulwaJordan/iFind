@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
-import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/presentation/screens/business_discovery_screen.dart';
 import 'package:ifind/features/business/presentation/screens/create_business_screen.dart';
+import 'package:ifind/features/business/presentation/screens/business_details_screen.dart';
+import 'package:ifind/features/needs/presentation/screens/post_need_screen.dart';
+import 'package:ifind/features/settings/presentation/screens/settings_screen.dart';
+import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -25,13 +29,17 @@ class HomeScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildFeaturedSection(context),
+                  _buildBroadcastBanner(context).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2),
                   const SizedBox(height: 32),
-                  _buildCategoriesSection(context),
+                  _buildGettingStarted(context).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
                   const SizedBox(height: 32),
-                  _buildQuickActions(context),
+                  _buildCategoriesSection(context).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
                   const SizedBox(height: 32),
-                  _buildNearbySection(context),
+                  _buildQuickActions(context).animate().fadeIn(delay: 400.ms).slideY(begin: 0.1),
+                  const SizedBox(height: 32),
+                  _buildFeaturedSection(context).animate().fadeIn(delay: 600.ms).slideY(begin: 0.1),
+                  const SizedBox(height: 32),
+                  _buildNearbySection(context).animate().fadeIn(delay: 800.ms).slideY(begin: 0.1),
                 ],
               ),
             ),
@@ -43,7 +51,7 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildSliverAppBar(BuildContext context, WidgetRef ref) {
     return SliverAppBar(
-      expandedHeight: 120,
+      expandedHeight: 100,
       floating: true,
       pinned: true,
       elevation: 0,
@@ -60,7 +68,7 @@ class HomeScreen extends ConsumerWidget {
                 Text(
                   'Welcome back,',
                   style: GoogleFonts.outfit(
-                    fontSize: 12,
+                    fontSize: 10,
                     color: Colors.white70,
                     fontWeight: FontWeight.w400,
                   ),
@@ -68,7 +76,7 @@ class HomeScreen extends ConsumerWidget {
                 Text(
                   user.fullName.split(' ').first,
                   style: GoogleFonts.outfit(
-                    fontSize: 20,
+                    fontSize: 16,
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
@@ -77,11 +85,93 @@ class HomeScreen extends ConsumerWidget {
             ),
             const Spacer(),
             IconButton(
-              onPressed: () => ref.read(authProvider.notifier).logout(),
-              icon: const Icon(Icons.logout_rounded, color: Colors.white70, size: 20),
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
+              icon: const Icon(Icons.settings_outlined, color: Colors.white70, size: 24),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildBroadcastBanner(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.black, Colors.grey.shade900],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.auto_awesome, color: Colors.amber, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'AI Assistant',
+                style: GoogleFonts.outfit(
+                  color: Colors.amber, 
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  letterSpacing: 1,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'What are you looking for today?',
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Describe your need and we\'ll find the best match nearby.',
+            style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity, // Full width button
+            child: ElevatedButton(
+              onPressed: () => Navigator.push(
+                context, 
+                MaterialPageRoute(builder: (_) => const PostNeedScreen())
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
+              ),
+              child: const Text('Find it for me', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -102,7 +192,10 @@ class HomeScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: 3,
             itemBuilder: (context, index) {
-              return _FeaturedBusinessCard(index: index);
+              return _FeaturedBusinessCard(index: index)
+                .animate()
+                .fadeIn(delay: (index * 100).ms)
+                .scale(begin: const Offset(0.9, 0.9));
             },
           ),
         ),
@@ -139,7 +232,9 @@ class HomeScreen extends ConsumerWidget {
                 name: cat['name'] as String,
                 icon: cat['icon'] as IconData,
                 color: cat['color'] as Color,
-              );
+              ).animate()
+                .fadeIn(delay: (index * 50).ms)
+                .slideX(begin: 0.2);
             },
           ),
         ),
@@ -169,7 +264,7 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: _QuickActionButton(
-                  title: 'List Shop',
+                  title: 'Create Shop',
                   subtitle: 'Reach more people',
                   icon: Icons.add_business_rounded,
                   color: AppColors.deepGreen,
@@ -180,6 +275,83 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildGettingStarted(BuildContext context) {
+    final steps = [
+      {
+        'title': 'Post a Need',
+        'desc': 'Tell us what you need and let shops find you.',
+        'icon': Icons.edit_note_rounded,
+        'color': Colors.blue,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PostNeedScreen())),
+      },
+      {
+        'title': 'Explore Shops',
+        'desc': 'Discover the best local businesses nearby.',
+        'icon': Icons.explore_rounded,
+        'color': Colors.orange,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BusinessDiscoveryScreen())),
+      },
+      {
+        'title': 'Launch Shop',
+        'desc': 'Start your own digital shop and grow.',
+        'icon': Icons.rocket_launch_rounded,
+        'color': Colors.purple,
+        'onTap': () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateBusinessScreen())),
+      },
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            children: [
+              const _SectionHeader(title: 'Getting Started'),
+              const Spacer(),
+              Text('Step 1 of 3', style: GoogleFonts.outfit(fontSize: 12, color: AppColors.lightText, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 130,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: steps.length,
+            itemBuilder: (context, index) {
+              final step = steps[index];
+              return Container(
+                width: 200,
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: (step['color'] as Color).withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: (step['color'] as Color).withValues(alpha: 0.1)),
+                ),
+                child: InkWell(
+                  onTap: step['onTap'] as VoidCallback,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(step['icon'] as IconData, color: step['color'] as Color, size: 28),
+                      const Spacer(),
+                      Text(step['title'] as String, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14)),
+                      const SizedBox(height: 4),
+                      Text(step['desc'] as String, style: const TextStyle(fontSize: 10, color: AppColors.lightText), maxLines: 2),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -215,61 +387,86 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _FeaturedBusinessCard extends StatelessWidget {
+class _FeaturedBusinessCard extends ConsumerWidget {
   final int index;
   const _FeaturedBusinessCard({required this.index});
 
   @override
-  Widget build(BuildContext context) {
-    final images = [
-      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1000',
-      'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1000',
-      'https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?q=80&w=1000',
-    ];
-    final names = ['Cafe Javas', 'Bold in Africa', 'Kikuubo Wholesalers'];
-    
-    return Container(
-      width: 280,
-      margin: const EdgeInsets.symmetric(horizontal: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        image: DecorationImage(
-          image: NetworkImage(images[index]),
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
+  Widget build(BuildContext context, WidgetRef ref) {
+    final businessesAsync = ref.watch(featuredBusinessesProvider);
+
+    return businessesAsync.when(
+      data: (businesses) {
+        if (businesses.isEmpty || index >= businesses.length) return const SizedBox();
+        final business = businesses[index];
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BusinessDetailScreen(business: business),
+              ),
+            );
+          },
+          child: Container(
+            width: 280,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              image: DecorationImage(
+                image: NetworkImage(
+                  business.coverImageUrl ?? 'https://via.placeholder.com/300',
+                ),
+                fit: BoxFit.cover,
+                onError: (_, __) {},
+              ),
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
+                ),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    business.name,
+                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 16),
+                      const SizedBox(width: 4),
+                      Text('${business.rating} (${business.reviewCount} reviews)', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              names[index],
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            const Row(
-              children: [
-                Icon(Icons.star, color: Colors.amber, size: 16),
-                SizedBox(width: 4),
-                Text('4.8 (120 reviews)', style: TextStyle(color: Colors.white70, fontSize: 12)),
-              ],
-            ),
-          ],
+        );
+      },
+      loading: () => Container(
+        width: 280,
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(24),
         ),
       ),
+      error: (_, __) => const SizedBox(),
     );
   }
 }
+
 
 class _CategoryItem extends StatelessWidget {
   final String name;

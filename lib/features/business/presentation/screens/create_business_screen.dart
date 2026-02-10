@@ -7,6 +7,9 @@ import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart'; // For BusinessCategory enum
 import 'package:ifind/features/business/domain/usecases/configure_business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'dart:io';
 
 class CreateBusinessNotifier extends StateNotifier<AsyncValue<void>> {
   final ConfigureBusiness configureBusiness;
@@ -76,6 +79,22 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
   double _latitude = 0.3476;
   double _longitude = 32.5825;
   bool _isGettingLocation = false;
+  File? _logoImage;
+  File? _coverImage;
+  final _picker = ImagePicker();
+
+  Future<void> _pickImage(bool isLogo) async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+    if (pickedFile != null) {
+      setState(() {
+        if (isLogo) {
+          _logoImage = File(pickedFile.path);
+        } else {
+          _coverImage = File(pickedFile.path);
+        }
+      });
+    }
+  }
 
   Future<void> _getCurrentLocation() async {
     setState(() => _isGettingLocation = true);
@@ -147,7 +166,7 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Business created successfully!'),
+              content: Text('Shop created successfully!'),
               backgroundColor: AppColors.success,
             ),
           );
@@ -157,27 +176,96 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
     }
   }
 
+  Widget _buildImageSection() {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () => _pickImage(false),
+          child: Container(
+            height: 180,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(16),
+              image: _coverImage != null 
+                  ? DecorationImage(image: FileImage(_coverImage!), fit: BoxFit.cover)
+                  : null,
+            ),
+            child: _coverImage == null ? Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.add_photo_alternate_outlined, size: 40, color: Colors.grey),
+                const SizedBox(height: 8),
+                Text('Add Shop Cover Photo', style: GoogleFonts.outfit(color: Colors.grey)),
+              ],
+            ) : null,
+          ),
+        ),
+        const SizedBox(height: 16),
+        GestureDetector(
+          onTap: () => _pickImage(true),
+          child: Row(
+            children: [
+              Container(
+                height: 80,
+                width: 80,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  shape: BoxShape.circle,
+                  image: _logoImage != null 
+                      ? DecorationImage(image: FileImage(_logoImage!), fit: BoxFit.cover)
+                      : null,
+                ),
+                child: _logoImage == null ? const Icon(Icons.add_a_photo_outlined, color: Colors.grey) : null,
+              ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Shop Logo', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                  Text('Tap to upload square logo', style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(createBusinessProvider);
     final isLoading = state.isLoading;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Business')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text('Create Your Shop', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(24),
           children: [
+            _buildImageSection(),
+            const SizedBox(height: 32),
+            Text('Shop Details', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Business Name',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.store),
+              style: GoogleFonts.outfit(),
+              decoration: InputDecoration(
+                labelText: 'Shop Name',
+                hintText: 'e.g. Maria\'s Cakes & Bakes',
+                prefixIcon: const Icon(Icons.storefront_outlined),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
               validator: (value) => 
-                  value == null || value.isEmpty ? 'Name is required' : null,
+                  value == null || value.isEmpty ? 'Shop name is required' : null,
             ),
             const SizedBox(height: 16),
             
@@ -314,9 +402,10 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
                 foregroundColor: Colors.white,
               ),
               child: isLoading 
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Create My Business'),
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text('Launch My Shop', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
+            const SizedBox(height: 40),
           ],
         ),
       ),

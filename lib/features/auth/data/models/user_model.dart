@@ -9,6 +9,7 @@ class UserModel extends User {
     required super.role,
     required super.fullName,
     super.phone,
+    super.avatarUrl,
     required super.createdAt,
     required super.updatedAt,
   });
@@ -21,6 +22,7 @@ class UserModel extends User {
       role: _roleFromString(json['role'] as String),
       fullName: json['full_name'] as String,
       phone: json['phone'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -34,6 +36,7 @@ class UserModel extends User {
       'role': _roleToString(role),
       'full_name': fullName,
       'phone': phone,
+      'avatar_url': avatarUrl,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -47,6 +50,7 @@ class UserModel extends User {
       role: user.role,
       fullName: user.fullName,
       phone: user.phone,
+      avatarUrl: user.avatarUrl,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     );

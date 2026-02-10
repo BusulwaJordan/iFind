@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/constants/app_strings.dart';
 import 'package:ifind/core/utils/validators.dart';
@@ -75,6 +74,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 backgroundColor: AppColors.error,
               ),
             );
+          },
+          data: (user) {
+            if (user != null) {
+              // Navigate to root (AuthWrapper will show Home)
+              Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+            }
           },
         );
       }

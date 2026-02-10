@@ -25,6 +25,7 @@ class User extends Equatable {
   final UserRole role;
   final String fullName;
   final String? phone;
+  final String? avatarUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -34,6 +35,7 @@ class User extends Equatable {
     required this.role,
     required this.fullName,
     this.phone,
+    this.avatarUrl,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -45,6 +47,7 @@ class User extends Equatable {
         role,
         fullName,
         phone,
+        avatarUrl,
         createdAt,
         updatedAt,
       ];
@@ -55,6 +58,7 @@ class User extends Equatable {
     UserRole? role,
     String? fullName,
     String? phone,
+    String? avatarUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -64,6 +68,7 @@ class User extends Equatable {
       role: role ?? this.role,
       fullName: fullName ?? this.fullName,
       phone: phone ?? this.phone,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

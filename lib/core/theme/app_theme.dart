@@ -65,7 +65,7 @@ class AppTheme {
         foregroundColor: AppColors.darkText,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.outfit(
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: AppColors.darkText,
@@ -133,7 +133,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          textStyle: GoogleFonts.inter(
+          textStyle: GoogleFonts.outfit(
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -144,7 +144,7 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primaryGreen,
-          textStyle: GoogleFonts.inter(
+          textStyle: GoogleFonts.outfit(
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -171,11 +171,11 @@ class AppTheme {
         unselectedItemColor: AppColors.lightText,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
-        selectedLabelStyle: GoogleFonts.inter(
+        selectedLabelStyle: GoogleFonts.outfit(
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
-        unselectedLabelStyle: GoogleFonts.inter(
+        unselectedLabelStyle: GoogleFonts.outfit(
           fontSize: 12,
           fontWeight: FontWeight.normal,
         ),

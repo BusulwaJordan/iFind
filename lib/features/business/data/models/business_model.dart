@@ -24,6 +24,21 @@ class BusinessModel extends Business {
   });
 
   factory BusinessModel.fromJson(Map<String, dynamic> json) {
+    double lat = (json['latitude'] as num?)?.toDouble() ?? 0.0;
+    double lng = (json['longitude'] as num?)?.toDouble() ?? 0.0;
+    
+    // Fallback parser for PostGIS 'POINT(lng lat)' format if individual columns are null
+    if (lat == 0.0 && lng == 0.0 && json['location'] != null) {
+      try {
+        final loc = json['location'] as String;
+        final coords = loc.replaceAll('POINT(', '').replaceAll(')', '').split(' ');
+        if (coords.length == 2) {
+          lng = double.parse(coords[0]);
+          lat = double.parse(coords[1]);
+        }
+      } catch (_) {}
+    }
+
     return BusinessModel(
       id: json['id'] as String,
       ownerId: json['owner_id'] as String,
@@ -32,8 +47,8 @@ class BusinessModel extends Business {
       category: _parseCategory(json['category'] as String),
       subCategory: json['sub_category'] as String?,
       address: json['address'] as String?,
-      latitude: (json['latitude'] as num).toDouble(),
-      longitude: (json['longitude'] as num).toDouble(),
+      latitude: lat,
+      longitude: lng,
       phone: json['phone'] as String?,
       website: json['website'] as String?,
       email: json['email'] as String?,

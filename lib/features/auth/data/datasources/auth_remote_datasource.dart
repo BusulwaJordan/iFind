@@ -23,16 +23,18 @@ class AuthRemoteDataSource {
       );
 
       if (response.user == null) {
-        throw Exception('Login failed');
+        throw Exception('Login failed: No user returned');
       }
 
       return await _mapSupabaseUserToModel(response.user!);
     } on AuthException catch (e) {
+      // Return specific Supabase error message (e.g. "Email not confirmed")
       throw Exception(e.message);
     } catch (e) {
       throw Exception('Login failed: ${e.toString()}');
     }
   }
+
 
   /// Register new user
   Future<UserModel> register({
@@ -100,6 +102,21 @@ class AuthRemoteDataSource {
     }
   }
 
+  /// Get user by ID
+  Future<UserModel> getUserById(String id) async {
+    try {
+      final response = await supabaseClient
+          .from(ApiConstants.usersTable)
+          .select()
+          .eq('id', id)
+          .single();
+
+      return UserModel.fromJson(response);
+    } catch (e) {
+      throw Exception('Failed to fetch user: $e');
+    }
+  }
+
   /// Update user profile
   Future<UserModel> updateProfile({
     required String userId,
@@ -162,6 +179,7 @@ class AuthRemoteDataSource {
         fullName: metadata['full_name'] as String? ?? 'iFind User',
         role: _stringToRole(metadata['role'] as String? ?? 'customer'),
         phone: metadata['phone'] as String?,
+        avatarUrl: metadata['avatar_url'] as String?,
         createdAt: DateTime.tryParse(user.createdAt) ?? now,
         updatedAt: now,
       );

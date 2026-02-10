@@ -9,6 +9,8 @@ import 'package:ifind/features/auth/presentation/screens/login_screen.dart';
 import 'package:ifind/features/auth/presentation/screens/register_screen.dart';
 import 'package:ifind/features/business/presentation/screens/create_business_screen.dart';
 import 'package:ifind/features/home/presentation/screens/home_screen.dart';
+import 'package:ifind/core/widgets/main_scaffold.dart';
+import 'package:ifind/core/widgets/loading_widget.dart';
 
 /// Main App Entry Point
 class MyApp extends ConsumerWidget {
@@ -49,7 +51,7 @@ class AuthWrapper extends ConsumerWidget {
         if (user == null) {
           return onboardingComplete ? const LoginScreen() : const OnboardingScreen();
         }
-        return HomeScreen(user: user);
+        return const MainScaffold();
       },
       loading: () => const LoadingScreen(),
       error: (error, stack) => ErrorScreen(message: error.toString()),
@@ -64,11 +66,7 @@ class LoadingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryGreen),
-        ),
-      ),
+      body: LoadingWidget(),
     );
   }
 }

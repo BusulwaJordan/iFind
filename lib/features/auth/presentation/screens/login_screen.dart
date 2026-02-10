@@ -45,6 +45,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ),
             );
           },
+          data: (user) {
+            if (user != null) {
+              // Navigate to root (AuthWrapper will show Home)
+              Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+            }
+          },
         );
       }
     }

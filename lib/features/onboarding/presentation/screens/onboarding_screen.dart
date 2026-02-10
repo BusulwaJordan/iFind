@@ -85,7 +85,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ElevatedButton(
                     onPressed: () async {
                       await ref.read(onboardingCompleteProvider.notifier).completeOnboarding();
-                      if (mounted) {
+                      if (context.mounted) {
                         Navigator.pushReplacementNamed(context, '/login');
                       }
                     },

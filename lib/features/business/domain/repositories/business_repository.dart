@@ -11,6 +11,9 @@ abstract class BusinessRepository {
     BusinessCategory? category,
   });
 
+  /// Get featured businesses
+  Future<Either<Failure, List<Business>>> getFeaturedBusinesses();
+
   /// Get business by ID
   Future<Either<Failure, Business>> getBusinessById(String id);
 

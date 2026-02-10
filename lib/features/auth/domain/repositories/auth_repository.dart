@@ -26,6 +26,9 @@ abstract class AuthRepository {
   /// Get current user
   Future<Either<Failure, User?>> getCurrentUser();
 
+  /// Get user by ID
+  Future<Either<Failure, User>> getUserById(String id);
+
   /// Update user profile
   Future<Either<Failure, User>> updateProfile({
     required String userId,

@@ -8,6 +8,7 @@ class MockData {
     fullName: 'Alex Innovation',
     role: UserRole.businessOwner,
     phone: '+256 700 000000',
+    avatarUrl: 'https://i.pravatar.cc/300',
     createdAt: DateTime.now(),
     updatedAt: DateTime.now(),
   );
