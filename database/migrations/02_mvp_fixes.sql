@@ -75,3 +75,46 @@ CREATE POLICY "Anyone can create reviews for testing"
     WITH CHECK (auth.uid() = customer_id);
 
 -- End of MVP Tweaks
+
+
+-- 3. Fix Google OAuth new user profile creation
+-- Google users don't have 'role' or 'full_name' in raw_user_meta_data the same way.
+-- Google puts the name in 'full_name' or 'name', and there is no role.
+-- We update handle_new_user to gracefully handle both cases.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+DECLARE
+  extracted_name TEXT;
+  extracted_role TEXT;
+BEGIN
+  -- Google OAuth puts name in 'full_name' or 'name'
+  extracted_name := COALESCE(
+    NEW.raw_user_meta_data->>'full_name',
+    NEW.raw_user_meta_data->>'name',
+    split_part(NEW.email, '@', 1)
+  );
+
+  -- Role defaults to 'customer' for Google users (they can change it in settings)
+  extracted_role := COALESCE(NEW.raw_user_meta_data->>'role', 'customer');
+
+  INSERT INTO public.users (id, email, role, full_name, phone)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    extracted_role,
+    extracted_name,
+    NEW.raw_user_meta_data->>'phone'
+  )
+  ON CONFLICT (id) DO NOTHING; -- Safe for re-triggers
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 4. Allow all users to view all businesses (MVP: no verification gate)
+DROP POLICY IF EXISTS "Public can view verified businesses" ON businesses;
+DROP POLICY IF EXISTS "All users can view all businesses" ON businesses;
+
+CREATE POLICY "All users can view all businesses"
+    ON businesses FOR SELECT
+    USING (TRUE);

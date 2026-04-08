@@ -52,6 +52,26 @@ class BusinessModel with _$BusinessModel {
 
     data['latitude'] = lat;
     data['longitude'] = lng;
+    
+    // Safely cast ratings since Postgres NUMERIC can be returned as int, double, or String
+    if (data['rating_average'] != null) {
+      final val = data['rating_average'];
+      if (val is String) {
+        data['rating_average'] = double.tryParse(val) ?? 0.0;
+      } else if (val is num) {
+        data['rating_average'] = val.toDouble();
+      }
+    }
+    
+    if (data['rating_count'] != null) {
+      final val = data['rating_count'];
+      if (val is String) {
+        data['rating_count'] = int.tryParse(val) ?? 0;
+      } else if (val is num) {
+        data['rating_count'] = val.toInt();
+      }
+    }
+
     return data;
   }
 

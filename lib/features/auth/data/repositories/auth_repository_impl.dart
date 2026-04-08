@@ -31,6 +31,18 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<Either<Failure, void>> loginWithGoogle() async {
+    try {
+      await remoteDataSource.loginWithGoogle();
+      return const Right(null);
+    } on AuthException catch (e) {
+      return Left(AuthFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, User>> register({
     required String email,
     required String password,

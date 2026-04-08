@@ -6,6 +6,7 @@ import 'package:ifind/core/constants/app_strings.dart';
 import 'package:ifind/core/utils/validators.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 /// Login Screen with glassmorphism design
 class LoginScreen extends ConsumerStatefulWidget {
@@ -39,16 +40,70 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         final authState = ref.read(authProvider);
         authState.whenOrNull(
           error: (error, _) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(error.toString()),
-                backgroundColor: AppColors.error,
-              ),
-            );
+            final errorStr = error.toString().toLowerCase();
+            // Intercept email not confirmed error with a friendly, actionable dialog
+            if (errorStr.contains('email not confirmed') ||
+                errorStr.contains('email_not_confirmed')) {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  title: Row(
+                    children: [
+                      const Icon(Icons.mark_email_unread_rounded, color: Colors.orange, size: 28),
+                      const SizedBox(width: 10),
+                      Text('Verify Your Email', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  content: Text(
+                    'You have not verified your email address yet.\n\n'
+                    'Please check your inbox at:\n${_emailController.text.trim()}\n\n'
+                    'Click the link in the email we sent you, then come back and log in.',
+                    style: GoogleFonts.outfit(height: 1.5),
+                  ),
+                  actions: [
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.check_circle_outline),
+                      label: const Text('Got it!'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryGreen,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(error.toString()),
+                  backgroundColor: AppColors.error,
+                ),
+              );
+            }
           },
-          // On success, go_router intercepts auth state change and redirects automatically
+          // On success, GoRouter intercepts auth state change and redirects automatically
         );
       }
+    }
+  }
+
+  Future<void> _handleGoogleLogin() async {
+    await ref.read(authProvider.notifier).loginWithGoogle();
+    if (mounted) {
+      final authState = ref.read(authProvider);
+      authState.whenOrNull(
+        error: (error, _) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Google Sign-In failed: ${error.toString()}'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        },
+      );
     }
   }
 
@@ -227,6 +282,61 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                           letterSpacing: 1.2,
                                         ),
                                       ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Divider with OR
+                            Row(
+                              children: [
+                                const Expanded(child: Divider()),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: Text(
+                                    'OR',
+                                    style: GoogleFonts.outfit(
+                                      color: Colors.grey[500],
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                const Expanded(child: Divider()),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Google Sign-In Button
+                            SizedBox(
+                              height: 56,
+                              child: OutlinedButton(
+                                onPressed: isLoading ? null : _handleGoogleLogin,
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(color: Colors.grey[300]!, width: 1.5),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  backgroundColor: Colors.white,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SvgPicture.network(
+                                      'https://www.svgrepo.com/show/475656/google-color.svg',
+                                      height: 22,
+                                      width: 22,
+                                      placeholderBuilder: (_) => const Icon(Icons.g_mobiledata, size: 22),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Continue with Google',
+                                      style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.grey[800],
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                             const SizedBox(height: 24),

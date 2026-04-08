@@ -89,8 +89,6 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
   }
 
   Future<void> _init() async {
-    // 1. Give time for Supabase to recover session from storage
-    // The Supabase initialization in main.dart is async, but we can double check here
     final session = Supabase.instance.client.auth.currentSession;
     
     if (session != null) {
@@ -98,8 +96,24 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       final result = await getCurrentUserUseCase();
       result.fold(
         (failure) {
-          debugPrint('Profile fetch failed for existing session: ${failure.message}');
-          state = const AsyncValue.data(null);
+          // Network issue — don't log the user out, keep them authenticated
+          // using basic info from the JWT session token. They can still use the app.
+          debugPrint('Profile fetch failed (likely network issue). Keeping session alive.');
+          final u = session.user;
+          final metadata = u.userMetadata ?? {};
+          final roleStr = metadata['role'] as String? ?? 'customer';
+          final parsedRole = roleStr == 'business_owner'
+              ? UserRole.businessOwner
+              : (roleStr == 'manager' ? UserRole.manager : UserRole.customer);
+          state = AsyncValue.data(User(
+            id: u.id,
+            email: u.email ?? '',
+            fullName: metadata['full_name'] as String? ?? 'iFind User',
+            role: parsedRole,
+            phone: metadata['phone'] as String?,
+            createdAt: DateTime.tryParse(u.createdAt) ?? DateTime.now(),
+            updatedAt: DateTime.now(),
+          ));
         },
         (user) => state = AsyncValue.data(user),
       );
@@ -107,7 +121,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       state = const AsyncValue.data(null);
     }
 
-    // 2. Listen to auth state changes for real-time updates
+    // Listen to auth state changes for real-time updates (Google OAuth callback lands here)
     authRepository.authStateChanges.listen((user) {
       debugPrint('Auth state changed. User: ${user?.id}');
       state = AsyncValue.data(user);
@@ -121,6 +135,21 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       (failure) =>
           state = AsyncValue.error(failure.message, StackTrace.current),
       (user) => state = AsyncValue.data(user),
+    );
+  }
+
+  Future<void> loginWithGoogle() async {
+    state = const AsyncValue.loading();
+    final result = await authRepository.loginWithGoogle();
+    result.fold(
+      (failure) => state = AsyncValue.error(failure.message, StackTrace.current),
+      (_) {
+        // Redirection handled by Supabase OAuth. 
+        // We wait for onAuthStateChange to bring the user back.
+        // It's possible the user cancels, so we set a timeout or rely on GoRouter.
+        // For now, let's reset state to null to clear loading spinner.
+        state = const AsyncValue.data(null);
+      },
     );
   }
 

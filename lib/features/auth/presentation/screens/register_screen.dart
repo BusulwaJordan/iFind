@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/constants/app_strings.dart';
 import 'package:ifind/core/utils/validators.dart';
@@ -106,6 +108,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           },
         );
       }
+    }
+  }
+
+  Future<void> _handleGoogleSignUp() async {
+    await ref.read(authProvider.notifier).loginWithGoogle();
+    if (mounted) {
+      final authState = ref.read(authProvider);
+      authState.whenOrNull(
+        error: (error, _) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Google Sign-Up failed: ${error.toString()}'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        },
+      );
     }
   }
 
@@ -280,21 +299,91 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 const SizedBox(height: 24),
 
                                 // Register Button
-                                ElevatedButton(
-                                  onPressed: isLoading ? null : _handleRegister,
-                                  child: isLoading
-                                      ? const SizedBox(
-                                          height: 20,
-                                          width: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                              AppColors.white,
+                                SizedBox(
+                                  height: 56,
+                                  child: ElevatedButton(
+                                    onPressed: isLoading ? null : _handleRegister,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primaryGreen,
+                                      foregroundColor: Colors.white,
+                                      elevation: 6,
+                                      shadowColor: AppColors.primaryGreen.withValues(alpha: 0.4),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+                                    child: isLoading
+                                        ? const SizedBox(
+                                            height: 24,
+                                            width: 24,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                            ),
+                                          )
+                                        : Text(
+                                            'CREATE ACCOUNT',
+                                            style: GoogleFonts.outfit(
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 1.2,
                                             ),
                                           ),
-                                        )
-                                      : const Text(AppStrings.register),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Divider
+                                Row(
+                                  children: [
+                                    const Expanded(child: Divider()),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      child: Text(
+                                        'OR',
+                                        style: GoogleFonts.outfit(
+                                          color: Colors.grey[500],
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    const Expanded(child: Divider()),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Google Sign-Up Button
+                                SizedBox(
+                                  height: 56,
+                                  child: OutlinedButton(
+                                    onPressed: isLoading ? null : _handleGoogleSignUp,
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(color: Colors.grey[300]!, width: 1.5),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      backgroundColor: Colors.white,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        SvgPicture.network(
+                                          'https://www.svgrepo.com/show/475656/google-color.svg',
+                                          height: 22,
+                                          width: 22,
+                                          placeholderBuilder: (_) => const Icon(Icons.g_mobiledata, size: 22),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          'Sign up with Google',
+                                          style: GoogleFonts.outfit(
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.grey[800],
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(height: 16),
 

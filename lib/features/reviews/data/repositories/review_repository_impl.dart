@@ -88,9 +88,6 @@ class ReviewRepositoryImpl implements ReviewRepository {
 
       await _client.from('reviews').insert(data);
 
-      // Manually trigger rating update to ensure immediate consistency
-      await _businessRepository.updateBusinessRating(businessId);
-
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

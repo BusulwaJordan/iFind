@@ -88,6 +88,18 @@ class AuthRemoteDataSource {
     }
   }
 
+  /// Login with Google
+  Future<void> loginWithGoogle() async {
+    try {
+      await supabaseClient.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'io.supabase.ifind://login-callback/',
+      );
+    } catch (e) {
+      throw Exception('Google Sign-In failed: ${e.toString()}');
+    }
+  }
+
   /// Get current user
   Future<User?> getCurrentUser() async {
     try {
