@@ -72,11 +72,36 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             );
           },
           data: (_) async {
-            // Registration successful — mark onboarding complete and show confirmation
+            // Registration successful
             await ref.read(onboardingCompleteProvider.notifier).completeOnboarding();
             if (mounted) {
               final email = _emailController.text.trim();
-              context.go('/confirmation?email=${Uri.encodeComponent(email)}');
+              
+              // Show an unmistakable dialog instead of navigating immediately.
+              // This completely avoids any GoRouter race conditions and forces user attention.
+              await showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => AlertDialog(
+                  title: const Text('Registration Successful! 🎉'),
+                  content: Text(
+                      'Your account has been created successfully.\n\nA verification link has been sent to $email. Please check your email and verify your account before logging in.'),
+                  actions: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryGreen,
+                        foregroundColor: AppColors.white,
+                      ),
+                      onPressed: () {
+                        // Pop the dialog and then go to login
+                        Navigator.of(context).pop();
+                        context.go('/login');
+                      },
+                      child: const Text('Go to Login'),
+                    ),
+                  ],
+                ),
+              );
             }
           },
         );

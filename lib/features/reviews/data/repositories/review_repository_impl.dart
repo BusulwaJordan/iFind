@@ -17,7 +17,7 @@ class ReviewRepositoryImpl implements ReviewRepository {
     try {
       final response = await _client
           .from('reviews')
-          .select('*, users(full_name, avatar_url)')
+          .select('*, users(full_name)')
           .eq('business_id', businessId)
           .order('created_at', ascending: false);
 
