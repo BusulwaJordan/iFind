@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
-import 'package:ifind/features/business/presentation/screens/leads_dashboard.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -23,7 +22,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Settings', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text('Settings',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
       ),
       body: ListView(
         children: [
@@ -41,11 +41,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 CircleAvatar(
                   radius: 30,
                   backgroundColor: AppColors.primaryGreen,
-                  backgroundImage: user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
+                  backgroundImage: user?.avatarUrl != null
+                      ? NetworkImage(user!.avatarUrl!)
+                      : null,
                   child: user?.avatarUrl == null
                       ? Text(
                           user?.fullName[0] ?? 'U',
-                          style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold),
                         )
                       : null,
                 ),
@@ -56,7 +61,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     children: [
                       Text(
                         user?.fullName ?? 'Guest',
-                        style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: GoogleFonts.outfit(
+                            fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                       Text(
                         user?.email ?? '',
@@ -68,31 +74,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Edit Profile Coming Soon')));
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text('Edit Profile Coming Soon')));
                   },
                 ),
               ],
             ),
           ),
-          
-          if (user?.role.toString().contains('business') == true || true) ...[ // Force true for MVP testing
-             const SizedBox(height: 32),
-             const _SectionHeader(title: 'Business Center'),
-             _SettingsTile(
-               icon: Icons.dashboard_outlined,
-               title: 'Leads Dashboard',
-               subtitle: 'View nearby customer needs',
-               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LeadsDashboardScreen())),
-               trailing: Container(
-                 padding: const EdgeInsets.all(6),
-                 decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                 child: const Text('3', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-               ),
-             ),
+
+          if (user?.role.toString().contains('business') == true || true) ...[
+            // Force true for MVP testing
+            const SizedBox(height: 32),
+            const _SectionHeader(title: 'Business Center'),
+            _SettingsTile(
+              icon: Icons.dashboard_outlined,
+              title: 'Leads Dashboard',
+              subtitle: 'View nearby customer needs',
+              onTap: () {
+                // TODO: Migrate LeadsDashboard to GoRouter if needed
+                // For now, if it's not a main tab, we can push it
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Dashboard coming soon')));
+              },
+              trailing: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: const BoxDecoration(
+                    color: Colors.red, shape: BoxShape.circle),
+                child: const Text('3',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold)),
+              ),
+            ),
           ],
-          
+
           const SizedBox(height: 32),
-          
+
           const _SectionHeader(title: 'General'),
           _SettingsTile(
             icon: Icons.notifications_outlined,
@@ -117,7 +135,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             subtitle: 'English',
             onTap: () {},
           ),
-          
+
           const _SectionHeader(title: 'Support'),
           _SettingsTile(
             icon: Icons.help_outline,
@@ -131,11 +149,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             icon: Icons.policy_outlined,
             title: 'Privacy Policy',
             onTap: () async {
-               final uri = Uri.parse('https://ifind.ug/privacy');
-               if (await canLaunchUrl(uri)) launchUrl(uri);
+              final uri = Uri.parse('https://ifind.ug/privacy');
+              if (await canLaunchUrl(uri)) launchUrl(uri);
             },
           ),
-          
+
           const _SectionHeader(title: 'App Info'),
           FutureBuilder<PackageInfo>(
             future: PackageInfo.fromPlatform(),
@@ -147,7 +165,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
             },
           ),
-          
+
           const SizedBox(height: 32),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -208,7 +226,8 @@ class _SettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(icon, color: AppColors.darkText),
-      title: Text(title, style: GoogleFonts.outfit(fontWeight: FontWeight.w500)),
+      title:
+          Text(title, style: GoogleFonts.outfit(fontWeight: FontWeight.w500)),
       subtitle: subtitle != null ? Text(subtitle!) : null,
       trailing: trailing ?? const Icon(Icons.chevron_right, color: Colors.grey),
       onTap: onTap,

@@ -3,6 +3,7 @@ import 'package:ifind/core/errors/failures.dart';
 import 'package:ifind/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
 import 'package:ifind/features/auth/domain/repositories/auth_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
 
 /// Auth repository implementation
 /// Bridges domain layer with data layer
@@ -22,8 +23,10 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
       );
       return Right(user);
+    } on AuthException catch (e) {
+      return Left(AuthFailure(e.message));
     } catch (e) {
-      return Left(AuthFailure(e.toString()));
+      return Left(ServerFailure(e.toString()));
     }
   }
 
@@ -44,8 +47,10 @@ class AuthRepositoryImpl implements AuthRepository {
         phone: phone,
       );
       return Right(user);
+    } on AuthException catch (e) {
+      return Left(AuthFailure(e.message));
     } catch (e) {
-      return Left(AuthFailure(e.toString()));
+      return Left(ServerFailure(e.toString()));
     }
   }
 

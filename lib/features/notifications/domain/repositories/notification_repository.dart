@@ -8,4 +8,12 @@ abstract class NotificationRepository {
 
   /// Mark a notification as read
   Future<Either<Failure, void>> markAsRead(String notificationId);
+
+  /// Create a new notification
+  Future<Either<Failure, void>> createNotification({
+    required String businessId,
+    String? needId,
+    required String title,
+    required String body,
+  });
 }

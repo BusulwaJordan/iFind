@@ -1,67 +1,54 @@
-import 'package:equatable/equatable.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'business.freezed.dart';
+
 
 enum BusinessCategory {
   retail,
   service,
   food,
+  fashion,
+  electronics,
+  home,
+  beauty,
+  automotive,
+  health,
+  sports,
+  kids,
+  education,
   entertainment,
   arcade,
+  travel,
+  @JsonValue('real_estate')
+  realEstate,
+  pets,
+  finance,
   other,
 }
 
-class Business extends Equatable {
-  final String id;
-  final String ownerId;
-  final String name;
-  final String description;
-  final BusinessCategory category;
-  final String? subCategory;
-  final String? address;
-  final double latitude;
-  final double longitude;
-  final String? phone;
-  final String? website;
-  final String? email;
-  final String? logoUrl;
-  final String? coverImageUrl;
-  final bool isVerified;
-  final double rating;
-  final int reviewCount;
-  final double? distance; // Calculated distance from user
-  final DateTime createdAt;
 
-  const Business({
-    required this.id,
-    required this.ownerId,
-    required this.name,
-    required this.description,
-    required this.category,
-    this.subCategory,
-    this.address,
-    required this.latitude,
-    required this.longitude,
-    this.phone,
-    this.website,
-    this.email,
-    this.logoUrl,
-    this.coverImageUrl,
-    this.isVerified = false,
-    this.rating = 0.0,
-    this.reviewCount = 0,
-    this.distance,
-    required this.createdAt,
-  });
-
-  @override
-  List<Object?> get props => [
-        id,
-        ownerId,
-        name,
-        category,
-        latitude,
-        longitude,
-        isVerified,
-        rating,
-        distance,
-      ];
+@freezed
+class Business with _$Business {
+  const factory Business({
+    required String id,
+    required String ownerId,
+    required String name,
+    required String description,
+    required BusinessCategory category,
+    String? subCategory,
+    String? address,
+    required double latitude,
+    required double longitude,
+    String? phone,
+    String? website,
+    String? email,
+    String? logoUrl,
+    String? coverImageUrl,
+    @Default(false) bool isVerified,
+    @Default(0.0) double rating,
+    @Default(0) int reviewCount,
+    double? distance,
+    required DateTime createdAt,
+  }) = _Business;
 }
+

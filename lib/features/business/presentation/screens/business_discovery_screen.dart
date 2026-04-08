@@ -1,5 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
@@ -9,187 +11,503 @@ import 'package:ifind/core/widgets/empty_state_widget.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class BusinessDiscoveryScreen extends ConsumerWidget {
-  const BusinessDiscoveryScreen({super.key});
+  final BusinessCategory? initialCategory;
+  const BusinessDiscoveryScreen({super.key, this.initialCategory});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Set initial category if provided
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (initialCategory != null &&
+          ref.read(selectedCategoryProvider) == null) {
+        ref.read(selectedCategoryProvider.notifier).state = initialCategory;
+      }
+    });
+
     final businessesState = ref.watch(nearbyBusinessesProvider);
     final selectedCategory = ref.watch(selectedCategoryProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            floating: true,
-            pinned: true,
-            expandedHeight: 120,
-            backgroundColor: AppColors.background,
-            elevation: 0,
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
-              title: Text(
-                'Discover Local',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.darkText,
-                    ),
-              ),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      AppColors.primaryGreen.withValues(alpha: 0.05),
-                      AppColors.background,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            actions: [
-              _SearchButton(),
-              IconButton(
-                icon: const Icon(Icons.filter_list, color: AppColors.darkText),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Filters coming soon!')),
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
-            ],
-          ),
-          
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 60,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                itemCount: BusinessCategory.values.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: _CategoryChip(
-                        label: 'All',
-                        isSelected: selectedCategory == null,
-                        onSelected: (selected) {
-                          ref.read(selectedCategoryProvider.notifier).state = null;
-                        },
-                      ),
-                    );
-                  }
-                  final category = BusinessCategory.values[index - 1];
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: _CategoryChip(
-                      label: category.name.toUpperCase(),
-                      isSelected: selectedCategory == category,
-                      onSelected: (selected) {
-                        ref.read(selectedCategoryProvider.notifier).state = 
-                            selected ? category : null;
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          
-          businessesState.when(
-            data: (businesses) {
-              if (businesses.isEmpty) {
-                return const SliverFillRemaining(
-                  child: EmptyStateWidget(
-                    title: 'No shops found nearby',
-                    message: 'Try scanning a different category or arcade to see what\'s available.',
-                    icon: Icons.store_mall_directory_outlined,
-                  ),
-                );
-              }
-              return SliverPadding(
-                padding: const EdgeInsets.all(16),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final business = businesses[index];
-                      return BusinessCard(business: business)
-                        .animate()
-                        .fadeIn(delay: (index * 100).ms)
-                        .slideY(begin: 0.1);
-                    },
-                    childCount: businesses.length,
-                  ),
-                ),
-              );
-            },
-            loading: () => const SliverFillRemaining(
-              child: LoadingWidget(),
-            ),
-            error: (error, stack) => SliverFillRemaining(
-              child: Center(
-                child: Text('Error: $error'), // Should not be reached due to fallback
-              ),
-            ),
-          ),
-        ],
+      backgroundColor: const Color(0xFFF8FAFB),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(nearbyBusinessesProvider.notifier).loadBusinesses();
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            _buildAppBar(context, ref),
+            _buildCategorySection(ref, selectedCategory),
+            _buildNearMeHeader(),
+            _buildBusinessList(businessesState),
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          ],
+        ),
       ),
     );
   }
-} // End of BusinessDiscoveryScreen
 
-// Helper widgets and classes follow below
+  Widget _buildAppBar(BuildContext context, WidgetRef ref) {
+    return SliverAppBar(
+      floating: true,
+      pinned: true,
+      expandedHeight: 180,
+      backgroundColor: Colors.white,
+      elevation: 0,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.deepGreen, AppColors.primaryGreen],
+            ),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                top: -60,
+                right: -60,
+                child: Container(
+                  width: 240,
+                  height: 240,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Discover Businesses',
+                      style: GoogleFonts.outfit(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    GestureDetector(
+                      onTap: () => showSearch(
+                        context: context,
+                        delegate: BusinessSearchDelegate(ref),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.search_rounded, color: Colors.white),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Search shops or products...',
+                                  style: GoogleFonts.outfit(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 8.0),
+          child: CircleAvatar(
+            backgroundColor: Colors.white.withValues(alpha: 0.2),
+            child: IconButton(
+              icon: const Icon(Icons.location_on_rounded, color: Colors.white),
+              onPressed: () {},
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
+  Widget _buildCategorySection(
+      WidgetRef ref, BusinessCategory? selectedCategory) {
+    return SliverToBoxAdapter(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+            child: Text(
+              'Categories',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.darkText,
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 100,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: BusinessCategory.values.length + 1,
+              itemBuilder: (context, index) {
+                final isAll = index == 0;
+                final category =
+                    isAll ? null : BusinessCategory.values[index - 1];
+                final isSelected = selectedCategory == category;
 
-class _SearchButton extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return IconButton(
-      icon: const Icon(Icons.search, color: AppColors.darkText),
-      onPressed: () {
-        showSearch(
-          context: context,
-          delegate: BusinessSearchDelegate(ref),
+                return Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: _CategoryBall(
+                    label: isAll ? 'All' : category!.name,
+                    isSelected: isSelected,
+                    onTap: () {
+                      ref.read(selectedCategoryProvider.notifier).state =
+                          category;
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ).animate().fadeIn(duration: 400.ms),
+    );
+  }
+
+  Widget _buildNearMeHeader() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 32, 20, 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Nearby Shops',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.darkText,
+              ),
+            ),
+            Text(
+              'See All',
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primaryGreen,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBusinessList(AsyncValue<List<Business>> state) {
+    return state.when(
+      data: (businesses) {
+        if (businesses.isEmpty) {
+          return const SliverFillRemaining(
+            child: EmptyStateWidget(
+              title: 'Nothing found',
+              message: 'Try a different category or broader search.',
+              icon: Icons.search_off_rounded,
+            ),
+          );
+        }
+        return SliverPadding(
+          padding: const EdgeInsets.all(8),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 0.75,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                return _BusinessGridTile(business: businesses[index])
+                    .animate()
+                    .fadeIn(delay: (index * 30).ms, duration: 300.ms)
+                    .scale(begin: const Offset(0.9, 0.9));
+              },
+              childCount: businesses.length,
+            ),
+          ),
         );
       },
+      loading: () => const SliverFillRemaining(child: LoadingWidget()),
+      error: (e, s) =>
+          SliverFillRemaining(child: Center(child: Text('Error: $e'))),
+    );
+  }
+}
+
+class _CategoryBall extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _CategoryBall({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: isSelected ? AppColors.primaryGreen : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          elevation: isSelected ? 8 : 2,
+          shadowColor: isSelected ? AppColors.primaryGreen.withValues(alpha: 0.4) : Colors.black12,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              width: 64,
+              height: 64,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: isSelected 
+                  ? null 
+                  : Border.all(color: AppColors.divider.withValues(alpha: 0.5)),
+              ),
+              child: Icon(
+                _getCategoryIcon(label),
+                size: 30,
+                color: isSelected ? Colors.white : AppColors.primaryGreen,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: 72,
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.outfit(
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              color: isSelected ? AppColors.primaryGreen : AppColors.darkText,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BusinessGridTile extends StatelessWidget {
+  final Business business;
+  const _BusinessGridTile({required this.business});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => BusinessDetailScreen(business: business)),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.divider.withValues(alpha: 0.5)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              flex: 4,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+                child: Stack(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        image: business.logoUrl != null
+                          ? DecorationImage(
+                              image: NetworkImage(business.logoUrl!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                        color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                      ),
+                      alignment: Alignment.center,
+                      child: business.logoUrl == null
+                        ? Text(
+                            business.name.substring(0, 1).toUpperCase(),
+                            style: GoogleFonts.outfit(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primaryGreen,
+                            ),
+                          )
+                        : null,
+                    ),
+                    if (business.isVerified)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.verified_rounded,
+                            color: AppColors.primaryGreen,
+                            size: 14,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 3,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Text(
+                      business.name,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: AppColors.darkText,
+                        height: 1.1,
+                      ),
+                    ),
+                    Text(
+                      business.description,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.outfit(
+                        fontSize: 10,
+                        color: AppColors.darkText.withValues(alpha: 0.6),
+                        height: 1.1,
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
+                        const SizedBox(width: 2),
+                        Text(
+                          business.rating.toStringAsFixed(1),
+                          style: GoogleFonts.outfit(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.darkText.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (business.distance != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '${business.distance!.toStringAsFixed(1)}km',
+                          style: GoogleFonts.outfit(
+                            fontSize: 10,
+                            color: AppColors.primaryGreen,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
 class BusinessSearchDelegate extends SearchDelegate {
   final WidgetRef ref;
-
   BusinessSearchDelegate(this.ref);
 
   @override
-  List<Widget>? buildActions(BuildContext context) {
-    return [
-      IconButton(
-        icon: const Icon(Icons.clear),
-        onPressed: () {
-          query = '';
-          ref.read(searchQueryProvider.notifier).state = '';
-        },
-      ),
-    ];
-  }
-
-  @override
-  Widget? buildLeading(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.arrow_back),
-      onPressed: () {
-        close(context, null);
-      },
+  ThemeData appBarTheme(BuildContext context) {
+    return Theme.of(context).copyWith(
+      appBarTheme:
+          const AppBarTheme(backgroundColor: Colors.white, elevation: 0),
+      inputDecorationTheme:
+          const InputDecorationTheme(border: InputBorder.none),
     );
   }
 
   @override
+  List<Widget>? buildActions(BuildContext context) => [
+        IconButton(
+            icon: const Icon(Icons.close_rounded), onPressed: () => query = ''),
+      ];
+
+  @override
+  Widget? buildLeading(BuildContext context) => IconButton(
+        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+        onPressed: () => close(context, null),
+      );
+
+  @override
   Widget buildResults(BuildContext context) {
-    // Update provider and close search to show results in main screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(searchQueryProvider.notifier).state = query;
       close(context, null);
@@ -198,242 +516,56 @@ class BusinessSearchDelegate extends SearchDelegate {
   }
 
   @override
-  Widget buildSuggestions(BuildContext context) {
-    return const Center(child: Text('Search for businesses...'));
-  }
+  Widget buildSuggestions(BuildContext context) => Container(
+        color: Colors.white,
+        child: Center(
+          child: Text('Search businesses or items...',
+              style: GoogleFonts.outfit(color: Colors.grey)),
+        ),
+      );
 }
 
-class _CategoryChip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final ValueChanged<bool> onSelected;
-
-  const _CategoryChip({
-    required this.label,
-    required this.isSelected,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return FilterChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? Colors.white : AppColors.darkText,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        ),
-      ),
-      selected: isSelected,
-      onSelected: onSelected,
-      backgroundColor: Colors.white,
-      selectedColor: AppColors.primaryGreen,
-      checkmarkColor: Colors.white,
-      elevation: 0,
-      pressElevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: isSelected ? AppColors.primaryGreen : Colors.grey.withValues(alpha: 0.2),
-        ),
-      ),
-    );
-  }
-}
-
-class BusinessCard extends StatelessWidget {
-  final Business business;
-
-  const BusinessCard({super.key, required this.business});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BusinessDetailScreen(business: business),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 20),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Premium Cover Image Stack
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                  child: SizedBox(
-                    height: 180,
-                    width: double.infinity,
-                    child: business.coverImageUrl != null
-                        ? Image.network(
-                            business.coverImageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              color: AppColors.lightGreen.withValues(alpha: 0.2),
-                              child: const Icon(Icons.store, size: 48, color: AppColors.primaryGreen),
-                            ),
-                          )
-                        : Container(
-                            color: AppColors.lightGreen.withValues(alpha: 0.2),
-                            child: const Center(
-                              child: Icon(Icons.store, size: 48, color: AppColors.primaryGreen),
-                            ),
-                          ),
-                  ),
-                ),
-                if (business.isVerified)
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.verified, size: 16, color: Colors.blue),
-                          SizedBox(width: 4),
-                          Text(
-                            'Verified',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                // Rating Badge
-                Positioned(
-                  bottom: 12,
-                  left: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.star, size: 14, color: Colors.amber),
-                        const SizedBox(width: 4),
-                        Text(
-                          business.rating.toStringAsFixed(1),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '(${business.reviewCount})',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            
-            // Details
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          business.name,
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    business.description,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.lightText,
-                          height: 1.4,
-                        ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on_outlined, size: 18, color: AppColors.primaryGreen),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          business.address ?? 'No address',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.darkText,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (business.distance != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.primaryGreen.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '${business.distance!.toStringAsFixed(1)} km',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.primaryGreen,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+IconData _getCategoryIcon(String label) {
+  switch (label.toLowerCase()) {
+    case 'all':
+      return Icons.grid_view_rounded;
+    case 'retail':
+      return Icons.shopping_bag_rounded;
+    case 'service':
+      return Icons.build_rounded;
+    case 'food':
+      return Icons.restaurant_rounded;
+    case 'fashion':
+      return Icons.checkroom_rounded;
+    case 'electronics':
+      return Icons.devices_rounded;
+    case 'home':
+      return Icons.home_rounded;
+    case 'beauty':
+      return Icons.face_retouching_natural_rounded;
+    case 'automotive':
+      return Icons.directions_car_rounded;
+    case 'health':
+      return Icons.medical_services_rounded;
+    case 'sports':
+      return Icons.sports_basketball_rounded;
+    case 'kids':
+      return Icons.child_care_rounded;
+    case 'education':
+      return Icons.school_rounded;
+    case 'entertainment':
+      return Icons.movie_rounded;
+    case 'arcade':
+      return Icons.games_rounded;
+    case 'travel':
+      return Icons.flight_rounded;
+    case 'realestate':
+      return Icons.apartment_rounded;
+    case 'pets':
+      return Icons.pets_rounded;
+    case 'finance':
+      return Icons.account_balance_rounded;
+    default:
+      return Icons.category_rounded;
   }
 }

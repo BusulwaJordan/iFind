@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/constants/app_strings.dart';
 import 'package:ifind/core/utils/validators.dart';
@@ -71,14 +72,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             );
           },
           data: (_) async {
-            // Registration successful - mark onboarding complete and go to confirmation screen
+            // Registration successful — mark onboarding complete and show confirmation
             await ref.read(onboardingCompleteProvider.notifier).completeOnboarding();
             if (mounted) {
-              Navigator.of(context).pushNamedAndRemoveUntil(
-                '/confirmation',
-                (route) => false,
-                arguments: _emailController.text.trim(),
-              );
+              final email = _emailController.text.trim();
+              context.go('/confirmation?email=${Uri.encodeComponent(email)}');
             }
           },
         );
@@ -288,12 +286,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                     TextButton(
                                       onPressed: isLoading
                                           ? null
-                                          : () {
-                                              Navigator.pushReplacementNamed(
-                                                context,
-                                                '/login',
-                                              );
-                                            },
+                                          : () => context.go('/login'),
                                       child: const Text(AppStrings.login),
                                     ),
                                   ],

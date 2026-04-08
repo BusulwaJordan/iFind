@@ -1,9 +1,0 @@
-Analyzing iFind...                                              
-
-warning - The value of the local variable 'session' isn't used - lib\features\auth\presentation\providers\auth_provider.dart:118:15 - unused_local_variable
-   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:152:47 - prefer_const_constructors
-   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:201:41 - prefer_const_constructors
-   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:222:46 - prefer_const_constructors
-   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\auth\presentation\screens\register_screen.dart:183:35 - deprecated_member_use
-   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\business\presentation\screens\create_business_screen.dart:161:15 - deprecated_member_use
-

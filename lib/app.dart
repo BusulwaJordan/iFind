@@ -2,13 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/theme/app_theme.dart';
-import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
-import 'package:ifind/features/auth/presentation/screens/email_confirmation_screen.dart';
-import 'package:ifind/features/onboarding/presentation/screens/onboarding_screen.dart';
-import 'package:ifind/features/auth/presentation/screens/login_screen.dart';
-import 'package:ifind/features/auth/presentation/screens/register_screen.dart';
-import 'package:ifind/features/business/presentation/screens/create_business_screen.dart';
-import 'package:ifind/core/widgets/main_scaffold.dart';
+import 'package:ifind/core/router/app_router.dart';
 
 /// Main App Entry Point
 class MyApp extends ConsumerWidget {
@@ -16,48 +10,18 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return MaterialApp(
+    final goRouter = ref.watch(routerProvider);
+
+    return MaterialApp.router(
       title: 'iFind',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-      home: const AuthWrapper(),
-      routes: {
-        '/onboarding': (context) => const OnboardingScreen(),
-        '/login': (context) => const LoginScreen(),
-        '/register': (context) => const RegisterScreen(),
-        '/confirmation': (context) {
-          final email = ModalRoute.of(context)!.settings.arguments as String;
-          return EmailConfirmationScreen(email: email);
-        },
-        '/create-business': (context) => const CreateBusinessScreen(),
-      },
+      routerConfig: goRouter,
     );
   }
 }
 
-/// Auth Wrapper - Routes to appropriate screen based on auth state
-class AuthWrapper extends ConsumerWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authProvider);
-    final onboardingComplete = ref.watch(onboardingCompleteProvider);
-
-    return authState.when(
-      data: (user) {
-        if (user == null) {
-          return onboardingComplete ? const LoginScreen() : const OnboardingScreen();
-        }
-        return const MainScaffold();
-      },
-      loading: () => const LoadingScreen(),
-      error: (error, stack) => ErrorScreen(message: error.toString()),
-    );
-  }
-}
-
-/// Loading Screen
+/// Splash / Loading Screen shown while auth resolves
 class LoadingScreen extends StatelessWidget {
   const LoadingScreen({super.key});
 
@@ -75,9 +39,20 @@ class LoadingScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset('assets/images/logo.png', height: 80, errorBuilder: (_, __, ___) => const Icon(Icons.rocket_launch_rounded, size: 64, color: AppColors.primaryGreen)),
+                  Image.asset(
+                    'assets/images/logo.png',
+                    height: 80,
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.rocket_launch_rounded,
+                      size: 64,
+                      color: AppColors.primaryGreen,
+                    ),
+                  ),
                   const SizedBox(height: 24),
-                  const CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(AppColors.primaryGreen)),
+                  const CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation(AppColors.primaryGreen),
+                  ),
                 ],
               ),
             );
@@ -88,7 +63,7 @@ class LoadingScreen extends StatelessWidget {
   }
 }
 
-/// Error Screen
+/// Full-screen error shown when the auth stream itself fails
 class ErrorScreen extends StatelessWidget {
   final String message;
 
@@ -110,9 +85,15 @@ class ErrorScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Error: $message',
+                'Something went wrong: $message',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Retry'),
               ),
             ],
           ),
@@ -121,5 +102,3 @@ class ErrorScreen extends StatelessWidget {
     );
   }
 }
-
-// Old HomeScreen removed. Imported from features/home/presentation/screens/home_screen.dart

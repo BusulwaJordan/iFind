@@ -1,37 +1,45 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:ifind/features/notifications/domain/entities/notification.dart';
 
-class NotificationModel extends AppNotification {
-  const NotificationModel({
-    required super.id,
-    required super.businessId,
-    super.needId,
-    required super.title,
-    required super.body,
-    required super.isRead,
-    required super.createdAt,
-  });
+part 'notification_model.freezed.dart';
+part 'notification_model.g.dart';
 
-  factory NotificationModel.fromJson(Map<String, dynamic> json) {
-    return NotificationModel(
-      id: json['id'] as String,
-      businessId: json['business_id'] as String,
-      needId: json['need_id'] as String?,
-      title: json['title'] as String,
-      body: json['body'] as String,
-      isRead: json['is_read'] as bool? ?? false,
-      createdAt: DateTime.parse(json['created_at'] as String),
-    );
-  }
+@freezed
+@freezed
+class NotificationModel with _$NotificationModel {
+  const factory NotificationModel({
+    required String id,
+    @JsonKey(name: 'business_id') required String businessId,
+    @JsonKey(name: 'need_id') String? needId,
+    required String title,
+    required String body,
+    @JsonKey(name: 'is_read') @Default(false) bool isRead,
+    @JsonKey(name: 'created_at') required DateTime createdAt,
+  }) = _NotificationModel;
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'business_id': businessId,
-      'need_id': needId,
-      'title': title,
-      'body': body,
-      'is_read': isRead,
-      'created_at': createdAt.toIso8601String(),
-    };
-  }
+  factory NotificationModel.fromJson(Map<String, dynamic> json) =>
+      _$NotificationModelFromJson(json);
+
+  const NotificationModel._();
+
+  AppNotification toEntity() => AppNotification(
+        id: id,
+        businessId: businessId,
+        needId: needId,
+        title: title,
+        body: body,
+        isRead: isRead,
+        createdAt: createdAt,
+      );
+
+  factory NotificationModel.fromEntity(AppNotification notification) =>
+      NotificationModel(
+        id: notification.id,
+        businessId: notification.businessId,
+        needId: notification.needId,
+        title: notification.title,
+        body: notification.body,
+        isRead: notification.isRead,
+        createdAt: notification.createdAt,
+      );
 }

@@ -6,8 +6,9 @@ class NeedsRepository {
 
   NeedsRepository(this._client);
 
-  Future<void> createNeed(Need need) async {
-    await _client.from('needs').insert(need.toJson());
+  Future<String> createNeed(Need need) async {
+    final response = await _client.from('needs').insert(need.toJson()).select('id').single();
+    return response['id'] as String;
   }
 
   Stream<List<Need>> watchMyNeeds(String userId) {
@@ -35,5 +36,9 @@ class NeedsRepository {
       // TODO: Implement Haversine distance check here
       return true; // Return all for now to verify UI
     }).toList();
+  }
+
+  Future<void> deleteNeed(String needId) async {
+    await _client.from('needs').delete().eq('id', needId);
   }
 }

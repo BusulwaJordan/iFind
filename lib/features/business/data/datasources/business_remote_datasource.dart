@@ -9,17 +9,13 @@ class BusinessRemoteDataSource {
   BusinessRemoteDataSource({required this.supabaseClient});
 
   /// Get nearby businesses using PostGIS
-  Future<List<BusinessModel>> getNearbyBusinesses({
+  Future<List<Business>> getNearbyBusinesses({
     required double latitude,
     required double longitude,
     required double radiusKm,
     BusinessCategory? category,
   }) async {
     try {
-      // Using Supabase RPC call to a stored procedure for geospatial query
-      // Note: This requires the 'nearby_businesses' function to be created in Supabase
-      // created in schema.sql
-      
       final params = {
         'lat': latitude,
         'long': longitude,
@@ -32,14 +28,16 @@ class BusinessRemoteDataSource {
         params: params,
       );
 
-      return response.map((json) => BusinessModel.fromJson(json)).toList();
+      return response
+          .map((json) => BusinessModel.fromJson(json).toEntity())
+          .toList();
     } catch (e) {
       throw Exception('Failed to fetch nearby businesses: $e');
     }
   }
 
   /// Create a new business
-  Future<BusinessModel> createBusiness(Map<String, dynamic> businessData) async {
+  Future<Business> createBusiness(Map<String, dynamic> businessData) async {
     try {
       final response = await supabaseClient
           .from(ApiConstants.businessesTable)
@@ -47,14 +45,14 @@ class BusinessRemoteDataSource {
           .select()
           .single();
 
-      return BusinessModel.fromJson(response);
+      return BusinessModel.fromJson(response).toEntity();
     } catch (e) {
       throw Exception('Failed to create business: $e');
     }
   }
 
   /// Get business by ID
-  Future<BusinessModel> getBusinessById(String id) async {
+  Future<Business> getBusinessById(String id) async {
     try {
       final response = await supabaseClient
           .from(ApiConstants.businessesTable)
@@ -62,28 +60,30 @@ class BusinessRemoteDataSource {
           .eq('id', id)
           .single();
 
-      return BusinessModel.fromJson(response);
+      return BusinessModel.fromJson(response).toEntity();
     } catch (e) {
       throw Exception('Failed to fetch business: $e');
     }
   }
 
   /// Get businesses owned by user
-  Future<List<BusinessModel>> getMyBusinesses(String ownerId) async {
+  Future<List<Business>> getMyBusinesses(String ownerId) async {
     try {
       final response = await supabaseClient
           .from(ApiConstants.businessesTable)
           .select()
           .eq('owner_id', ownerId);
 
-      return (response as List).map((json) => BusinessModel.fromJson(json)).toList();
+      return (response as List)
+          .map((json) => BusinessModel.fromJson(json).toEntity())
+          .toList();
     } catch (e) {
       throw Exception('Failed to fetch my businesses: $e');
     }
   }
 
   /// Update business
-  Future<BusinessModel> updateBusiness({
+  Future<Business> updateBusiness({
     required String businessId,
     required Map<String, dynamic> updates,
   }) async {
@@ -95,7 +95,7 @@ class BusinessRemoteDataSource {
           .select()
           .single();
 
-      return BusinessModel.fromJson(response);
+      return BusinessModel.fromJson(response).toEntity();
     } catch (e) {
       throw Exception('Failed to update business: $e');
     }
@@ -111,5 +111,26 @@ class BusinessRemoteDataSource {
     } catch (e) {
       throw Exception('Failed to delete business: $e');
     }
+  }
+
+  /// Stream business by ID
+  Stream<Business?> watchBusiness(String id) {
+    return supabaseClient
+        .from(ApiConstants.businessesTable)
+        .stream(primaryKey: ['id'])
+        .eq('id', id)
+        .map((data) =>
+            data.isEmpty ? null : BusinessModel.fromJson(data.first).toEntity());
+  }
+
+  /// Stream businesses owned by user
+  Stream<List<Business>> watchMyBusinesses(String ownerId) {
+    return supabaseClient
+        .from(ApiConstants.businessesTable)
+        .stream(primaryKey: ['id'])
+        .eq('owner_id', ownerId)
+        .map((data) => data
+            .map((json) => BusinessModel.fromJson(json).toEntity())
+            .toList());
   }
 }

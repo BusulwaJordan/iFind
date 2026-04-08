@@ -50,4 +50,13 @@ abstract class BusinessRepository {
 
   /// Delete business
   Future<Either<Failure, void>> deleteBusiness(String id);
+
+  /// Stream business updates
+  Stream<Business?> watchBusiness(String id);
+
+  /// Stream user's businesses updates
+  Stream<List<Business>> watchMyBusinesses(String ownerId);
+
+  /// Update business rating metadata
+  Future<Either<Failure, void>> updateBusinessRating(String businessId);
 }

@@ -4,5 +4,10 @@ import 'package:ifind/features/reviews/domain/entities/review.dart';
 
 abstract class ReviewRepository {
   Future<Either<Failure, List<Review>>> getReviews(String businessId);
-  Future<Either<Failure, Review>> addReview(Review review);
+  Stream<Either<Failure, List<Review>>> streamReviews(String businessId);
+  Future<Either<Failure, void>> addReview({
+    required String businessId,
+    required int rating,
+    String? comment,
+  });
 }

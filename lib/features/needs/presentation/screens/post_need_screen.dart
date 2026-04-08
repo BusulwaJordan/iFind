@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/widgets/loading_widget.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
-import 'package:ifind/features/business/presentation/screens/business_details_screen.dart';
 import 'package:ifind/features/needs/presentation/providers/need_provider.dart';
 
 class PostNeedScreen extends ConsumerStatefulWidget {
@@ -48,14 +48,16 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
     });
   }
 
-  void _analyze({bool silent = false}) async { // Modified signature
+  void _analyze({bool silent = false}) async {
+    // Modified signature
     if (_textController.text.trim().isEmpty) return;
-    
+
     // Unfocus keyboard
-    if (!silent) { // Conditional unfocus
+    if (!silent) {
+      // Conditional unfocus
       FocusScope.of(context).unfocus();
     }
-    
+
     await ref.read(postNeedProvider.notifier).analyzeText(_textController.text);
     if (!mounted) return;
 
@@ -73,13 +75,13 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
     if (user == null) return;
 
     final success = await ref.read(postNeedProvider.notifier).submitNeed(
-      userId: user.id,
-      title: _textController.text,
-      description: _descController.text,
-      category: _analysisResult?['category'] ?? 'General',
-      lat: 0.3476, // Mock location for MVP
-      long: 32.5825,
-    );
+          userId: user.id,
+          title: _textController.text,
+          description: _descController.text,
+          category: _analysisResult?['category'] ?? 'General',
+          lat: 0.3476, // Mock location for MVP
+          long: 32.5825,
+        );
 
     if (success && mounted) {
       // Show success animation or dialog
@@ -93,11 +95,12 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(postNeedProvider);
-    
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('Post a Need', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text('Post a Need',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
@@ -109,7 +112,8 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
           children: [
             Text(
               'What do you need?',
-              style: GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold),
+              style:
+                  GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold),
             ).animate().fadeIn().slideY(begin: 0.2),
             const SizedBox(height: 8),
             Text(
@@ -117,14 +121,15 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
               style: GoogleFonts.outfit(color: Colors.grey[600]),
             ).animate().fadeIn().slideY(begin: 0.2, delay: 100.ms),
             const SizedBox(height: 32),
-            
+
             // Input Area
             TextField(
               controller: _textController,
               maxLines: 3,
               style: GoogleFonts.outfit(fontSize: 18),
               decoration: InputDecoration(
-                hintText: 'e.g. "I need a chocolate birthday cake for tomorrow"',
+                hintText:
+                    'e.g. "I need a chocolate birthday cake for tomorrow"',
                 filled: true,
                 fillColor: Colors.grey[100],
                 border: OutlineInputBorder(
@@ -134,9 +139,9 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
                 contentPadding: const EdgeInsets.all(20),
               ),
             ).animate().fadeIn().scale(delay: 200.ms),
-            
+
             const SizedBox(height: 24),
-            
+
             // Analyze Button
             if (!_hasAnalyzed)
               SizedBox(
@@ -145,7 +150,8 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
                   onPressed: state.isAnalyzing ? null : _analyze,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
                   ),
                   child: state.isAnalyzing
                       ? const LoadingWidget(size: 24)
@@ -153,11 +159,10 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             const Icon(Icons.auto_awesome, color: Colors.amber),
-                            SizedBox(width: 8),
-                            Text(
-                              'Find Best Match', 
-                              style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold)
-                            ),
+                            const SizedBox(width: 8),
+                            Text('Find Best Match',
+                                style: GoogleFonts.outfit(
+                                    fontSize: 16, fontWeight: FontWeight.bold)),
                           ],
                         ),
                 ),
@@ -166,12 +171,12 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
             // AI Result Area
             if (_hasAnalyzed && _analysisResult != null) ...[
               _buildAnalysisResult(context, state.isSubmitting),
-              
               if (state.matchingBusinesses.isNotEmpty) ...[
                 const SizedBox(height: 32),
                 Text(
                   'Matching Businesses Nearby',
-                  style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.outfit(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                 ).animate().fadeIn(delay: 500.ms),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -206,7 +211,8 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
           decoration: BoxDecoration(
             color: AppColors.primaryGreen.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.3)),
+            border: Border.all(
+                color: AppColors.primaryGreen.withValues(alpha: 0.3)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,12 +223,15 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
                   const SizedBox(width: 8),
                   Text(
                     'AI Analysis Complete',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.primaryGreen),
+                    style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryGreen),
                   ),
                 ],
               ),
               const Divider(height: 24),
-              _ResultRow(label: 'Category', value: _analysisResult!['category']),
+              _ResultRow(
+                  label: 'Category', value: _analysisResult!['category']),
               const SizedBox(height: 8),
               _ResultRow(label: 'Urgency', value: _analysisResult!['urgency']),
               const SizedBox(height: 16),
@@ -240,34 +249,34 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
             ],
           ),
         ).animate().fadeIn().slideY(begin: 0.2),
-        
         const SizedBox(height: 24),
-        
         TextField(
           controller: _descController,
           decoration: InputDecoration(
             labelText: 'Add more details (Optional)',
             filled: true,
             fillColor: Colors.grey[50],
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none),
           ),
         ).animate().fadeIn(delay: 200.ms),
-        
         const SizedBox(height: 24),
-        
         SizedBox(
           height: 56,
           child: ElevatedButton(
             onPressed: isSubmitting ? null : _submit,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryGreen,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
             ),
             child: isSubmitting
                 ? const LoadingWidget(size: 24)
                 : Text(
                     'Broadcast Need',
-                    style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.outfit(
+                        fontSize: 16, fontWeight: FontWeight.bold),
                   ),
           ),
         ).animate().fadeIn(delay: 400.ms),
@@ -300,12 +309,7 @@ class _MatchingBusinessCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => BusinessDetailScreen(business: business)),
-        );
-      },
+      onTap: () => context.push('/business-details', extra: business),
       child: Container(
         width: 160,
         decoration: BoxDecoration(
@@ -324,7 +328,8 @@ class _MatchingBusinessCard extends StatelessWidget {
           children: [
             Expanded(
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
                 child: Image.network(
                   business.coverImageUrl ?? 'https://via.placeholder.com/150',
                   fit: BoxFit.cover,
@@ -353,7 +358,8 @@ class _MatchingBusinessCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         business.rating.toString(),
-                        style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey[600]),
+                        style: GoogleFonts.outfit(
+                            fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -383,12 +389,14 @@ class _SuccessDialog extends StatelessWidget {
                 color: AppColors.primaryGreen.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.send_rounded, color: AppColors.primaryGreen, size: 48),
+              child: const Icon(Icons.send_rounded,
+                  color: AppColors.primaryGreen, size: 48),
             ).animate().scale().shake(delay: 200.ms),
             const SizedBox(height: 24),
             Text(
               'Need Broadcasted!',
-              style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
+              style:
+                  GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
@@ -403,12 +411,13 @@ class _SuccessDialog extends StatelessWidget {
               height: 48,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.of(context).pop(); // Close dialog
-                  Navigator.of(context).pop(); // Return to home
+                  context.pop(); // Close success dialog
+                  context.pop(); // Return to home
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.darkText,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 child: const Text('Great!'),
               ),

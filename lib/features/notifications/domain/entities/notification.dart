@@ -1,32 +1,16 @@
-import 'package:equatable/equatable.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-class AppNotification extends Equatable {
-  final String id;
-  final String businessId;
-  final String? needId;
-  final String title;
-  final String body;
-  final bool isRead;
-  final DateTime createdAt;
+part 'notification.freezed.dart';
 
-  const AppNotification({
-    required this.id,
-    required this.businessId,
-    this.needId,
-    required this.title,
-    required this.body,
-    required this.isRead,
-    required this.createdAt,
-  });
-
-  @override
-  List<Object?> get props => [
-        id,
-        businessId,
-        needId,
-        title,
-        body,
-        isRead,
-        createdAt,
-      ];
+@freezed
+class AppNotification with _$AppNotification {
+  const factory AppNotification({
+    required String id,
+    required String businessId,
+    String? needId,
+    required String title,
+    required String body,
+    @Default(false) bool isRead,
+    required DateTime createdAt,
+  }) = _AppNotification;
 }

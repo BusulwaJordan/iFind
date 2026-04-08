@@ -12,7 +12,7 @@ class AuthRemoteDataSource {
   AuthRemoteDataSource({required this.supabaseClient});
 
   /// Login with email and password
-  Future<UserModel> login({
+  Future<User> login({
     required String email,
     required String password,
   }) async {
@@ -26,18 +26,17 @@ class AuthRemoteDataSource {
         throw Exception('Login failed: No user returned');
       }
 
-      return await _mapSupabaseUserToModel(response.user!);
-    } on AuthException catch (e) {
-      // Return specific Supabase error message (e.g. "Email not confirmed")
-      throw Exception(e.message);
+      final model = await _mapSupabaseUserToModel(response.user!);
+      return model.toEntity();
+    } on AuthException {
+      rethrow;
     } catch (e) {
       throw Exception('Login failed: ${e.toString()}');
     }
   }
 
-
   /// Register new user
-  Future<UserModel> register({
+  Future<User> register({
     required String email,
     required String password,
     required String fullName,
@@ -52,7 +51,7 @@ class AuthRemoteDataSource {
         emailRedirectTo: 'ifind://auth/verify', // Deep link for mobile
         data: {
           'full_name': fullName,
-          'role': _roleToString(role),
+          'role': role.name, // Simplified role to string
           'phone': phone,
         },
       );
@@ -62,9 +61,9 @@ class AuthRemoteDataSource {
       }
 
       final now = DateTime.now();
-      
-      // Return user model based on input (profile creation handled by DB trigger)
-      return UserModel(
+
+      // Return user entity directly
+      return User(
         id: response.user!.id,
         email: email,
         fullName: fullName,
@@ -73,10 +72,8 @@ class AuthRemoteDataSource {
         createdAt: now,
         updatedAt: now,
       );
-
-
-    } on AuthException catch (e) {
-      throw Exception(e.message);
+    } on AuthException {
+      rethrow;
     } catch (e) {
       throw Exception('Registration failed: ${e.toString()}');
     }
@@ -92,19 +89,20 @@ class AuthRemoteDataSource {
   }
 
   /// Get current user
-  Future<UserModel?> getCurrentUser() async {
+  Future<User?> getCurrentUser() async {
     try {
       final currentUser = supabaseClient.auth.currentUser;
       if (currentUser == null) return null;
 
-      return await _mapSupabaseUserToModel(currentUser);
+      final model = await _mapSupabaseUserToModel(currentUser);
+      return model.toEntity();
     } catch (e) {
       return null;
     }
   }
 
   /// Get user by ID
-  Future<UserModel> getUserById(String id) async {
+  Future<User> getUserById(String id) async {
     try {
       final response = await supabaseClient
           .from(ApiConstants.usersTable)
@@ -112,14 +110,15 @@ class AuthRemoteDataSource {
           .eq('id', id)
           .single();
 
-      return UserModel.fromJson(response);
+      final model = UserModel.fromJson(response);
+      return model.toEntity();
     } catch (e) {
       throw Exception('Failed to fetch user: $e');
     }
   }
 
   /// Update user profile
-  Future<UserModel> updateProfile({
+  Future<User> updateProfile({
     required String userId,
     String? fullName,
     String? phone,
@@ -138,20 +137,22 @@ class AuthRemoteDataSource {
           .select()
           .single();
 
-      return UserModel.fromJson(response);
+      final model = UserModel.fromJson(response);
+      return model.toEntity();
     } catch (e) {
       throw Exception('Profile update failed: ${e.toString()}');
     }
   }
 
   /// Listen to auth state changes
-  Stream<UserModel?> get authStateChanges {
+  Stream<User?> get authStateChanges {
     return supabaseClient.auth.onAuthStateChange.asyncMap((state) async {
       final user = state.session?.user;
       if (user == null) return null;
 
       try {
-        return await _mapSupabaseUserToModel(user);
+        final model = await _mapSupabaseUserToModel(user);
+        return model.toEntity();
       } catch (e) {
         return null;
       }
@@ -178,36 +179,12 @@ class AuthRemoteDataSource {
         id: user.id,
         email: user.email ?? '',
         fullName: metadata['full_name'] as String? ?? 'iFind User',
-        role: _stringToRole(metadata['role'] as String? ?? 'customer'),
+        role: UserRole.values.byName(metadata['role'] as String? ?? 'customer'),
         phone: metadata['phone'] as String?,
         avatarUrl: metadata['avatar_url'] as String?,
         createdAt: DateTime.tryParse(user.createdAt) ?? now,
         updatedAt: now,
       );
-    }
-  }
-
-  /// Helper to convert string to role enum
-  UserRole _stringToRole(String role) {
-    switch (role) {
-      case 'business_owner':
-        return UserRole.businessOwner;
-      case 'manager':
-        return UserRole.manager;
-      default:
-        return UserRole.customer;
-    }
-  }
-
-  /// Helper to convert role enum to string
-  String _roleToString(UserRole role) {
-    switch (role) {
-      case UserRole.customer:
-        return 'customer';
-      case UserRole.businessOwner:
-        return 'business_owner';
-      case UserRole.manager:
-        return 'manager';
     }
   }
 }

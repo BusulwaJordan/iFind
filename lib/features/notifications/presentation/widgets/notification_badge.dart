@@ -16,7 +16,7 @@ class NotificationBadge extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final unreadCount = ref.watch(unreadNotificationCountProvider(businessId));
+    final unreadCount = ref.watch(businessUnreadCountProvider(businessId));
 
     return badges.Badge(
       position: badges.BadgePosition.topEnd(top: 0, end: 0),

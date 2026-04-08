@@ -29,8 +29,29 @@ class AppColors {
   static const Color background = Color(0xFFFFFFFF);
   static const Color surface = Color(0xFFF5F5F5);
   
-  // Glassmorphism Colors
-  static Color glassBackground = white.withValues(alpha: 0.2);
-  static Color glassBorder = white.withValues(alpha: 0.3);
-  static Color glassOverlay = white.withValues(alpha: 0.1);
+  // Glassmorphism & Effects
+  static Color glassBackground = white.withValues(alpha: 0.1);
+  static Color glassBorder = white.withValues(alpha: 0.2);
+  static Color glassOverlay = white.withValues(alpha: 0.05);
+  
+  // Premium Gradients
+  static const LinearGradient primaryGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primaryGreen, secondaryGreen],
+  );
+  
+  static const LinearGradient surfaceGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [white, offWhite],
+  );
+
+  static final List<BoxShadow> premiumShadow = [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.05),
+      blurRadius: 15,
+      offset: const Offset(0, 8),
+    ),
+  ];
 }

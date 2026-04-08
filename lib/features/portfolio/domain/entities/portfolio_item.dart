@@ -9,6 +9,7 @@ class PortfolioItem extends Equatable {
   final String mediaUrl;
   final String? thumbnailUrl; // For videos
   final String? caption;
+  final double? price; // New field for sale items
   final DateTime createdAt;
 
   const PortfolioItem({
@@ -18,11 +19,12 @@ class PortfolioItem extends Equatable {
     required this.mediaUrl,
     this.thumbnailUrl,
     this.caption,
+    this.price,
     required this.createdAt,
   });
 
   @override
-  List<Object?> get props => [id, businessId, mediaType, mediaUrl, thumbnailUrl, caption, createdAt];
+  List<Object?> get props => [id, businessId, mediaType, mediaUrl, thumbnailUrl, caption, price, createdAt];
 
   factory PortfolioItem.fromJson(Map<String, dynamic> json) {
     return PortfolioItem(
@@ -35,6 +37,7 @@ class PortfolioItem extends Equatable {
       mediaUrl: json['media_url'],
       thumbnailUrl: json['thumbnail_url'],
       caption: json['caption'],
+      price: json['price'] != null ? (json['price'] as num).toDouble() : null,
       createdAt: DateTime.parse(json['created_at']),
     );
   }
@@ -46,6 +49,7 @@ class PortfolioItem extends Equatable {
       'media_url': mediaUrl,
       'thumbnail_url': thumbnailUrl,
       'caption': caption,
+      'price': price,
     };
   }
 }

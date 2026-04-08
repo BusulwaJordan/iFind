@@ -185,4 +185,51 @@ class BusinessRepositoryImpl implements BusinessRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  @override
+  Stream<Business?> watchBusiness(String id) {
+    return remoteDataSource.watchBusiness(id);
+  }
+
+  @override
+  Stream<List<Business>> watchMyBusinesses(String ownerId) {
+    return remoteDataSource.watchMyBusinesses(ownerId);
+  }
+
+  @override
+  Future<Either<Failure, void>> updateBusinessRating(String businessId) async {
+    try {
+      final response = await remoteDataSource.supabaseClient
+          .from('reviews')
+          .select('rating')
+          .eq('business_id', businessId);
+
+      final reviews = response as List;
+      if (reviews.isEmpty) {
+        await remoteDataSource.updateBusiness(
+          businessId: businessId,
+          updates: {
+            'rating_average': 0.0,
+            'rating_count': 0,
+          },
+        );
+        return const Right(null);
+      }
+
+      final count = reviews.length;
+      final sum = reviews.fold<int>(0, (prev, element) => prev + (element['rating'] as int));
+      final average = sum / count;
+
+      await remoteDataSource.updateBusiness(
+        businessId: businessId,
+        updates: {
+          'rating_average': average,
+          'rating_count': count,
+        },
+      );
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }

@@ -1,0 +1,88 @@
+--- FILE: analysis_final.txt ---
+Analyzing iFind...                                              
+
+   info - Use 'const' for final variables initialized to a constant value - lib\core\utils\distance_calculator.dart:6:10 - prefer_const_declarations
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:82:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:142:47 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:191:41 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:212:46 - prefer_const_constructors
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\auth\presentation\screens\register_screen.dart:173:35 - deprecated_member_use
+warning - A value for optional parameter 'key' isn't ever given - lib\features\business\presentation\screens\business_discovery_screen.dart:170:11 - unused_element_parameter
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\business\presentation\screens\create_business_screen.dart:161:15 - deprecated_member_use
+
+--- FILE: analysis_final_readable.txt ---
+Analyzing iFind...                                              
+
+   info - The import of 'dart:ui' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\auth\presentation\screens\login_screen.dart:1:8 - unnecessary_import
+   info - The import of 'dart:ui' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/material.dart' - lib\features\auth\presentation\screens\login_screen.dart:2:8 - unnecessary_import
+warning - Duplicate import - lib\features\auth\presentation\screens\login_screen.dart:2:8 - duplicate_import
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:68:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:69:21 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\features\auth\presentation\screens\login_screen.dart:72:21 - prefer_const_literals_to_create_immutables
+  error - Undefined name 'ImageFilter' - lib\features\business\presentation\screens\business_discovery_screen.dart:103:35 - undefined_identifier
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\create_business_screen.dart:374:27 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\create_business_screen.dart:375:36 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\create_business_screen.dart:498:32 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\product_feed_screen.dart:360:31 - prefer_const_constructors
+   info - Use a 'SizedBox' to add whitespace to a layout - lib\features\portfolio\presentation\screens\gallery_media_view_screen.dart:265:25 - sized_box_for_whitespace
+
+flutter : 12 issues 
+found. (ran in 19.5s)
+At line:1 char:1
++ flutter analyze 
+--no-pub > 
+analysis_final.log 
+2>&1 ; Get-Content 
+anal ...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (12 issu   
+ es found. (ran i    
+n 19.5s):String)     
+[], RemoteExcep    
+tion
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+
+--- FILE: final_analysis.txt ---
+Analyzing iFind...                                              
+
+   info - Use 'const' with the constructor to improve performance - lib\features\onboarding\presentation\screens\onboarding_screen.dart:108:32 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\onboarding\presentation\screens\onboarding_screen.dart:110:34 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\onboarding\presentation\screens\onboarding_screen.dart:246:26 - prefer_const_constructors
+
+flutter : 3 issues 
+found. (ran in 7.3s)
+At line:1 char:1
++ flutter analyze 
+--no-pub > 
+final_analysis.txt 
+2>&1
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (3 issue   
+ s found. (ran in    
+ 7.3s):String) [    
+], RemoteExcepti    
+on
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+--- FILE: errors.txt ---
+Analyzing iFind...                                              
+
+   info - Statements in an if should be enclosed in a block - lib\features\business\presentation\screens\business_details_screen.dart:181:23 - curly_braces_in_flow_control_structures
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\create_business_screen.dart:374:27 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\create_business_screen.dart:375:36 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\create_business_screen.dart:498:32 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\product_feed_screen.dart:360:31 - prefer_const_constructors
+

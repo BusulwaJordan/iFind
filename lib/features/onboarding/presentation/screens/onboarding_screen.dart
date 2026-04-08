@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
@@ -19,24 +20,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     OnboardingData(
       title: "Discover Uganda's Hidden Gems",
       description: "Find local businesses, from hidden boutiques to the best street food, all in one place.",
-      image: 'https://images.unsplash.com/photo-1550928431-ee0ec6db30d3?q=80&w=2000',
+      image: 'assets/images/Screenshot 2026-02-11 113158.png',
     ),
     OnboardingData(
       title: "Connect Directly",
       description: "Chat with owners, book appointments, and support your local economy with ease.",
-      image: 'https://images.unsplash.com/photo-1521791136064-7986c2959210?q=80&w=2000',
+      image: 'assets/images/Screenshot 2026-02-11 113031.png',
     ),
     OnboardingData(
       title: "Grow Together",
       description: "Whether you're a customer or a business owner, iFind helps you thrive in the digital world.",
-      image: 'https://images.unsplash.com/photo-1534353436294-0dbd4bdac845?q=80&w=2000',
+      image: 'assets/images/Modern Workspace Setup.png',
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.white,
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
           PageView.builder(
@@ -48,38 +49,18 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             },
             itemCount: _pages.length,
             itemBuilder: (context, index) {
-              return OnboardingPage(data: _pages[index]);
+              return OnboardingPage(
+                data: _pages[index],
+                isLast: index == _pages.length - 1,
+              );
             },
-          ),
-          
-          // Skip/Login Button for returnees
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 10,
-            right: 20,
-            child: TextButton(
-              onPressed: () async {
-                await ref.read(onboardingCompleteProvider.notifier).completeOnboarding();
-                if (context.mounted) {
-                  Navigator.pushReplacementNamed(context, '/login');
-                }
-              },
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.black.withValues(alpha: 0.3),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              ),
-              child: const Text(
-                'Sign In',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
           ),
           
           // Navigation Bottom Area
           Positioned(
-            bottom: 40,
-            left: 24,
-            right: 24,
+            bottom: 50,
+            left: 32,
+            right: 32,
             child: Column(
               children: [
                 // Page Indicator
@@ -88,15 +69,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   children: List.generate(
                     _pages.length,
                     (index) => AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeOutCubic,
                       margin: const EdgeInsets.symmetric(horizontal: 4),
-                      height: 8,
-                      width: _currentPage == index ? 24 : 8,
+                      height: 6,
+                      width: _currentPage == index ? 32 : 6,
                       decoration: BoxDecoration(
                         color: _currentPage == index 
                             ? AppColors.primaryGreen 
                             : AppColors.primaryGreen.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
                   ),
@@ -105,24 +87,35 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 
                 // Buttons
                 if (_currentPage == _pages.length - 1)
-                  ElevatedButton(
-                    onPressed: () async {
-                      await ref.read(onboardingCompleteProvider.notifier).completeOnboarding();
-                      if (context.mounted) {
-                        Navigator.pushReplacementNamed(context, '/login');
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.deepGreen,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(double.infinity, 56),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 60,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await ref.read(onboardingCompleteProvider.notifier).completeOnboarding();
+                        // go_router redirect fires automatically when onboardingComplete becomes true
+                        // but we push manually as a safety net
+                        if (context.mounted) {
+                          context.go('/login');
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryGreen,
+                        foregroundColor: Colors.white,
+                        elevation: 8,
+                        shadowColor: AppColors.primaryGreen.withValues(alpha: 0.4),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      'Get Started',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      child: Text(
+                        'EXPLORE NOW',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16, 
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
                     ),
                   )
                 else
@@ -131,37 +124,39 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     children: [
                       TextButton(
                         onPressed: () {
-                          _pageController.jumpToPage(_pages.length - 1);
+                          _pageController.animateToPage(
+                            _pages.length - 1,
+                            duration: const Duration(milliseconds: 600),
+                            curve: Curves.easeOutCubic,
+                          );
                         },
-                        child: const Text(
+                        child: Text(
                           'Skip',
-                          style: TextStyle(
-                            color: AppColors.lightText,
+                          style: GoogleFonts.outfit(
+                            color: Colors.grey[400],
                             fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                      ElevatedButton(
-                        onPressed: () {
-                          _pageController.nextPage(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryGreen,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                      SizedBox(
+                        height: 60,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            _pageController.nextPage(
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeOutCubic,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 32),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
                           ),
-                        ),
-                        child: const Row(
-                          children: [
-                            Text('Next'),
-                            SizedBox(width: 8),
-                            Icon(Icons.arrow_forward_rounded, size: 20),
-                          ],
+                          child: const Icon(Icons.arrow_forward_ios_rounded, size: 20),
                         ),
                       ),
                     ],
@@ -189,8 +184,9 @@ class OnboardingData {
 
 class OnboardingPage extends StatelessWidget {
   final OnboardingData data;
+  final bool isLast;
 
-  const OnboardingPage({super.key, required this.data});
+  const OnboardingPage({super.key, required this.data, required this.isLast});
 
   @override
   Widget build(BuildContext context) {
@@ -198,40 +194,19 @@ class OnboardingPage extends StatelessWidget {
       children: [
         Expanded(
           flex: 6,
-          child: Container(
+          child: SizedBox(
             width: double.infinity,
-            decoration: const BoxDecoration(
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(40),
-                bottomRight: Radius.circular(40),
-              ),
-            ),
             child: ClipRRect(
               borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(40),
-                bottomRight: Radius.circular(40),
+                bottomLeft: Radius.circular(60),
+                bottomRight: Radius.circular(60),
               ),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.network(
+                  Image.asset(
                     data.image,
                     fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        color: AppColors.lightGreen.withValues(alpha: 0.1),
-                        child: const Center(
-                          child: CircularProgressIndicator(
-                            color: AppColors.primaryGreen,
-                          ),
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: AppColors.primaryGreen,
-                      child: const Icon(Icons.image_not_supported, color: Colors.white, size: 50),
-                    ),
                   ),
                   Container(
                     decoration: BoxDecoration(
@@ -239,10 +214,12 @@ class OnboardingPage extends StatelessWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.black.withValues(alpha: 0.2),
+                          Colors.black.withValues(alpha: 0.1),
                           Colors.transparent,
-                          Colors.black.withValues(alpha: 0.5),
+                          Colors.white.withValues(alpha: 0.8),
+                          Colors.white,
                         ],
+                        stops: const [0, 0.4, 0.85, 1],
                       ),
                     ),
                   ),
@@ -256,28 +233,30 @@ class OnboardingPage extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.start,
               children: [
+                const SizedBox(height: 40),
                 Text(
                   data.title,
                   textAlign: TextAlign.center,
                   style: GoogleFonts.outfit(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
                     color: AppColors.deepGreen,
+                    height: 1.1,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 Text(
                   data.description,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: AppColors.lightText,
-                    height: 1.5,
+                  style: GoogleFonts.outfit(
+                    fontSize: 17,
+                    color: Colors.grey[600],
+                    height: 1.6,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 60), // Space for bottom navigation
               ],
             ),
           ),

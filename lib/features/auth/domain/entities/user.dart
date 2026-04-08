@@ -1,8 +1,11 @@
-import 'package:equatable/equatable.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'user.freezed.dart';
 
 /// User role enum
 enum UserRole {
   customer,
+  @JsonValue('business_owner')
   businessOwner,
   manager;
 
@@ -19,58 +22,16 @@ enum UserRole {
 }
 
 /// User entity - domain layer
-class User extends Equatable {
-  final String id;
-  final String email;
-  final UserRole role;
-  final String fullName;
-  final String? phone;
-  final String? avatarUrl;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-
-  const User({
-    required this.id,
-    required this.email,
-    required this.role,
-    required this.fullName,
-    this.phone,
-    this.avatarUrl,
-    required this.createdAt,
-    required this.updatedAt,
-  });
-
-  @override
-  List<Object?> get props => [
-        id,
-        email,
-        role,
-        fullName,
-        phone,
-        avatarUrl,
-        createdAt,
-        updatedAt,
-      ];
-
-  User copyWith({
-    String? id,
-    String? email,
-    UserRole? role,
-    String? fullName,
+@freezed
+class User with _$User {
+  const factory User({
+    required String id,
+    required String email,
+    required UserRole role,
+    required String fullName,
     String? phone,
     String? avatarUrl,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
-    return User(
-      id: id ?? this.id,
-      email: email ?? this.email,
-      role: role ?? this.role,
-      fullName: fullName ?? this.fullName,
-      phone: phone ?? this.phone,
-      avatarUrl: avatarUrl ?? this.avatarUrl,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
-  }
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) = _User;
 }

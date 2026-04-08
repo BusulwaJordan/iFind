@@ -1,0 +1,226 @@
+--- FILE: analysis.txt ---
+Analyzing iFind...                                              
+
+   info - Unnecessary 'const' keyword - lib\features\business\presentation\screens\business_discovery_screen.dart:315:27 - unnecessary_const
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\my_shop_screen.dart:162:20 - prefer_const_constructors
+
+flutter : 2 issues 
+found. (ran in 11.4s)
+At line:1 char:1
++ flutter analyze > 
+analysis.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (2 issue   
+ s found. (ran in    
+ 11.4s):String)     
+[], RemoteExcept    
+ion
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+--- FILE: analysis_auth_fix.txt ---
+Analyzing iFind...                                              
+
+warning - The value of the local variable 'session' isn't used - lib\features\auth\presentation\providers\auth_provider.dart:118:15 - unused_local_variable
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:152:47 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:201:41 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:222:46 - prefer_const_constructors
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\auth\presentation\screens\register_screen.dart:183:35 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\business\presentation\screens\create_business_screen.dart:161:15 - deprecated_member_use
+
+--- FILE: analysis_full.txt ---
+Analyzing iFind...                                              
+
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:66:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:67:21 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\features\auth\presentation\screens\login_screen.dart:70:21 - prefer_const_literals_to_create_immutables
+  error - Undefined name 'GoogleFonts' - lib\features\auth\presentation\screens\login_screen.dart:109:30 - undefined_identifier
+  error - Undefined name 'GoogleFonts' - lib\features\auth\presentation\screens\login_screen.dart:119:30 - undefined_identifier
+  error - Undefined name 'GoogleFonts' - lib\features\auth\presentation\screens\login_screen.dart:146:38 - undefined_identifier
+  error - Undefined name 'GoogleFonts' - lib\features\auth\presentation\screens\login_screen.dart:160:45 - undefined_identifier
+  error - Undefined name 'GoogleFonts' - lib\features\auth\presentation\screens\login_screen.dart:174:45 - undefined_identifier
+  error - Undefined name 'GoogleFonts' - lib\features\auth\presentation\screens\login_screen.dart:220:48 - undefined_identifier
+  error - Undefined name 'GoogleFonts' - lib\features\auth\presentation\screens\login_screen.dart:235:42 - undefined_identifier
+  error - Undefined name 'GoogleFonts' - lib\features\auth\presentation\screens\login_screen.dart:251:44 - undefined_identifier
+  error - Unexpected text 'return' - lib\features\business\presentation\screens\business_details_screen.dart:84:9 - unexpected_token
+  error - Too many positional arguments: 0 expected, but 1 found - lib\features\business\presentation\screens\business_details_screen.dart:84:16 - extra_positional_arguments_could_be_named
+  error - Expected to find ')' - lib\features\business\presentation\screens\business_details_screen.dart:228:10 - expected_token
+   info - Use a 'SizedBox' to add whitespace to a layout - lib\features\business\presentation\screens\business_details_screen.dart:275:22 - sized_box_for_whitespace
+  error - Undefined name 'ImageFilter' - lib\features\business\presentation\screens\business_discovery_screen.dart:103:35 - undefined_identifier
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\create_business_screen.dart:374:27 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\create_business_screen.dart:375:36 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\create_business_screen.dart:498:32 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\product_feed_screen.dart:360:31 - prefer_const_constructors
+   info - Use a 'SizedBox' to add whitespace to a layout - lib\features\onboarding\presentation\screens\onboarding_screen.dart:194:18 - sized_box_for_whitespace
+   info - Use a 'SizedBox' to add whitespace to a layout - lib\features\portfolio\presentation\screens\gallery_media_view_screen.dart:265:25 - sized_box_for_whitespace
+
+--- FILE: analysis_output.txt ---
+Analyzing iFind...                                              
+
+   info - Parameter 'message' could be a super parameter - lib\core\errors\failures.dart:15:9 - use_super_parameters
+   info - Parameter 'message' could be a super parameter - lib\core\errors\failures.dart:20:9 - use_super_parameters
+   info - Parameter 'message' could be a super parameter - lib\core\errors\failures.dart:25:9 - use_super_parameters
+   info - Parameter 'message' could be a super parameter - lib\core\errors\failures.dart:30:9 - use_super_parameters
+   info - Parameter 'message' could be a super parameter - lib\core\errors\failures.dart:35:9 - use_super_parameters
+   info - Parameter 'message' could be a super parameter - lib\core\errors\failures.dart:40:9 - use_super_parameters
+   info - Parameter 'message' could be a super parameter - lib\core\errors\failures.dart:45:9 - use_super_parameters
+   info - Use 'const' with the constructor to improve performance - lib\core\theme\app_theme.dart:13:20 - prefer_const_constructors
+   info - 'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre - lib\core\theme\app_theme.dart:22:9 - deprecated_member_use
+   info - 'onBackground' is deprecated and shouldn't be used. Use onSurface instead. This feature was deprecated after v3.18.0-0.1.pre - lib\core\theme\app_theme.dart:23:9 - deprecated_member_use
+   info - Use 'const' for final variables initialized to a constant value - lib\core\utils\distance_calculator.dart:6:10 - prefer_const_declarations
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:82:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:142:47 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:191:41 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:212:46 - prefer_const_constructors
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\auth\presentation\screens\register_screen.dart:173:35 - deprecated_member_use
+  error - Functions must have an explicit list of parameters - lib\features\business\presentation\providers\business_provider.dart:7:5 - missing_function_parameters
+  error - A function body must be provided - lib\features\business\presentation\providers\business_provider.dart:7:11 - missing_function_body
+  error - Expected a method, getter, setter or operator declaration - lib\features\business\presentation\providers\business_provider.dart:7:11 - expected_executable
+   info - Use the generic function type syntax to declare the parameter '' - lib\features\business\presentation\providers\business_provider.dart:8:7 - use_function_type_syntax_for_parameters
+  error - Expected an identifier - lib\features\business\presentation\providers\business_provider.dart:8:7 - missing_identifier
+  error - Expected to find ')' - lib\features\business\presentation\providers\business_provider.dart:8:17 - expected_token
+  error - Undefined name 'failure' - lib\features\business\presentation\providers\business_provider.dart:10:50 - undefined_identifier
+  error - Undefined name 'state' - lib\features\business\presentation\providers\business_provider.dart:11:9 - undefined_identifier
+  error - Expected a method, getter, setter or operator declaration - lib\features\business\presentation\providers\business_provider.dart:12:8 - expected_executable
+  error - Directives must appear before any declarations - lib\features\business\presentation\providers\business_provider.dart:13:1 - directive_after_declaration
+  error - Directives must appear before any declarations - lib\features\business\presentation\providers\business_provider.dart:14:1 - directive_after_declaration
+  error - Directives must appear before any declarations - lib\features\business\presentation\providers\business_provider.dart:15:1 - directive_after_declaration
+  error - Directives must appear before any declarations - lib\features\business\presentation\providers\business_provider.dart:16:1 - directive_after_declaration
+   info - Don't invoke 'print' in production code - lib\features\business\presentation\providers\business_provider.dart:73:9 - avoid_print
+warning - A value for optional parameter 'key' isn't ever given - lib\features\business\presentation\screens\business_discovery_screen.dart:170:11 - unused_element_parameter
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\business\presentation\screens\create_business_screen.dart:161:15 - deprecated_member_use
+
+--- FILE: analysis_output_ascii.txt ---
+Analyzing iFind...                                              
+
+   info - Parameter 'message' could be a super parameter - lib\core\errors\failures.dart:15:9 - use_super_parameters
+   info - Parameter 'message' could be a super parameter - lib\core\errors\failures.dart:20:9 - use_super_parameters
+   info - Parameter 'message' could be a super parameter - lib\core\errors\failures.dart:25:9 - use_super_parameters
+   info - Parameter 'message' could be a super parameter - lib\core\errors\failures.dart:30:9 - use_super_parameters
+   info - Parameter 'message' could be a super parameter - lib\core\errors\failures.dart:35:9 - use_super_parameters
+   info - Parameter 'message' could be a super parameter - lib\core\errors\failures.dart:40:9 - use_super_parameters
+   info - Parameter 'message' could be a super parameter - lib\core\errors\failures.dart:45:9 - use_super_parameters
+   info - Use 'const' with the constructor to improve performance - lib\core\theme\app_theme.dart:13:20 - prefer_const_constructors
+   info - 'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre - lib\core\theme\app_theme.dart:22:9 - deprecated_member_use
+   info - 'onBackground' is deprecated and shouldn't be used. Use onSurface instead. This feature was deprecated after v3.18.0-0.1.pre - lib\core\theme\app_theme.dart:23:9 - deprecated_member_use
+   info - Use 'const' for final variables initialized to a constant value - lib\core\utils\distance_calculator.dart:6:10 - prefer_const_declarations
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:82:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:142:47 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:191:41 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:212:46 - prefer_const_constructors
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\auth\presentation\screens\register_screen.dart:173:35 - deprecated_member_use
+  error - Functions must have an explicit list of parameters - lib\features\business\presentation\providers\business_provider.dart:7:5 - missing_function_parameters
+  error - A function body must be provided - lib\features\business\presentation\providers\business_provider.dart:7:11 - missing_function_body
+  error - Expected a method, getter, setter or operator declaration - lib\features\business\presentation\providers\business_provider.dart:7:11 - expected_executable
+   info - Use the generic function type syntax to declare the parameter '' - lib\features\business\presentation\providers\business_provider.dart:8:7 - use_function_type_syntax_for_parameters
+  error - Expected an identifier - lib\features\business\presentation\providers\business_provider.dart:8:7 - missing_identifier
+  error - Expected to find ')' - lib\features\business\presentation\providers\business_provider.dart:8:17 - expected_token
+  error - Undefined name 'failure' - lib\features\business\presentation\providers\business_provider.dart:10:50 - undefined_identifier
+  error - Undefined name 'state' - lib\features\business\presentation\providers\business_provider.dart:11:9 - undefined_identifier
+  error - Expected a method, getter, setter or operator declaration - lib\features\business\presentation\providers\business_provider.dart:12:8 - expected_executable
+  error - Directives must appear before any declarations - lib\features\business\presentation\providers\business_provider.dart:13:1 - directive_after_declaration
+  error - Directives must appear before any declarations - lib\features\business\presentation\providers\business_provider.dart:14:1 - directive_after_declaration
+  error - Directives must appear before any declarations - lib\features\business\presentation\providers\business_provider.dart:15:1 - directive_after_declaration
+  error - Directives must appear before any declarations - lib\features\business\presentation\providers\business_provider.dart:16:1 - directive_after_declaration
+   info - Don't invoke 'print' in production code - lib\features\business\presentation\providers\business_provider.dart:73:9 - avoid_print
+warning - A value for optional parameter 'key' isn't ever given - lib\features\business\presentation\screens\business_discovery_screen.dart:170:11 - unused_element_parameter
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\business\presentation\screens\create_business_screen.dart:161:15 - deprecated_member_use
+
+--- FILE: analysis_plain.txt ---
+Analyzing iFind...                                              
+
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\business_discovery_screen.dart:311:30 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\features\business\presentation\screens\business_discovery_screen.dart:313:35 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\business_discovery_screen.dart:314:27 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\business_discovery_screen.dart:315:27 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\business_discovery_screen.dart:316:27 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\business_discovery_screen.dart:318:36 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\my_shop_screen.dart:162:20 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\needs\presentation\screens\post_need_screen.dart:155:29 - prefer_const_constructors
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\onboarding\presentation\screens\onboarding_screen.dart:63:50 - use_build_context_synchronously
+
+--- FILE: analysis_premium_ui.txt ---
+Analyzing iFind...                                              
+
+  error - The argument for the named parameter 'textTheme' was already specified - lib\core\theme\app_theme.dart:29:7 - duplicate_named_argument
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\screens\home_screen.dart:247:55 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\screens\home_screen.dart:291:28 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\screens\home_screen.dart:326:24 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\screens\home_screen.dart:328:43 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - lib\features\home\presentation\screens\home_screen.dart:337:35 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\screens\home_screen.dart:356:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\screens\home_screen.dart:365:43 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - lib\features\home\presentation\screens\home_screen.dart:377:17 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\home\presentation\screens\home_screen.dart:377:79 - prefer_const_constructors
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\onboarding\presentation\screens\onboarding_screen.dart:73:54 - deprecated_member_use
+  error - The argument type 'BorderRadius' can't be assigned to the parameter type 'OutlinedBorder?'.  - lib\features\onboarding\presentation\screens\onboarding_screen.dart:91:30 - argument_type_not_assignable
+   info - Use 'const' with the constructor to improve performance - lib\features\onboarding\presentation\screens\onboarding_screen.dart:106:32 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\onboarding\presentation\screens\onboarding_screen.dart:108:34 - prefer_const_constructors
+  error - The argument type 'BorderRadius' can't be assigned to the parameter type 'OutlinedBorder?'.  - lib\features\onboarding\presentation\screens\onboarding_screen.dart:125:34 - argument_type_not_assignable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\onboarding\presentation\screens\onboarding_screen.dart:191:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\onboarding\presentation\screens\onboarding_screen.dart:210:40 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\onboarding\presentation\screens\onboarding_screen.dart:212:40 - deprecated_member_use
+   info - Use 'const' with the constructor to improve performance - lib\features\onboarding\presentation\screens\onboarding_screen.dart:242:26 - prefer_const_constructors
+
+--- FILE: analysis_readable.txt ---
+Analyzing iFind...                                              
+
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:66:21 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\auth\presentation\screens\login_screen.dart:67:21 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\features\auth\presentation\screens\login_screen.dart:70:21 - prefer_const_literals_to_create_immutables
+  error - Undefined name 'GoogleFonts' - lib\features\auth\presentation\screens\login_screen.dart:109:30 - undefined_identifier
+  error - Undefined name 'GoogleFonts' - lib\features\auth\presentation\screens\login_screen.dart:119:30 - undefined_identifier
+  error - Undefined name 'GoogleFonts' - lib\features\auth\presentation\screens\login_screen.dart:146:38 - undefined_identifier
+  error - Undefined name 'GoogleFonts' - lib\features\auth\presentation\screens\login_screen.dart:160:45 - undefined_identifier
+  error - Undefined name 'GoogleFonts' - lib\features\auth\presentation\screens\login_screen.dart:174:45 - undefined_identifier
+  error - Undefined name 'GoogleFonts' - lib\features\auth\presentation\screens\login_screen.dart:220:48 - undefined_identifier
+  error - Undefined name 'GoogleFonts' - lib\features\auth\presentation\screens\login_screen.dart:235:42 - undefined_identifier
+  error - Undefined name 'GoogleFonts' - lib\features\auth\presentation\screens\login_screen.dart:251:44 - undefined_identifier
+  error - Unexpected text 'return' - lib\features\business\presentation\screens\business_details_screen.dart:84:9 - unexpected_token
+  error - Too many positional arguments: 0 expected, but 1 found - lib\features\business\presentation\screens\business_details_screen.dart:84:16 - extra_positional_arguments_could_be_named
+  error - Expected to find ')' - lib\features\business\presentation\screens\business_details_screen.dart:228:10 - expected_token
+   info - Use a 'SizedBox' to add whitespace to a layout - lib\features\business\presentation\screens\business_details_screen.dart:275:22 - sized_box_for_whitespace
+  error - Undefined name 'ImageFilter' - lib\features\business\presentation\screens\business_discovery_screen.dart:103:35 - undefined_identifier
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\create_business_screen.dart:374:27 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\create_business_screen.dart:375:36 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\create_business_screen.dart:498:32 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\product_feed_screen.dart:360:31 - prefer_const_constructors
+   info - Use a 'SizedBox' to add whitespace to a layout - lib\features\onboarding\presentation\screens\onboarding_screen.dart:194:18 - sized_box_for_whitespace
+   info - Use a 'SizedBox' to add whitespace to a layout - lib\features\portfolio\presentation\screens\gallery_media_view_screen.dart:265:25 - sized_box_for_whitespace
+
+flutter : 22 issues 
+found. (ran in 12.7s)
+At line:1 char:1
++ flutter analyze 
+--no-pub > 
+analysis.log 2>&1 ; 
+Get-Content 
+analysis.l ...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (22 issu   
+ es found. (ran i    
+n 12.7s):String)     
+[], RemoteExcep    
+tion
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+
+--- FILE: analysis_results.txt ---
+Analyzing iFind...                                              
+
+   info - Statements in an if should be enclosed in a block - lib\features\business\presentation\screens\business_details_screen.dart:181:23 - curly_braces_in_flow_control_structures
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\create_business_screen.dart:374:27 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\create_business_screen.dart:375:36 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\create_business_screen.dart:498:32 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\business\presentation\screens\product_feed_screen.dart:360:31 - prefer_const_constructors
+

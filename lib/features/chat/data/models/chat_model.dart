@@ -1,67 +1,112 @@
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:ifind/features/chat/domain/entities/chat.dart';
 
-class ChatModel extends Chat {
-  const ChatModel({
-    required super.id,
-    required super.customerId,
-    required super.businessId,
-    super.lastMessage,
-    super.lastMessageAt,
-    required super.createdAt,
-  });
+part 'chat_model.freezed.dart';
+part 'chat_model.g.dart';
 
-  factory ChatModel.fromJson(Map<String, dynamic> json) {
-    return ChatModel(
-      id: json['id'],
-      customerId: json['customer_id'],
-      businessId: json['business_id'],
-      lastMessage: json['last_message'],
-      lastMessageAt: json['last_message_at'] != null ? DateTime.parse(json['last_message_at']) : null,
-      createdAt: DateTime.parse(json['created_at']),
+@freezed
+@freezed
+class ChatModel with _$ChatModel {
+  const factory ChatModel({
+    required String id,
+    @JsonKey(name: 'customer_id') required String customerId,
+    @JsonKey(name: 'business_id') required String businessId,
+    @JsonKey(name: 'last_message') String? lastMessage,
+    @JsonKey(name: 'last_message_at') DateTime? lastMessageAt,
+    @JsonKey(name: 'created_at') required DateTime createdAt,
+    // Add transient fields from join
+    @JsonKey(includeToJson: false, includeFromJson: false) String? businessName,
+    @JsonKey(includeToJson: false, includeFromJson: false)
+    String? businessLogoUrl,
+  }) = _ChatModel;
+
+  factory ChatModel.fromJson(Map<String, dynamic> json) =>
+      _$ChatModelFromJson(json);
+
+  factory ChatModel.fromSupabase(Map<String, dynamic> json, {String? myId}) {
+    // Handle Supabase returning join as either a single object or a list
+    final businessData = json['businesses'];
+    Map<String, dynamic>? businessMap;
+    if (businessData is List && businessData.isNotEmpty) {
+      businessMap = businessData.first;
+    } else if (businessData is Map<String, dynamic>) {
+      businessMap = businessData;
+    }
+
+    final profileData = json['profiles'];
+    Map<String, dynamic>? profileMap;
+    if (profileData is List && profileData.isNotEmpty) {
+      profileMap = profileData.first;
+    } else if (profileData is Map<String, dynamic>) {
+      profileMap = profileData;
+    }
+
+    // IDENTITY RESOLUTION LOGIC:
+    final customerId = json['customer_id'] as String;
+    final isCustomer = myId == customerId;
+
+    final String resolvedName;
+    final String? resolvedLogo;
+
+    if (isCustomer) {
+      resolvedName = businessMap?['name'] as String? ?? 'Unknown Business';
+      resolvedLogo = businessMap?['logo_url'] as String?;
+    } else {
+      resolvedName = profileMap?['full_name'] as String? ?? 'Customer';
+      resolvedLogo = profileMap?['avatar_url'] as String?;
+    }
+
+    return ChatModel.fromJson(json).copyWith(
+      businessName: resolvedName,
+      businessLogoUrl: resolvedLogo,
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'customer_id': customerId,
-      'business_id': businessId,
-      'last_message': lastMessage,
-      'last_message_at': lastMessageAt?.toIso8601String(),
-      'created_at': createdAt.toIso8601String(),
-    };
-  }
+  const ChatModel._();
+
+  Chat toEntity() => Chat(
+        id: id,
+        customerId: customerId,
+        businessId: businessId,
+        lastMessage: lastMessage,
+        lastMessageAt: lastMessageAt,
+        createdAt: createdAt,
+        businessName: businessName,
+        businessLogoUrl: businessLogoUrl,
+      );
 }
 
-class MessageModel extends Message {
-  const MessageModel({
-    required super.id,
-    required super.chatId,
-    required super.senderId,
-    required super.content,
-    super.isRead,
-    required super.createdAt,
-  });
+@freezed
+class MessageModel with _$MessageModel {
+  const factory MessageModel({
+    required String id,
+    @JsonKey(name: 'chat_id') required String chatId,
+    @JsonKey(name: 'sender_id') required String senderId,
+    required String content,
+    @JsonKey(name: 'is_read') @Default(false) bool isRead,
+    @JsonKey(name: 'created_at') required DateTime createdAt,
+  }) = _MessageModel;
 
-  factory MessageModel.fromJson(Map<String, dynamic> json) {
-    return MessageModel(
-      id: json['id'],
-      chatId: json['chat_id'],
-      senderId: json['sender_id'],
-      content: json['content'],
-      isRead: json['is_read'] ?? false,
-      createdAt: DateTime.parse(json['created_at']),
-    );
-  }
+  factory MessageModel.fromJson(Map<String, dynamic> json) =>
+      _$MessageModelFromJson(json);
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'chat_id': chatId,
-      'sender_id': senderId,
-      'content': content,
-      'is_read': isRead,
-      'created_at': createdAt.toIso8601String(),
-    };
-  }
+  const MessageModel._();
+
+  Message toEntity() => Message(
+        id: id,
+        chatId: chatId,
+        senderId: senderId,
+        content: content,
+        isRead: isRead,
+        createdAt: createdAt,
+      );
+
+  factory MessageModel.fromEntity(Message message) => MessageModel(
+        id: message.id,
+        chatId: message.chatId,
+        senderId: message.senderId,
+        content: message.content,
+        isRead: message.isRead,
+        createdAt: message.createdAt,
+      );
 }

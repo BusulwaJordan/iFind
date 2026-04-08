@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/constants/app_strings.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
@@ -29,12 +30,14 @@ class _EmailConfirmationScreenState extends ConsumerState<EmailConfirmationScree
 
   @override
   Widget build(BuildContext context) {
-    // Watch auth state for changes
+    // The go_router redirect listens to authProvider and navigates automatically
+    // when the user verifies their email and gets a session. We only need to
+    // handle the edge case where the session is already established.
     ref.listen<AsyncValue>(authProvider, (previous, next) {
       next.whenData((user) {
         if (user != null && mounted) {
-          // User is verified and logged in - redirect to home
-          Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+          // go_router redirect will fire, but we push explicitly to be safe
+          context.go('/');
         }
       });
     });
@@ -147,13 +150,7 @@ class _EmailConfirmationScreenState extends ConsumerState<EmailConfirmationScree
                               ),
                               const SizedBox(height: 32),
                               ElevatedButton(
-                                onPressed: () {
-                                  Navigator.pushNamedAndRemoveUntil(
-                                    context,
-                                    '/login',
-                                    (route) => false,
-                                  );
-                                },
+                                onPressed: () => context.go('/login'),
                                 style: ElevatedButton.styleFrom(
                                   minimumSize: const Size(double.infinity, 50),
                                 ),

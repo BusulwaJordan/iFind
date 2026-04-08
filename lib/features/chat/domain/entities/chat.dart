@@ -1,43 +1,30 @@
-import 'package:equatable/equatable.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-class Chat extends Equatable {
-  final String id;
-  final String customerId;
-  final String businessId;
-  final String? lastMessage;
-  final DateTime? lastMessageAt;
-  final DateTime createdAt;
+part 'chat.freezed.dart';
 
-  const Chat({
-    required this.id,
-    required this.customerId,
-    required this.businessId,
-    this.lastMessage,
-    this.lastMessageAt,
-    required this.createdAt,
-  });
-
-  @override
-  List<Object?> get props => [id, customerId, businessId, lastMessage, lastMessageAt];
+@freezed
+class Chat with _$Chat {
+  const factory Chat({
+    required String id,
+    required String customerId,
+    required String businessId,
+    String? lastMessage,
+    DateTime? lastMessageAt,
+    required DateTime createdAt,
+    // Transient UI fields
+    String? businessName,
+    String? businessLogoUrl,
+  }) = _Chat;
 }
 
-class Message extends Equatable {
-  final String id;
-  final String chatId;
-  final String senderId;
-  final String content;
-  final bool isRead;
-  final DateTime createdAt;
-
-  const Message({
-    required this.id,
-    required this.chatId,
-    required this.senderId,
-    required this.content,
-    this.isRead = false,
-    required this.createdAt,
-  });
-
-  @override
-  List<Object?> get props => [id, chatId, senderId, content, isRead, createdAt];
+@freezed
+class Message with _$Message {
+  const factory Message({
+    required String id,
+    required String chatId,
+    required String senderId,
+    required String content,
+    @Default(false) bool isRead,
+    required DateTime createdAt,
+  }) = _Message;
 }

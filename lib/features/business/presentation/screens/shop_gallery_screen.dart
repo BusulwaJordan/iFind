@@ -6,7 +6,9 @@ import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:ifind/features/portfolio/presentation/providers/portfolio_provider.dart';
+import 'package:ifind/features/portfolio/presentation/screens/gallery_media_view_screen.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class ShopGalleryScreen extends ConsumerStatefulWidget {
   final Business business;
@@ -25,10 +27,14 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Delete Media', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        content: const Text('Are you sure you want to remove this from your gallery?'),
+        title: Text('Delete Media',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: const Text(
+            'Are you sure you want to remove this from your gallery?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -42,58 +48,80 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
 
     try {
       final repository = ref.read(portfolioRepositoryProvider);
-      await repository.deletePortfolioItem(itemId);
-      
-      ref.invalidate(portfolioProvider(widget.business.id));
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Removed successfully')),
-        );
-      }
+      final result = await repository.deletePortfolioItem(itemId);
+
+      result.fold((failure) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Delete failed: ${failure.message}')),
+          );
+        }
+      }, (_) {
+        ref.invalidate(portfolioProvider(widget.business.id));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Removed successfully')),
+          );
+        }
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Delete failed: $e')),
+          SnackBar(content: Text('Error: $e')),
         );
       }
     }
   }
 
   Future<void> _addItem(MediaType type) async {
-    final pickedFile = await (type == MediaType.image 
-        ? _picker.pickImage(source: ImageSource.gallery) 
+    final pickedFile = await (type == MediaType.image
+        ? _picker.pickImage(source: ImageSource.gallery)
         : _picker.pickVideo(source: ImageSource.gallery));
 
     if (pickedFile == null) return;
 
-    // Show caption input dialog
+    // Show caption and price input dialog
     if (!mounted) return;
-    final caption = await _showCaptionDialog();
-    if (caption == null) return; // User cancelled
+    final result = await _showUploadDetailsDialog();
+    if (result == null) return; // User cancelled
+
+    final caption = result['caption'] as String?;
+    final price = result['price'] as double?;
 
     setState(() => _isUploading = true);
 
     try {
       final repository = ref.read(portfolioRepositoryProvider);
-      await repository.uploadPortfolioItem(
+      final uploadResult = await repository.uploadPortfolioItem(
         businessId: widget.business.id,
         file: File(pickedFile.path),
         type: type,
-        caption: caption.isEmpty ? null : caption,
+        caption: caption?.isEmpty == true ? null : caption,
+        price: price,
       );
-      
-      ref.invalidate(portfolioProvider(widget.business.id));
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Upload successful!')),
-        );
-      }
+
+      uploadResult.fold((failure) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Upload failed: ${failure.message}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      }, (item) {
+        ref.invalidate(portfolioProvider(widget.business.id));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Success! Item uploaded to gallery.')),
+          );
+        }
+      });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e')),
+          SnackBar(content: Text('System Error: $e')),
         );
       }
     } finally {
@@ -101,27 +129,42 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
     }
   }
 
-  Future<String?> _showCaptionDialog() async {
-    final controller = TextEditingController();
-    return showDialog<String>(
+  Future<Map<String, dynamic>?> _showUploadDetailsDialog() async {
+    final captionController = TextEditingController();
+    final priceController = TextEditingController();
+
+    return showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Add Caption', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Post to Gallery',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'Add a caption, price, or description (optional, max 100 characters)',
-              style: Theme.of(context).textTheme.bodySmall,
+            TextField(
+              controller: captionController,
+              maxLength: 100,
+              maxLines: 2,
+              style: GoogleFonts.outfit(),
+              decoration: InputDecoration(
+                labelText: 'Caption (Optional)',
+                hintText: 'Describe this product...',
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
             const SizedBox(height: 16),
             TextField(
-              controller: controller,
-              maxLength: 100,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                hintText: 'e.g., "Fresh baked cake - 50,000 UGX"',
-                border: OutlineInputBorder(),
+              controller: priceController,
+              keyboardType: TextInputType.number,
+              style: GoogleFonts.outfit(),
+              decoration: InputDecoration(
+                labelText: 'Price (Optional)',
+                hintText: 'UGX',
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                prefixIcon: const Icon(Icons.payments_outlined, size: 20),
               ),
             ),
           ],
@@ -129,15 +172,25 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, null),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, ''),
-            child: const Text('Skip'),
+            child:
+                Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text('Continue'),
+            onPressed: () {
+              final priceStr = priceController.text.trim();
+              final price = double.tryParse(priceStr.replaceAll(',', ''));
+              Navigator.pop(context, {
+                'caption': captionController.text.trim(),
+                'price': price,
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Post Now'),
           ),
         ],
       ),
@@ -149,12 +202,13 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
     final galleryItemsAsync = ref.watch(portfolioProvider(widget.business.id));
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF7F9FB),
       appBar: AppBar(
-        title: Text('Shop Gallery', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text('Manage Gallery',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
-        elevation: 0,
+        elevation: 0.5,
       ),
       body: galleryItemsAsync.when(
         data: (items) {
@@ -163,10 +217,28 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.add_photo_alternate_outlined, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text('No media yet', style: GoogleFonts.outfit(color: Colors.grey)),
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 20)
+                      ],
+                    ),
+                    child: const Icon(Icons.add_photo_alternate_outlined,
+                        size: 48, color: Colors.grey),
+                  ),
                   const SizedBox(height: 24),
+                  Text('Your gallery is empty',
+                      style: GoogleFonts.outfit(
+                          fontSize: 18, color: Colors.grey[600])),
+                  const SizedBox(height: 8),
+                  Text('Start adding products to attract customers',
+                      style: GoogleFonts.outfit(color: Colors.grey)),
+                  const SizedBox(height: 32),
                   _buildUploadButtons(),
                 ],
               ),
@@ -176,6 +248,8 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(portfolioProvider(widget.business.id));
+              return await ref
+                  .read(portfolioProvider(widget.business.id).future);
             },
             child: Stack(
               children: [
@@ -183,73 +257,169 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
                   padding: const EdgeInsets.all(16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 0.85,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 20,
+                    childAspectRatio: 0.8,
                   ),
                   itemCount: items.length,
                   itemBuilder: (context, index) {
                     final item = items[index];
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Image.network(
-                            item.mediaType == MediaType.video 
-                                ? (item.thumbnailUrl ?? item.mediaUrl)
-                                : item.mediaUrl,
-                            fit: BoxFit.cover,
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
                           ),
-                          if (item.mediaType == MediaType.video)
-                            const Center(child: Icon(Icons.play_circle_fill, color: Colors.white70, size: 48)),
-                          
-                          // Caption overlay at bottom
-                          if (item.caption != null && item.caption!.isNotEmpty)
-                            Positioned(
-                              bottom: 0,
-                              left: 0,
-                              right: 0,
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.bottomCenter,
-                                    end: Alignment.topCenter,
-                                    colors: [
-                                      Colors.black.withOpacity(0.8),
-                                      Colors.transparent,
-                                    ],
-                                  ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      GalleryMediaViewScreen(item: item),
                                 ),
-                                child: Text(
-                                  item.caption!,
-                                  style: GoogleFonts.outfit(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
+                              ),
+                              onLongPress: () => _deleteItem(item.id),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(20)),
+                                    child: item.mediaType == MediaType.image
+                                        ? CachedNetworkImage(
+                                            imageUrl: item.mediaUrl,
+                                            fit: BoxFit.cover,
+                                            placeholder: (context, url) =>
+                                                Container(
+                                                    color: Colors.grey[100]),
+                                            errorWidget:
+                                                (context, url, error) =>
+                                                    const Icon(Icons.error),
+                                          )
+                                        : (item.thumbnailUrl != null
+                                            ? CachedNetworkImage(
+                                                imageUrl: item.thumbnailUrl!,
+                                                fit: BoxFit.cover,
+                                                placeholder: (context, url) =>
+                                                    Container(
+                                                        color:
+                                                            Colors.grey[100]),
+                                                errorWidget: (context, url,
+                                                        error) =>
+                                                    _buildVideoPlaceholder(),
+                                                memCacheHeight: 240,
+                                                memCacheWidth: 240,
+                                              )
+                                            : _buildVideoPlaceholder()),
                                   ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                  if (item.mediaType == MediaType.video)
+                                    Center(
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black
+                                              .withValues(alpha: 0.4),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                            Icons.play_arrow_rounded,
+                                            color: Colors.white,
+                                            size: 28),
+                                      ),
+                                    ),
+
+                                  // High-End Bold Price Tag
+                                  if (item.price != null)
+                                    Positioned(
+                                      top: 12,
+                                      left: 12,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryGreen,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: AppColors.primaryGreen
+                                                  .withValues(alpha: 0.4),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Text(
+                                          'UGX ${item.price!.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")}',
+                                          style: GoogleFonts.outfit(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 0.2,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                  // Quick Delete
+                                  Positioned(
+                                    top: 12,
+                                    right: 12,
+                                    child: GestureDetector(
+                                      onTap: () => _deleteItem(item.id),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black
+                                              .withValues(alpha: 0.3),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.close_rounded,
+                                            color: Colors.white, size: 14),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          
-                          // Delete button
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: Material(
-                              color: Colors.black45,
-                              shape: const CircleBorder(),
-                              child: InkWell(
-                                onTap: () => _deleteItem(item.id),
-                                customBorder: const CircleBorder(),
-                                child: const Padding(
-                                  padding: EdgeInsets.all(6.0),
-                                  child: Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.caption ?? 'Premium Product',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.darkText,
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  item.mediaType == MediaType.video
+                                      ? 'Video Showcase'
+                                      : 'Product Photo',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 11,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -259,72 +429,111 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
                 ),
                 if (_isUploading)
                   Container(
-                    color: Colors.black26,
-                    child: const Center(child: CircularProgressIndicator()),
+                    color: Colors.black45,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(color: Colors.white),
+                          const SizedBox(height: 16),
+                          Text('Uploading to iFind...',
+                              style: GoogleFonts.outfit(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
                   ),
               ],
             ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text('Error: $e', textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () => ref.invalidate(portfolioProvider(widget.business.id)),
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
+        error: (e, s) => Center(child: Text('Error: $e')),
       ),
       floatingActionButton: _buildUploadFAB(),
     );
   }
 
   Widget _buildUploadFAB() {
-    return FloatingActionButton.extended(
+    return FloatingActionButton(
       onPressed: () {
         showModalBottomSheet(
           context: context,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+          shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
           builder: (context) => Container(
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Add Media', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold)),
+                Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2))),
+                const SizedBox(height: 20),
+                Text('Add to Gallery',
+                    style: GoogleFonts.outfit(
+                        fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 24),
-                ListTile(
-                  leading: const Icon(Icons.image_rounded, color: Colors.blue),
-                  title: const Text('Photo'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _addItem(MediaType.image);
-                  },
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildOptionButton(
+                      icon: Icons.image_rounded,
+                      label: 'Photo',
+                      color: Colors.blue,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _addItem(MediaType.image);
+                      },
+                    ),
+                    _buildOptionButton(
+                      icon: Icons.videocam_rounded,
+                      label: 'Video',
+                      color: Colors.purple,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _addItem(MediaType.video);
+                      },
+                    ),
+                  ],
                 ),
-                ListTile(
-                  leading: const Icon(Icons.videocam_rounded, color: Colors.purple),
-                  title: const Text('Video'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _addItem(MediaType.video);
-                  },
-                ),
+                const SizedBox(height: 24),
               ],
             ),
           ),
         );
       },
       backgroundColor: AppColors.primaryGreen,
-      icon: const Icon(Icons.add_a_photo_rounded),
-      label: const Text('Add Media'),
+      child: const Icon(Icons.add_a_photo_rounded, color: Colors.white),
+    );
+  }
+
+  Widget _buildOptionButton(
+      {required IconData icon,
+      required String label,
+      required Color color,
+      required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Icon(icon, color: color, size: 32),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        ],
+      ),
     );
   }
 
@@ -335,17 +544,39 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
         ElevatedButton.icon(
           onPressed: () => _addItem(MediaType.image),
           icon: const Icon(Icons.image_rounded),
-          label: const Text('Photo'),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
+          label: const Text('Add Photo'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
         ),
         const SizedBox(width: 16),
         ElevatedButton.icon(
           onPressed: () => _addItem(MediaType.video),
           icon: const Icon(Icons.videocam_rounded),
-          label: const Text('Video'),
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.purple, foregroundColor: Colors.white),
+          label: const Text('Add Video'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.purple,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildVideoPlaceholder() {
+    return Container(
+      color: Colors.grey[200],
+      child: Center(
+        child: Icon(Icons.movie_creation_outlined,
+            color: Colors.grey[400], size: 32),
+      ),
     );
   }
 }

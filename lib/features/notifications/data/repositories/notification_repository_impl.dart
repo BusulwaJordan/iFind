@@ -17,7 +17,11 @@ class NotificationRepositoryImpl implements NotificationRepository {
         .stream(primaryKey: ['id'])
         .eq('business_id', businessId)
         .order('created_at') // Newest last (append to bottom) or reverse in UI
-        .map((data) => data.map((json) => NotificationModel.fromJson(json)).toList().reversed.toList());
+        .map((data) => data
+            .map((json) => NotificationModel.fromJson(json).toEntity())
+            .toList()
+            .reversed
+            .toList());
   }
 
   @override
@@ -25,8 +29,29 @@ class NotificationRepositoryImpl implements NotificationRepository {
     try {
       await _client
           .from('notifications')
-          .update({'is_read': true})
-          .eq('id', notificationId);
+          .update({'is_read': true}).eq('id', notificationId);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> createNotification({
+    required String businessId,
+    String? needId,
+    required String title,
+    required String body,
+  }) async {
+    try {
+      await _client.from('notifications').insert({
+        'business_id': businessId,
+        'need_id': needId,
+        'title': title,
+        'body': body,
+        'is_read': false,
+        'created_at': DateTime.now().toIso8601String(),
+      });
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
