@@ -51,7 +51,7 @@ class AuthRemoteDataSource {
         emailRedirectTo: 'ifind://auth/verify', // Deep link for mobile
         data: {
           'full_name': fullName,
-          'role': role.name, // Simplified role to string
+          'role': role == UserRole.businessOwner ? 'business_owner' : role.name,
           'phone': phone,
         },
       );
@@ -175,11 +175,16 @@ class AuthRemoteDataSource {
       final metadata = user.userMetadata ?? {};
       final now = DateTime.now();
 
+      final roleStr = metadata['role'] as String? ?? 'customer';
+      final parsedRole = roleStr == 'business_owner' 
+          ? UserRole.businessOwner 
+          : (roleStr == 'manager' ? UserRole.manager : UserRole.customer);
+
       return UserModel(
         id: user.id,
         email: user.email ?? '',
         fullName: metadata['full_name'] as String? ?? 'iFind User',
-        role: UserRole.values.byName(metadata['role'] as String? ?? 'customer'),
+        role: parsedRole,
         phone: metadata['phone'] as String?,
         avatarUrl: metadata['avatar_url'] as String?,
         createdAt: DateTime.tryParse(user.createdAt) ?? now,
