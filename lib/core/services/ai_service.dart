@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:http/http.dart' as http;   // <-- ADD THIS
 
 class AiService {
   late final GenerativeModel _model;
@@ -14,7 +15,6 @@ class AiService {
   }
 
   /// Analyzes a user's raw text need to extract structured data
-  /// Returns a map with {category, urgency, tags}
   Future<Map<String, dynamic>> analyzeNeed(String text) async {
     final prompt = '''
     Analyze this user request: "$text"
@@ -23,14 +23,11 @@ class AiService {
     - urgency: string (high, medium, low)
     - tags: list of strings (keywords)
     ''';
-
     try {
       final content = [Content.text(prompt)];
       final response = await _model.generateContent(content);
       final textResponse = response.text;
-      
       if (textResponse != null) {
-        // Find JSON block if AI wrapped it in markdown
         final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(textResponse);
         if (jsonMatch != null) {
           final jsonStr = jsonMatch.group(0)!;
@@ -39,13 +36,10 @@ class AiService {
           return result;
         }
       }
-      
-      // If we got a response but couldn't parse it, log and throw
       debugPrint('AI returned unparseable response: $textResponse');
       throw Exception('AI response could not be parsed as JSON');
     } catch (e) {
       debugPrint('AI Service Error: $e');
-      // Re-throw the error so caller can handle it
       rethrow;
     }
   }
@@ -67,11 +61,9 @@ class AiService {
       }
     ]
     ''';
-
     try {
       final response = await _model.generateContent([Content.text(prompt)]);
       final textResponse = response.text;
-      
       if (textResponse != null) {
         final jsonMatch = RegExp(r'\[[\s\S]*\]').firstMatch(textResponse);
         if (jsonMatch != null) {
@@ -84,6 +76,31 @@ class AiService {
     } catch (e) {
       debugPrint('AI Ranking Error: $e');
       rethrow;
+    }
+  }
+
+  // ---------- NEW: Python backend methods ----------
+  static const String _pythonBaseUrl = 'http://localhost:8000';
+
+  Future<List<Map<String, dynamic>>> getHybridRecommendations(String businessId, int topN) async {
+    final response = await http.get(
+      Uri.parse('$_pythonBaseUrl/recommend/business/$businessId?top_n=$topN'),
+    );
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to load hybrid recommendations: ${response.statusCode}');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> searchNearbyBusinesses(double lat, double lon, double radiusKm) async {
+    final response = await http.get(
+      Uri.parse('$_pythonBaseUrl/search/nearby?lat=$lat&lon=$lon&radius_km=$radiusKm'),
+    );
+    if (response.statusCode == 200) {
+      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to load nearby businesses: ${response.statusCode}');
     }
   }
 }

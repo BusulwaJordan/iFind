@@ -1,0 +1,14 @@
+category_a,category_b,connection_type
+Manufacturing & Production,Wholesale & Distribution,supplies
+Wholesale & Distribution,Manufacturing & Production,buys_from
+Agriculture & Supplies,Food & Beverage,supplies
+Agriculture & Supplies,Restaurant & Catering,supplies
+Food & Beverage,Restaurant & Catering,supplies
+Construction & Hardware,Retail - General,supplies
+Manufacturing & Production,Construction & Hardware,supplies
+Logistics & Transport,Manufacturing & Production,serves
+Logistics & Transport,Wholesale & Distribution,serves
+Logistics & Transport,Retail - General,serves
+IT & Software Services,Financial Services,serves
+Beauty & Wellness,Retail - Clothing & Fashion,supplies
+Healthcare & Pharmacy,Manufacturing & Production,supplies
