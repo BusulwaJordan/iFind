@@ -1,0 +1,201 @@
+user_id,first_name,last_name,email,phone,home_neighbourhood,home_latitude,home_longitude,user_type,preferred_categories,max_search_distance_km,total_sessions,created_at
+USR0001,Brian,Nakamya,brian.nakamya45@company.co.ug,772459731,Nakasero,0.319187,32.580655,customer,Retail - Electronics|Logistics & Transport|IT & Software Services|Beauty & Wellness,6,41,2025-11-12 05:49:23
+USR0002,Catherine,Ssentongo,catherine_ssentongo83@gmail.com,701810032,Nakasero,0.3216,32.586439,business_owner,Manufacturing & Production|Retail - Clothing & Fashion,4,72,2026-01-15 12:55:30
+USR0003,Edith,Akello,edith.akello24@company.co.ug,756789237,Ntinda,0.341025,32.611234,business_owner,Logistics & Transport|Construction & Hardware,6,50,2025-11-01 00:21:35
+USR0004,Nathan,Kiprotich,nathan.kiprotich74@company.co.ug,701938338,Ntinda,0.344104,32.612496,customer,Retail - Electronics|Restaurant & Catering|Education & Training|Logistics & Transport,11,41,2026-02-15 01:49:44
+USR0005,Oscar,Wasswa,oscar_wasswa46@gmail.com,782747351,Wandegeya,0.338863,32.572715,business_owner,Education & Training,5,41,2025-11-21 07:34:33
+USR0006,Ugochi,Ssemakula,ugochissemakula19@outlook.com,752507333,Nakasero,0.318928,32.580103,customer,Logistics & Transport|Education & Training,11,23,2026-02-07 13:08:48
+USR0007,Gloria,Namubiru,gloria_namubiru58@yahoo.com,752156215,Nakasero,0.322059,32.586615,customer,Agriculture & Supplies|Financial Services,11,65,2026-02-25 02:49:48
+USR0008,Brian,Nabwire,briannabwire57@ug.com,782275377,Ntinda,0.338579,32.611247,business_owner,Retail - General|Restaurant & Catering|Food & Beverage,11,37,2025-11-30 07:52:05
+USR0009,Edith,Mulindwa,edithmulindwa66@ug.com,701700534,Wandegeya,0.338571,32.573426,business_owner,Manufacturing & Production|Agriculture & Supplies|Beauty & Wellness,5,57,2026-02-06 00:22:33
+USR0010,Christine,Ssemakula,christine.ssemakula39@company.co.ug,701571578,Wandegeya,0.339314,32.574035,customer,Beauty & Wellness,3,27,2026-03-25 08:01:16
+USR0011,Michael,Ssentongo,michaelssentongo81@company.co.ug,782274044,Ntinda,0.342313,32.617279,business_owner,Construction & Hardware,5,69,2025-12-20 12:47:00
+USR0012,James,Nabukenya,james_nabukenya38@company.co.ug,752380329,Ntinda,0.344667,32.615115,both,Retail - Clothing & Fashion,6,8,2026-04-26 20:57:47
+USR0013,Irene,Ssentongo,irene.ssentongo92@yahoo.com,772968726,Nakasero,0.317733,32.585748,customer,Construction & Hardware|Education & Training,5,54,2026-01-06 08:58:57
+USR0014,Emmanuel,Kato,emmanuelkato96@ug.com,772828449,Nakasero,0.322554,32.581953,both,Construction & Hardware|Retail - General|Beauty & Wellness,3,59,2026-02-21 20:31:02
+USR0015,Xavier,Nakamya,xavier.nakamya55@ug.com,702618746,Wandegeya,0.339343,32.573798,customer,Construction & Hardware|Agriculture & Supplies,6,44,2026-04-09 06:31:50
+USR0016,David,Muwanga,david_muwanga3@company.co.ug,701999312,Nakasero,0.317106,32.582652,both,Food & Beverage|IT & Software Services|Retail - Clothing & Fashion|Education & Training,5,21,2026-04-05 17:45:54
+USR0017,Sarah,Nakamya,sarah_nakamya11@outlook.com,772796787,Wandegeya,0.342519,32.569159,customer,IT & Software Services|Wholesale & Distribution|Beauty & Wellness,6,55,2026-02-25 13:12:24
+USR0018,Grace,Okello,grace.okello17@ug.com,752337178,Nakasero,0.319636,32.582561,customer,Agriculture & Supplies|Retail - Electronics|Financial Services,5,62,2025-11-12 21:31:14
+USR0019,Zoe,Nakamya,zoe.nakamya41@gmail.com,772413791,Wandegeya,0.338686,32.573414,business_owner,Education & Training|Wholesale & Distribution,5,9,2026-02-03 04:18:21
+USR0020,Amara,Namasaba,amara_namasaba45@yahoo.com,756323404,Wandegeya,0.34114,32.56906,customer,Agriculture & Supplies|Food & Beverage|Retail - Electronics|Beauty & Wellness,5,16,2026-02-13 18:03:06
+USR0021,Zoe,Atim,zoe.atim32@outlook.com,772775933,Ntinda,0.33859,32.615427,business_owner,Beauty & Wellness|IT & Software Services|Retail - General,6,27,2026-01-31 21:29:33
+USR0022,Hassan,Kiprotich,hassan_kiprotich83@ug.com,701921875,Wandegeya,0.34249,32.574683,customer,Food & Beverage,6,77,2025-11-12 22:18:35
+USR0023,Amara,Atim,amara_atim73@yahoo.com,782483162,Ntinda,0.341824,32.612382,customer,Retail - General,11,9,2025-11-02 16:29:56
+USR0024,Nathan,Muwanga,nathanmuwanga37@ug.com,756847245,Nakasero,0.319507,32.582323,business_owner,Education & Training,11,69,2026-02-18 11:46:49
+USR0025,Sarah,Nakamya,sarahnakamya27@gmail.com,702662445,Ntinda,0.340287,32.615691,business_owner,Restaurant & Catering,6,31,2025-11-10 14:00:22
+USR0026,Fatima,Nalwanga,fatimanalwanga78@ug.com,701424314,Nakasero,0.320663,32.584264,customer,IT & Software Services,3,2,2025-11-29 13:04:02
+USR0027,Xavier,Ssempijja,xavier_ssempijja22@company.co.ug,772233096,Wandegeya,0.341749,32.574114,business_owner,Beauty & Wellness,5,43,2026-03-24 16:34:39
+USR0028,Sarah,Ssempijja,sarahssempijja74@outlook.com,756180813,Nakasero,0.319473,32.583086,customer,Healthcare & Pharmacy|Retail - Clothing & Fashion,4,14,2026-04-09 07:01:10
+USR0029,Henry,Akello,henry.akello6@business.ug,701356430,Wandegeya,0.33823,32.570548,both,Wholesale & Distribution|Agriculture & Supplies,6,71,2026-03-23 23:25:35
+USR0030,Brian,Akello,brian_akello93@yahoo.com,772384434,Ntinda,0.343782,32.615572,customer,Retail - Clothing & Fashion,5,67,2026-04-24 21:23:46
+USR0031,Agnes,Nakamya,agnes_nakamya42@outlook.com,701679958,Ntinda,0.341197,32.613951,customer,IT & Software Services|Construction & Hardware|Food & Beverage,6,48,2026-02-14 03:08:47
+USR0032,Gloria,Kiprotich,gloria.kiprotich20@business.ug,701529954,Wandegeya,0.33812,32.571791,business_owner,Healthcare & Pharmacy,3,49,2026-04-01 04:34:19
+USR0033,Ugochi,Ssemakula,ugochi.ssemakula54@business.ug,782162804,Nakasero,0.322808,32.580139,customer,Wholesale & Distribution,5,67,2026-01-13 03:44:03
+USR0034,Yusuf,Kyeyune,yusufkyeyune13@gmail.com,752239999,Wandegeya,0.341186,32.57076,business_owner,Financial Services,5,31,2025-12-22 10:16:57
+USR0035,Vincent,Wasswa,vincent_wasswa41@company.co.ug,782385166,Wandegeya,0.339168,32.574605,customer,Retail - Clothing & Fashion,3,22,2026-01-19 16:34:51
+USR0036,Vincent,Nalwanga,vincent_nalwanga99@business.ug,702573869,Nakasero,0.318158,32.58112,customer,Beauty & Wellness|Education & Training,5,78,2025-11-07 10:29:57
+USR0037,Vincent,Ochieng,vincent.ochieng46@company.co.ug,782638401,Nakasero,0.316343,32.581391,business_owner,Retail - General|Financial Services,6,72,2026-03-14 02:59:14
+USR0038,Patricia,Ssemakula,patricia.ssemakula16@gmail.com,701164664,Ntinda,0.343813,32.618861,customer,Healthcare & Pharmacy|Education & Training|Agriculture & Supplies|Beauty & Wellness,6,75,2026-02-13 03:12:30
+USR0039,Emmanuel,Okello,emmanuelokello57@yahoo.com,702196446,Nakasero,0.322336,32.585635,customer,Logistics & Transport,5,22,2026-04-14 15:18:44
+USR0040,Christine,Aceng,christine.aceng49@ug.com,756547389,Ntinda,0.33921,32.612718,customer,Logistics & Transport|Retail - Clothing & Fashion|Retail - General,11,80,2026-02-18 15:46:34
+USR0041,Timothy,Nakato,timothy_nakato8@business.ug,701393366,Ntinda,0.340681,32.614354,business_owner,Education & Training|Beauty & Wellness,11,3,2026-04-26 07:43:13
+USR0042,Xavier,Nakato,xavier_nakato73@ug.com,752437226,Wandegeya,0.339942,32.569259,customer,Retail - General|Beauty & Wellness,6,8,2026-03-24 23:13:09
+USR0043,Frank,Ssempijja,frank.ssempijja21@business.ug,701359896,Ntinda,0.342598,32.613132,business_owner,Beauty & Wellness,5,74,2026-03-31 17:49:41
+USR0044,Zoe,Atim,zoe.atim76@yahoo.com,772945372,Nakasero,0.321167,32.58187,business_owner,Construction & Hardware|Wholesale & Distribution|Retail - Clothing & Fashion,11,25,2026-03-29 23:41:31
+USR0045,Gloria,Auma,gloria_auma5@yahoo.com,701158896,Ntinda,0.339628,32.61275,customer,Healthcare & Pharmacy,11,26,2026-03-24 13:43:54
+USR0046,Winnie,Ssentongo,winnie.ssentongo3@outlook.com,702715104,Nakasero,0.320933,32.580133,customer,Retail - Electronics|Healthcare & Pharmacy|IT & Software Services,6,76,2025-11-18 07:16:35
+USR0047,Ugochi,Ssali,ugochissali56@yahoo.com,756610866,Nakasero,0.320544,32.580394,both,Food & Beverage|Education & Training|Construction & Hardware,3,49,2025-12-25 03:21:17
+USR0048,Timothy,Ochieng,timothy.ochieng90@company.co.ug,752510623,Nakasero,0.321955,32.585167,business_owner,Construction & Hardware|Healthcare & Pharmacy,11,29,2026-02-22 17:09:53
+USR0049,Grace,Nakato,gracenakato10@outlook.com,702463656,Nakasero,0.322877,32.580343,both,Agriculture & Supplies,4,58,2025-11-02 06:11:52
+USR0050,Nathan,Akello,nathan_akello33@gmail.com,701855408,Wandegeya,0.338006,32.570702,business_owner,Wholesale & Distribution|Financial Services,6,49,2026-01-02 02:07:53
+USR0051,Zoe,Ssemakula,zoessemakula98@business.ug,756336540,Ntinda,0.339139,32.61159,business_owner,Retail - General|Healthcare & Pharmacy|Restaurant & Catering,5,10,2025-12-31 09:39:01
+USR0052,Zoe,Nabukenya,zoenabukenya12@gmail.com,772722886,Wandegeya,0.342926,32.574253,business_owner,Education & Training|Retail - Clothing & Fashion|Construction & Hardware|Financial Services,5,7,2025-11-18 08:14:45
+USR0053,Nathan,Kiprotich,nathankiprotich93@company.co.ug,756666362,Ntinda,0.339857,32.613252,customer,Financial Services,11,71,2026-03-30 13:15:26
+USR0054,Joseph,Muwanga,joseph_muwanga12@gmail.com,772963918,Ntinda,0.342634,32.615802,customer,Food & Beverage,6,38,2026-04-24 02:40:55
+USR0055,Frank,Ssemakula,frank_ssemakula63@ug.com,756377877,Ntinda,0.338638,32.615353,customer,Healthcare & Pharmacy|Retail - Clothing & Fashion|Logistics & Transport|Retail - General,6,57,2026-01-22 11:07:52
+USR0056,Oliver,Mugisha,oliver.mugisha97@gmail.com,756799891,Wandegeya,0.338484,32.572677,business_owner,Beauty & Wellness|Construction & Hardware|Food & Beverage|Manufacturing & Production,5,50,2026-03-26 17:06:40
+USR0057,Brian,Auma,brianauma31@ug.com,782413369,Wandegeya,0.338395,32.574319,business_owner,Retail - Electronics|Beauty & Wellness,6,23,2026-04-19 02:24:37
+USR0058,Ketty,Kiprotich,ketty.kiprotich55@yahoo.com,701816308,Nakasero,0.319048,32.586978,business_owner,Healthcare & Pharmacy|IT & Software Services|Beauty & Wellness,5,12,2026-01-08 16:30:58
+USR0059,Agnes,Auma,agnesauma59@outlook.com,701924758,Ntinda,0.342903,32.615701,business_owner,Financial Services,6,19,2026-02-09 15:19:47
+USR0060,Michael,Ssemakula,michael.ssemakula37@business.ug,752460572,Nakasero,0.322145,32.581113,business_owner,Retail - General|Retail - Clothing & Fashion|Restaurant & Catering|Financial Services,5,80,2026-02-17 04:01:31
+USR0061,Agnes,Muwanga,agnesmuwanga31@outlook.com,701881975,Ntinda,0.341327,32.613149,customer,Agriculture & Supplies|Beauty & Wellness|Restaurant & Catering,5,36,2026-03-31 02:06:40
+USR0062,Grace,Akello,graceakello57@outlook.com,772382507,Nakasero,0.321102,32.58384,customer,Food & Beverage|Agriculture & Supplies|Financial Services|IT & Software Services,6,67,2026-04-04 10:41:10
+USR0063,David,Ssempijja,david_ssempijja91@gmail.com,752522979,Nakasero,0.31695,32.58581,both,Retail - Clothing & Fashion,5,26,2026-03-30 00:53:38
+USR0064,Patricia,Muwanga,patricia_muwanga91@gmail.com,702387286,Ntinda,0.340578,32.614714,customer,Education & Training,5,31,2026-01-05 21:21:34
+USR0065,Norah,Kyeyune,norahkyeyune71@ug.com,772460971,Nakasero,0.317145,32.586156,business_owner,Restaurant & Catering,5,50,2025-11-09 02:32:35
+USR0066,Lydia,Kiprotich,lydia.kiprotich87@company.co.ug,702382154,Nakasero,0.320561,32.583106,both,Logistics & Transport,5,23,2026-02-15 19:44:53
+USR0067,Amara,Akello,amara_akello92@business.ug,756773962,Ntinda,0.339928,32.618164,both,Restaurant & Catering|Food & Beverage|Logistics & Transport|Wholesale & Distribution,11,80,2026-01-10 07:24:34
+USR0068,Grace,Okello,grace_okello72@company.co.ug,756722615,Wandegeya,0.341045,32.570089,customer,Healthcare & Pharmacy,6,42,2026-04-03 10:12:36
+USR0069,Rajiv,Kato,rajiv_kato25@company.co.ug,702642421,Wandegeya,0.341827,32.574298,business_owner,Education & Training|Healthcare & Pharmacy|Wholesale & Distribution|Retail - Clothing & Fashion,5,64,2026-04-27 18:22:10
+USR0070,Rajiv,Nalwanga,rajivnalwanga5@ug.com,752842464,Ntinda,0.344963,32.617528,customer,Education & Training|Manufacturing & Production,6,46,2026-01-30 00:40:01
+USR0071,Ketty,Nabwire,ketty_nabwire13@yahoo.com,782234159,Wandegeya,0.341705,32.573076,business_owner,Education & Training|Healthcare & Pharmacy,6,29,2026-01-02 19:32:23
+USR0072,Ugochi,Nalwanga,ugochi_nalwanga75@outlook.com,772586288,Ntinda,0.343958,32.614764,both,Logistics & Transport,5,65,2025-11-21 15:58:17
+USR0073,Zoe,Ssempijja,zoe.ssempijja20@ug.com,702310026,Ntinda,0.340399,32.618898,both,Retail - Clothing & Fashion|Healthcare & Pharmacy|IT & Software Services|Wholesale & Distribution,6,63,2025-12-29 18:13:06
+USR0074,Lawrence,Ssali,lawrence.ssali58@gmail.com,772319553,Wandegeya,0.341806,32.56918,business_owner,Beauty & Wellness|Wholesale & Distribution|Agriculture & Supplies|Retail - Electronics,6,79,2026-01-16 20:27:59
+USR0075,Christine,Wasswa,christine_wasswa1@ug.com,701659711,Ntinda,0.339396,32.613985,customer,Beauty & Wellness|Agriculture & Supplies|Manufacturing & Production,5,3,2026-03-01 08:33:08
+USR0076,Patricia,Akello,patricia_akello17@outlook.com,701502181,Wandegeya,0.340517,32.570143,customer,Restaurant & Catering,6,59,2026-03-10 12:00:29
+USR0077,Norah,Ssempijja,norahssempijja18@ug.com,772613989,Ntinda,0.340515,32.612507,both,Retail - General|Food & Beverage|Agriculture & Supplies|IT & Software Services,5,28,2026-03-11 14:50:07
+USR0078,Michael,Ssempijja,michael_ssempijja92@gmail.com,756930605,Nakasero,0.316262,32.586012,customer,Construction & Hardware,5,14,2026-02-25 04:58:07
+USR0079,Blessing,Muwanga,blessing_muwanga57@gmail.com,782229598,Wandegeya,0.340736,32.571321,customer,Restaurant & Catering,6,13,2026-02-26 19:16:09
+USR0080,Sarah,Namasaba,sarah.namasaba54@company.co.ug,701636435,Wandegeya,0.341594,32.568824,customer,Logistics & Transport,6,78,2025-12-05 23:21:56
+USR0081,Rajiv,Ssempijja,rajivssempijja53@outlook.com,772268163,Nakasero,0.316276,32.582971,customer,Healthcare & Pharmacy|Food & Beverage|Retail - General|Beauty & Wellness,5,15,2026-03-29 17:23:59
+USR0082,Gloria,Ochieng,gloria.ochieng93@business.ug,756206210,Nakasero,0.322333,32.584155,customer,Restaurant & Catering|Logistics & Transport|Retail - General,2,23,2026-04-05 16:32:59
+USR0083,Timothy,Atim,timothy_atim95@outlook.com,701199613,Wandegeya,0.342256,32.574232,customer,Education & Training|Wholesale & Distribution,5,43,2026-01-03 05:10:48
+USR0084,Daniel,Namasaba,daniel.namasaba48@company.co.ug,772291752,Ntinda,0.338797,32.614202,customer,IT & Software Services|Agriculture & Supplies|Logistics & Transport|Financial Services,5,15,2025-11-23 22:30:43
+USR0085,David,Nabukenya,davidnabukenya62@ug.com,752811346,Nakasero,0.319067,32.583891,business_owner,Agriculture & Supplies,5,62,2026-04-13 23:16:19
+USR0086,Henry,Nalwanga,henry.nalwanga34@gmail.com,756429502,Ntinda,0.338087,32.617947,customer,Education & Training|Agriculture & Supplies,6,67,2026-02-01 20:29:36
+USR0087,Oscar,Ssemakula,oscarssemakula32@company.co.ug,782462544,Ntinda,0.342646,32.616131,customer,Retail - General,6,65,2026-04-01 03:52:58
+USR0088,Gloria,Nabukenya,gloria_nabukenya31@ug.com,772391668,Nakasero,0.316352,32.580782,business_owner,Agriculture & Supplies|Food & Beverage|Retail - Electronics|Logistics & Transport,6,74,2026-01-19 10:16:25
+USR0089,Gloria,Kyeyune,gloria_kyeyune96@gmail.com,756118632,Ntinda,0.338719,32.614299,business_owner,Agriculture & Supplies,5,78,2026-04-21 15:01:33
+USR0090,Ugochi,Ssempijja,ugochissempijja86@yahoo.com,782457411,Wandegeya,0.339817,32.56838,customer,Healthcare & Pharmacy|Manufacturing & Production|Beauty & Wellness|Construction & Hardware,11,61,2026-03-08 12:00:19
+USR0091,Yusuf,Ssentongo,yusuf.ssentongo98@gmail.com,756332518,Ntinda,0.338015,32.613841,business_owner,Manufacturing & Production|Wholesale & Distribution|Healthcare & Pharmacy,5,6,2026-04-09 18:13:35
+USR0092,Gloria,Ochieng,gloriaochieng53@company.co.ug,701366641,Wandegeya,0.341054,32.569313,both,Food & Beverage|Logistics & Transport|Beauty & Wellness|Wholesale & Distribution,5,14,2026-03-15 17:57:21
+USR0093,Catherine,Kato,catherine.kato99@business.ug,782579605,Wandegeya,0.341292,32.574693,customer,Retail - General|Manufacturing & Production|IT & Software Services|Wholesale & Distribution,11,56,2026-03-30 08:47:46
+USR0094,Frank,Ssempijja,frankssempijja23@company.co.ug,756954845,Nakasero,0.316899,32.582099,business_owner,Manufacturing & Production|Financial Services|Agriculture & Supplies,11,32,2025-12-19 04:36:36
+USR0095,Winnie,Namubiru,winnie.namubiru53@yahoo.com,752834018,Ntinda,0.344205,32.615098,business_owner,IT & Software Services|Wholesale & Distribution|Manufacturing & Production,5,26,2025-12-07 18:10:05
+USR0096,Timothy,Nabwire,timothy.nabwire91@company.co.ug,756286450,Ntinda,0.341527,32.616554,customer,Beauty & Wellness,6,72,2026-01-25 04:54:41
+USR0097,Lydia,Nabwire,lydianabwire96@ug.com,752399817,Wandegeya,0.342387,32.570957,customer,Retail - General,6,19,2025-11-09 17:12:34
+USR0098,David,Kiprotich,david_kiprotich88@yahoo.com,772253541,Ntinda,0.343876,32.616525,customer,Healthcare & Pharmacy,6,14,2026-02-18 12:02:45
+USR0099,Kisa,Akello,kisaakello50@company.co.ug,702635740,Wandegeya,0.341922,32.573592,customer,Wholesale & Distribution,6,50,2026-01-13 18:48:39
+USR0100,Vincent,Auma,vincentauma33@gmail.com,702750706,Nakasero,0.322082,32.585884,customer,Wholesale & Distribution|Education & Training,5,76,2026-02-06 01:30:03
+USR0101,Norah,Kiprotich,norah_kiprotich58@yahoo.com,702815819,Wandegeya,0.338372,32.574737,business_owner,Financial Services,5,55,2025-12-20 04:18:30
+USR0102,Rajiv,Ochieng,rajiv_ochieng1@business.ug,772588983,Nakasero,0.320968,32.580238,customer,Construction & Hardware|Retail - General|Beauty & Wellness,11,39,2026-01-27 00:38:57
+USR0103,Lydia,Auma,lydiaauma41@gmail.com,752330646,Ntinda,0.344699,32.615165,business_owner,Financial Services|Manufacturing & Production,11,52,2025-11-16 16:14:25
+USR0104,Oliver,Kiprotich,oliver_kiprotich47@outlook.com,772329056,Wandegeya,0.342752,32.572328,customer,Retail - Electronics,5,58,2025-12-13 05:46:36
+USR0105,Oscar,Namasaba,oscarnamasaba42@gmail.com,782934883,Nakasero,0.322615,32.582087,customer,Retail - General|Manufacturing & Production|Beauty & Wellness,5,66,2026-03-23 22:08:35
+USR0106,Daniel,Nakato,danielnakato25@outlook.com,772638857,Nakasero,0.316576,32.579768,both,Education & Training,5,27,2026-02-28 05:00:07
+USR0107,Nathan,Nabwire,nathan.nabwire69@gmail.com,756877388,Ntinda,0.343426,32.616172,both,Retail - General|Logistics & Transport,6,5,2025-11-15 21:13:55
+USR0108,David,Nabukenya,david.nabukenya74@business.ug,702371212,Ntinda,0.340853,32.614609,customer,Retail - General|Financial Services|Education & Training,5,69,2025-11-01 06:35:02
+USR0109,Oscar,Nakamya,oscar.nakamya90@business.ug,701475075,Wandegeya,0.34264,32.568743,business_owner,Construction & Hardware|Retail - Electronics|Restaurant & Catering,6,49,2026-01-09 22:38:56
+USR0110,Blessing,Nakato,blessing.nakato18@business.ug,756509985,Nakasero,0.321577,32.585796,customer,Restaurant & Catering|Education & Training,5,2,2026-02-07 07:10:56
+USR0111,Kisa,Ochieng,kisa.ochieng74@gmail.com,752513224,Nakasero,0.31976,32.586576,customer,Food & Beverage|Financial Services|Education & Training,11,19,2025-11-29 00:42:08
+USR0112,Oliver,Namasaba,oliver.namasaba24@yahoo.com,756938504,Ntinda,0.341971,32.611435,business_owner,Education & Training|Manufacturing & Production|Retail - Electronics|Restaurant & Catering,5,33,2025-11-17 19:07:11
+USR0113,Michael,Nakato,michael.nakato86@outlook.com,756345925,Ntinda,0.3387,32.615956,both,Logistics & Transport|Wholesale & Distribution|Healthcare & Pharmacy,11,40,2026-03-04 08:20:18
+USR0114,Joseph,Mulindwa,joseph_mulindwa55@outlook.com,702105066,Wandegeya,0.339566,32.5735,business_owner,Restaurant & Catering|Agriculture & Supplies|Healthcare & Pharmacy|Retail - Clothing & Fashion,6,62,2026-01-22 01:38:20
+USR0115,Xavier,Namubiru,xavier.namubiru23@business.ug,756736095,Ntinda,0.338574,32.613245,business_owner,Restaurant & Catering|IT & Software Services,5,10,2026-04-08 21:43:34
+USR0116,Hassan,Kato,hassankato52@business.ug,752323095,Nakasero,0.322344,32.583413,customer,Education & Training|Beauty & Wellness|Retail - Clothing & Fashion|Healthcare & Pharmacy,6,29,2026-04-08 18:51:28
+USR0117,Michael,Aceng,michael_aceng65@yahoo.com,752194952,Ntinda,0.340777,32.615017,business_owner,Beauty & Wellness|Manufacturing & Production,5,58,2025-11-28 17:15:42
+USR0118,Lydia,Mulindwa,lydiamulindwa94@yahoo.com,782476224,Wandegeya,0.338202,32.57333,customer,Healthcare & Pharmacy|Food & Beverage|Retail - General,5,67,2026-04-11 16:50:01
+USR0119,Yusuf,Wasswa,yusuf.wasswa6@ug.com,756439813,Ntinda,0.338723,32.618748,business_owner,Agriculture & Supplies|IT & Software Services|Restaurant & Catering,11,70,2026-02-10 06:39:01
+USR0120,Zoe,Kato,zoekato84@outlook.com,701641760,Ntinda,0.339761,32.618781,customer,Healthcare & Pharmacy|Agriculture & Supplies|Wholesale & Distribution|Logistics & Transport,6,78,2025-11-01 09:35:09
+USR0121,Irene,Kyeyune,irene.kyeyune66@yahoo.com,756394450,Nakasero,0.317481,32.580495,customer,Education & Training,5,54,2026-03-25 10:02:23
+USR0122,Henry,Nakato,henry_nakato27@ug.com,752269078,Wandegeya,0.341236,32.570876,customer,Construction & Hardware|Wholesale & Distribution,6,18,2026-02-20 21:44:52
+USR0123,Catherine,Mulindwa,catherine.mulindwa34@gmail.com,702641737,Nakasero,0.322708,32.583795,business_owner,Wholesale & Distribution,5,11,2025-12-08 23:43:39
+USR0124,Norah,Nakato,norah.nakato53@yahoo.com,752249644,Ntinda,0.343562,32.617564,customer,Retail - Clothing & Fashion|IT & Software Services|Education & Training,6,59,2026-02-14 23:56:58
+USR0125,Emmanuel,Akello,emmanuel.akello14@ug.com,701312177,Ntinda,0.341659,32.618275,business_owner,Construction & Hardware|Retail - Electronics,6,61,2026-04-10 14:33:04
+USR0126,Norah,Muwanga,norah.muwanga12@business.ug,782791423,Wandegeya,0.338652,32.572224,business_owner,Manufacturing & Production|Financial Services|Healthcare & Pharmacy|Retail - General,11,55,2025-12-11 07:06:55
+USR0127,Frank,Wasswa,frankwasswa98@business.ug,756704106,Ntinda,0.338684,32.612071,customer,Wholesale & Distribution|Agriculture & Supplies,5,37,2026-02-15 07:30:22
+USR0128,James,Nalwanga,james.nalwanga91@yahoo.com,756927769,Ntinda,0.33805,32.61518,customer,Education & Training|Food & Beverage|IT & Software Services|Healthcare & Pharmacy,6,47,2025-11-19 07:07:25
+USR0129,Christine,Kato,christine_kato69@outlook.com,782692099,Wandegeya,0.339828,32.569929,business_owner,Financial Services|Manufacturing & Production,11,62,2025-12-02 05:01:18
+USR0130,Kisa,Auma,kisa_auma74@outlook.com,772911801,Ntinda,0.342938,32.616886,both,IT & Software Services,6,58,2026-03-20 09:28:47
+USR0131,Ketty,Ssemakula,ketty_ssemakula44@business.ug,752743852,Nakasero,0.320879,32.584654,customer,Beauty & Wellness,5,19,2026-01-23 15:31:51
+USR0132,Norah,Nalwanga,norah_nalwanga29@gmail.com,772183927,Nakasero,0.320263,32.584796,both,Construction & Hardware|Education & Training|Manufacturing & Production|Restaurant & Catering,11,8,2026-04-18 12:02:15
+USR0133,Lawrence,Kato,lawrence.kato26@ug.com,756942960,Ntinda,0.341627,32.612558,business_owner,Construction & Hardware|Retail - Clothing & Fashion,5,47,2025-12-13 01:05:19
+USR0134,Amara,Nabukenya,amara_nabukenya46@outlook.com,756514337,Nakasero,0.318838,32.580602,customer,Wholesale & Distribution,5,71,2025-12-21 03:25:39
+USR0135,Kisa,Mulindwa,kisa_mulindwa29@outlook.com,752303974,Ntinda,0.341183,32.614232,customer,Financial Services|Manufacturing & Production,5,72,2025-11-13 04:12:44
+USR0136,Timothy,Ssali,timothy_ssali69@business.ug,752362292,Nakasero,0.320859,32.586728,business_owner,Beauty & Wellness|Healthcare & Pharmacy,6,59,2026-04-09 16:42:31
+USR0137,Blessing,Nakato,blessing.nakato49@outlook.com,756926965,Nakasero,0.322959,32.584415,customer,Financial Services|Healthcare & Pharmacy|Manufacturing & Production,11,2,2026-03-05 15:57:31
+USR0138,Rajiv,Akello,rajiv_akello87@gmail.com,756960959,Ntinda,0.340394,32.615436,customer,Healthcare & Pharmacy|Food & Beverage|Construction & Hardware,6,24,2026-04-18 18:03:42
+USR0139,Mary,Nakato,mary.nakato95@yahoo.com,702378297,Wandegeya,0.339034,32.569419,customer,Retail - Clothing & Fashion|Beauty & Wellness|Retail - Electronics,6,11,2026-03-01 04:31:52
+USR0140,Gloria,Namasaba,gloria.namasaba62@business.ug,772750817,Nakasero,0.318208,32.586185,both,Logistics & Transport|Retail - Clothing & Fashion|Beauty & Wellness,11,36,2026-01-10 10:31:57
+USR0141,Lydia,Ochieng,lydia_ochieng62@business.ug,752134144,Nakasero,0.319517,32.58215,business_owner,Logistics & Transport|Retail - Electronics,11,59,2025-12-26 17:16:48
+USR0142,Amara,Okello,amara_okello75@yahoo.com,701441244,Wandegeya,0.339808,32.574033,customer,Food & Beverage|Restaurant & Catering|Logistics & Transport,11,44,2026-01-04 17:15:09
+USR0143,Gloria,Nalwanga,glorianalwanga97@ug.com,772482812,Nakasero,0.32198,32.581237,customer,Construction & Hardware|Education & Training,5,13,2026-03-09 05:51:56
+USR0144,Patricia,Auma,patricia.auma19@ug.com,756256812,Ntinda,0.341311,32.611078,customer,Wholesale & Distribution|Agriculture & Supplies,11,69,2026-03-09 04:46:10
+USR0145,Gloria,Namubiru,glorianamubiru7@business.ug,782203782,Ntinda,0.342834,32.61148,business_owner,Agriculture & Supplies|Education & Training|Retail - Electronics|Logistics & Transport,5,34,2026-01-03 19:56:06
+USR0146,Kisa,Auma,kisa.auma53@outlook.com,701468145,Ntinda,0.344072,32.618705,customer,Beauty & Wellness|Restaurant & Catering,6,42,2026-02-28 17:16:43
+USR0147,Gloria,Aceng,gloria_aceng79@gmail.com,772586279,Ntinda,0.342422,32.612159,customer,Financial Services|Education & Training|Construction & Hardware,11,52,2026-04-01 04:07:12
+USR0148,Emmanuel,Nakamya,emmanuel.nakamya41@outlook.com,772784733,Nakasero,0.318039,32.58114,business_owner,Wholesale & Distribution|Logistics & Transport|Beauty & Wellness,5,76,2026-02-01 11:10:55
+USR0149,Daniel,Nalwanga,daniel.nalwanga17@yahoo.com,756346024,Nakasero,0.320634,32.586523,business_owner,Food & Beverage,4,51,2025-11-18 15:46:13
+USR0150,Emmanuel,Nakato,emmanuel.nakato99@gmail.com,782649435,Wandegeya,0.341825,32.568583,customer,Retail - Electronics|Education & Training,6,40,2025-12-11 06:33:19
+USR0151,Timothy,Kyeyune,timothy.kyeyune68@yahoo.com,702129959,Wandegeya,0.338176,32.570498,both,Logistics & Transport|Agriculture & Supplies|Manufacturing & Production|Restaurant & Catering,11,57,2025-11-24 09:41:45
+USR0152,James,Nabukenya,james_nabukenya81@business.ug,756766738,Wandegeya,0.342386,32.571045,business_owner,Wholesale & Distribution|Healthcare & Pharmacy|Logistics & Transport,11,30,2026-03-24 06:16:00
+USR0153,Daniel,Namubiru,daniel_namubiru20@ug.com,772111068,Ntinda,0.338001,32.617523,business_owner,Restaurant & Catering|Logistics & Transport|Manufacturing & Production,6,63,2026-04-18 17:22:18
+USR0154,Frank,Namubiru,frank_namubiru77@ug.com,702935471,Nakasero,0.316051,32.581989,customer,Financial Services|Food & Beverage|Retail - Clothing & Fashion|IT & Software Services,6,49,2025-12-09 16:54:26
+USR0155,Fatima,Nalwanga,fatimanalwanga98@yahoo.com,752946803,Wandegeya,0.34147,32.569903,business_owner,Financial Services|Food & Beverage|Retail - Electronics,6,18,2025-12-22 01:20:37
+USR0156,Edith,Namasaba,edithnamasaba80@outlook.com,782296911,Ntinda,0.340245,32.612217,both,Retail - Clothing & Fashion,5,37,2025-12-18 09:42:16
+USR0157,Daniel,Aceng,daniel.aceng20@yahoo.com,701617555,Nakasero,0.31752,32.582362,business_owner,Healthcare & Pharmacy|Logistics & Transport|IT & Software Services|Retail - General,5,11,2026-03-31 05:07:02
+USR0158,Joseph,Muwanga,joseph.muwanga70@ug.com,782290425,Ntinda,0.339345,32.617732,business_owner,Retail - Electronics,6,50,2026-03-18 06:25:35
+USR0159,Daniel,Akello,daniel.akello59@gmail.com,756908447,Wandegeya,0.33847,32.572662,customer,Education & Training|Restaurant & Catering|Healthcare & Pharmacy|Retail - Clothing & Fashion,5,71,2026-02-01 11:08:29
+USR0160,Rajiv,Nakato,rajiv.nakato47@outlook.com,701799080,Wandegeya,0.339089,32.56879,business_owner,Retail - General|Retail - Clothing & Fashion|Beauty & Wellness,4,75,2025-11-21 15:15:25
+USR0161,Patricia,Okello,patriciaokello61@business.ug,756725173,Nakasero,0.317085,32.585166,customer,Retail - Electronics|Education & Training|Construction & Hardware|Healthcare & Pharmacy,5,8,2026-01-02 20:32:46
+USR0162,Joseph,Ssentongo,joseph.ssentongo63@gmail.com,702432125,Wandegeya,0.342908,32.57352,business_owner,IT & Software Services|Food & Beverage|Retail - General|Wholesale & Distribution,6,46,2026-03-09 21:15:40
+USR0163,Rajiv,Muwanga,rajiv_muwanga72@company.co.ug,772669097,Ntinda,0.342879,32.612518,customer,Healthcare & Pharmacy|IT & Software Services|Logistics & Transport,5,77,2026-04-12 21:49:21
+USR0164,Kisa,Nabukenya,kisa.nabukenya58@business.ug,772959222,Nakasero,0.317843,32.581937,customer,IT & Software Services|Retail - Clothing & Fashion|Retail - General|Construction & Hardware,4,80,2025-12-12 23:04:09
+USR0165,Emmanuel,Nabwire,emmanuel.nabwire68@ug.com,756621718,Wandegeya,0.341829,32.569079,customer,Education & Training|Healthcare & Pharmacy|Retail - Electronics|Beauty & Wellness,11,9,2025-11-08 01:18:34
+USR0166,Irene,Nabukenya,irene.nabukenya63@yahoo.com,702203550,Nakasero,0.316223,32.584134,customer,Manufacturing & Production|Construction & Hardware|IT & Software Services|Agriculture & Supplies,5,7,2026-01-04 19:05:57
+USR0167,Norah,Ssentongo,norah.ssentongo84@gmail.com,782972496,Nakasero,0.31656,32.585408,customer,Agriculture & Supplies|Healthcare & Pharmacy|Beauty & Wellness|IT & Software Services,5,79,2025-12-17 19:11:10
+USR0168,Catherine,Aceng,catherine.aceng28@outlook.com,752201836,Nakasero,0.316709,32.580848,customer,Manufacturing & Production|Education & Training,3,73,2026-02-20 03:38:19
+USR0169,Lawrence,Auma,lawrence_auma96@business.ug,701903506,Wandegeya,0.341193,32.570506,customer,Wholesale & Distribution|Retail - Electronics|Retail - Clothing & Fashion|Beauty & Wellness,11,52,2026-01-29 13:24:09
+USR0170,Ketty,Auma,ketty_auma41@ug.com,752440424,Wandegeya,0.342224,32.570886,business_owner,Construction & Hardware|Food & Beverage|Wholesale & Distribution,11,28,2026-01-06 08:30:47
+USR0171,Kisa,Aceng,kisa_aceng58@outlook.com,782100205,Ntinda,0.343084,32.618864,business_owner,Wholesale & Distribution|Restaurant & Catering,6,39,2026-04-25 10:12:02
+USR0172,Nathan,Ssali,nathan_ssali71@company.co.ug,752683347,Nakasero,0.319995,32.583573,customer,Healthcare & Pharmacy|Retail - Clothing & Fashion|Agriculture & Supplies|Restaurant & Catering,5,75,2025-12-14 22:37:39
+USR0173,Rajiv,Namubiru,rajiv_namubiru73@business.ug,702869933,Nakasero,0.31654,32.581598,customer,Agriculture & Supplies|IT & Software Services|Wholesale & Distribution|Construction & Hardware,5,77,2026-02-23 04:22:05
+USR0174,Catherine,Aceng,catherine.aceng8@ug.com,772464831,Wandegeya,0.342399,32.57104,both,Agriculture & Supplies,6,78,2026-04-15 10:44:10
+USR0175,Zoe,Muwanga,zoe.muwanga41@business.ug,752692354,Ntinda,0.339047,32.615019,customer,Education & Training,6,58,2026-03-14 23:26:37
+USR0176,Lydia,Ssempijja,lydia_ssempijja38@yahoo.com,782255202,Nakasero,0.316925,32.57966,business_owner,Manufacturing & Production,6,34,2025-11-15 10:44:30
+USR0177,Hassan,Nalwanga,hassan.nalwanga62@yahoo.com,752307731,Wandegeya,0.340439,32.572566,customer,Food & Beverage|Retail - Electronics,6,56,2025-12-28 02:37:07
+USR0178,Lydia,Nakamya,lydia_nakamya55@company.co.ug,772465227,Nakasero,0.317333,32.581756,business_owner,Retail - Clothing & Fashion|Healthcare & Pharmacy|Construction & Hardware,6,80,2025-11-26 07:40:42
+USR0179,Catherine,Akello,catherine_akello20@company.co.ug,756994188,Nakasero,0.316601,32.584917,customer,Agriculture & Supplies|Wholesale & Distribution,5,2,2025-12-31 15:56:10
+USR0180,Henry,Namubiru,henry.namubiru43@ug.com,702875959,Ntinda,0.341766,32.61263,customer,Manufacturing & Production|Logistics & Transport|Construction & Hardware,5,3,2026-01-06 15:08:40
+USR0181,Ingrid,Muwanga,ingrid.muwanga37@yahoo.com,702927524,Ntinda,0.342876,32.61317,customer,Retail - Electronics,6,35,2026-02-26 21:24:41
+USR0182,Yusuf,Ssemakula,yusufssemakula50@outlook.com,702499194,Nakasero,0.31956,32.584678,both,Agriculture & Supplies|Construction & Hardware|Manufacturing & Production|Retail - Electronics,5,26,2026-01-28 20:02:17
+USR0183,Edith,Auma,edith.auma32@gmail.com,752419739,Wandegeya,0.339668,32.570754,customer,Education & Training|Healthcare & Pharmacy|Agriculture & Supplies,6,31,2026-04-27 12:02:03
+USR0184,Hassan,Mugisha,hassan_mugisha50@company.co.ug,701681896,Nakasero,0.322644,32.580805,customer,Education & Training|Retail - Clothing & Fashion|Retail - Electronics|IT & Software Services,6,67,2026-04-21 04:00:15
+USR0185,Oscar,Kato,oscar_kato31@yahoo.com,752260169,Wandegeya,0.340132,32.570187,business_owner,Manufacturing & Production|Retail - Clothing & Fashion|Food & Beverage|Education & Training,5,75,2026-02-05 02:53:54
+USR0186,Mary,Ochieng,maryochieng68@company.co.ug,702550955,Ntinda,0.34497,32.618806,customer,Healthcare & Pharmacy|Retail - Electronics,11,69,2026-04-19 00:26:04
+USR0187,Henry,Nabukenya,henrynabukenya4@yahoo.com,772534152,Ntinda,0.344728,32.613427,business_owner,Retail - Clothing & Fashion|Beauty & Wellness|Food & Beverage,5,17,2025-12-03 06:54:47
+USR0188,Oscar,Namasaba,oscarnamasaba79@business.ug,702725329,Ntinda,0.339625,32.616499,customer,Retail - Clothing & Fashion|Manufacturing & Production|Construction & Hardware|Logistics & Transport,6,24,2026-04-01 17:59:25
+USR0189,Gloria,Nakato,gloria.nakato29@yahoo.com,701528436,Nakasero,0.321352,32.57912,customer,Food & Beverage|IT & Software Services|Education & Training|Wholesale & Distribution,5,9,2025-12-01 21:58:13
+USR0190,Daniel,Namasaba,daniel_namasaba59@company.co.ug,702548324,Ntinda,0.340834,32.611335,business_owner,IT & Software Services|Healthcare & Pharmacy|Financial Services|Construction & Hardware,11,77,2026-02-04 04:34:59
+USR0191,Catherine,Ssempijja,catherine_ssempijja6@ug.com,702643899,Nakasero,0.319765,32.586871,customer,Manufacturing & Production|Beauty & Wellness|Education & Training|Retail - General,4,38,2026-01-17 21:33:56
+USR0192,Ugochi,Namubiru,ugochi_namubiru38@yahoo.com,752157196,Ntinda,0.34283,32.618229,customer,Retail - Electronics|IT & Software Services|Manufacturing & Production|Wholesale & Distribution,6,75,2026-04-17 02:12:48
+USR0193,James,Ochieng,james_ochieng58@ug.com,701287567,Ntinda,0.341176,32.618173,both,Retail - Electronics|Restaurant & Catering|Healthcare & Pharmacy|IT & Software Services,6,16,2025-11-16 12:59:59
+USR0194,Daniel,Kato,danielkato91@gmail.com,782862182,Ntinda,0.343537,32.615093,both,Manufacturing & Production|Financial Services|Retail - General|Retail - Clothing & Fashion,5,73,2026-04-05 04:22:13
+USR0195,Joseph,Nabukenya,josephnabukenya7@yahoo.com,782423026,Nakasero,0.318167,32.585149,customer,Retail - Electronics|Retail - Clothing & Fashion,5,1,2026-02-19 15:45:41
+USR0196,Rajiv,Okello,rajiv_okello70@ug.com,701737517,Ntinda,0.344179,32.612903,business_owner,Logistics & Transport|Financial Services|Wholesale & Distribution|Retail - Electronics,11,77,2025-11-01 09:28:48
+USR0197,Kisa,Mugisha,kisamugisha27@company.co.ug,701293818,Wandegeya,0.338741,32.572573,customer,Education & Training,11,78,2025-12-23 15:20:50
+USR0198,Fatima,Muwanga,fatima.muwanga21@ug.com,756398194,Nakasero,0.320278,32.584532,business_owner,Logistics & Transport|IT & Software Services,11,47,2026-04-15 22:52:46
+USR0199,Fatima,Namubiru,fatima_namubiru9@outlook.com,782984274,Ntinda,0.341853,32.613343,customer,Healthcare & Pharmacy|Manufacturing & Production|Financial Services,11,27,2026-03-04 18:31:33
+USR0200,Oscar,Muwanga,oscarmuwanga81@business.ug,752191928,Nakasero,0.319386,32.584509,both,Financial Services|Construction & Hardware|Healthcare & Pharmacy,5,68,2026-02-11 04:03:19
