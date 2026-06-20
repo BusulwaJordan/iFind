@@ -80,7 +80,7 @@ class AiService {
   }
 
   // ---------- NEW: Python backend methods ----------
-  static const String _pythonBaseUrl = 'http://localhost:8000';
+  static const String _pythonBaseUrl = 'https://ifind-backend-9wvd.onrender.com';
 
   Future<List<Map<String, dynamic>>> getHybridRecommendations(String businessId, int topN) async {
     final response = await http.get(
