@@ -4,6 +4,8 @@ import pandas as pd
 from geopy.distance import geodesic
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from supabase import create_client
+import os
 
 app = FastAPI()
 
@@ -14,13 +16,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load data
-businesses = pd.read_csv('businesses_clean.csv')
-users = pd.read_csv('users_clean.csv')
-interactions = pd.read_csv('interactions_clean.csv')
-connections = pd.read_csv('category_connections.csv')
+# Initialize Supabase client
+supabase_url = os.environ.get("SUPABASE_URL")
+supabase_key = os.environ.get("SUPABASE_ANON_KEY")
+supabase = create_client(supabase_url, supabase_key)
 
-# ---------- Final Hybrid Recommendation Function ----------
+# Load data from Supabase
+print("Loading data from Supabase...")
+businesses = pd.DataFrame(supabase.table('businesses').select('*').execute().data)
+users = pd.DataFrame(supabase.table('users').select('*').execute().data)
+interactions = pd.DataFrame(supabase.table('interactions').select('*').execute().data)
+connections = pd.DataFrame(supabase.table('category_connections').select('*').execute().data)
+print(f"Loaded {len(businesses)} businesses, {len(users)} users, {len(interactions)} interactions, {len(connections)} connections")
+
+# ---------- Final Hybrid Recommendation Function (unchanged) ----------
 def final_hybrid_recommend(business_id, businesses_df, connections_df, interactions_df, top_n=10, max_distance=5.0):
     source = businesses_df[businesses_df['business_id'] == business_id].iloc[0]
     all_businesses = businesses_df[businesses_df['business_id'] != business_id].copy()
