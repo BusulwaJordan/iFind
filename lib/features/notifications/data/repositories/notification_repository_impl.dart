@@ -11,17 +11,44 @@ class NotificationRepositoryImpl implements NotificationRepository {
   NotificationRepositoryImpl(this._client);
 
   @override
-  Stream<List<AppNotification>> watchNotifications(String businessId) {
-    return _client
+  Stream<List<AppNotification>> watchNotifications(String businessId) async* {
+    while (true) {
+      yield await _fetchBusinessNotifications(businessId);
+      await Future<void>.delayed(const Duration(seconds: 2));
+    }
+  }
+
+  Future<List<AppNotification>> _fetchBusinessNotifications(
+      String businessId) async {
+    final data = await _client
         .from('notifications')
-        .stream(primaryKey: ['id'])
+        .select()
         .eq('business_id', businessId)
-        .order('created_at') // Newest last (append to bottom) or reverse in UI
-        .map((data) => data
-            .map((json) => NotificationModel.fromJson(json).toEntity())
-            .toList()
-            .reversed
-            .toList());
+        .order('created_at', ascending: false);
+
+    return (data as List)
+        .map((json) => NotificationModel.fromJson(json).toEntity())
+        .toList();
+  }
+
+  @override
+  Stream<List<AppNotification>> watchUserNotifications(String userId) async* {
+    while (true) {
+      yield await _fetchUserNotifications(userId);
+      await Future<void>.delayed(const Duration(seconds: 2));
+    }
+  }
+
+  Future<List<AppNotification>> _fetchUserNotifications(String userId) async {
+    final data = await _client
+        .from('notifications')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
+
+    return (data as List)
+        .map((json) => NotificationModel.fromJson(json).toEntity())
+        .toList();
   }
 
   @override
@@ -37,16 +64,33 @@ class NotificationRepositoryImpl implements NotificationRepository {
   }
 
   @override
+  Future<Either<Failure, void>> deleteNotification(
+      String notificationId) async {
+    try {
+      await _client.from('notifications').delete().eq('id', notificationId);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, void>> createNotification({
-    required String businessId,
+    String? userId,
+    String? businessId,
     String? needId,
+    String? type,
+    Map<String, dynamic>? data,
     required String title,
     required String body,
   }) async {
     try {
       await _client.from('notifications').insert({
-        'business_id': businessId,
-        'need_id': needId,
+        if (userId != null) 'user_id': userId,
+        if (businessId != null) 'business_id': businessId,
+        if (needId != null) 'need_id': needId,
+        if (type != null) 'type': type,
+        if (data != null) 'data': data,
         'title': title,
         'body': body,
         'is_read': false,

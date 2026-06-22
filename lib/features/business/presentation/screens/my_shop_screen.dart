@@ -2,21 +2,196 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/services/b2b_service.dart';
+import 'package:ifind/core/utils/distance_calculator.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
+import 'package:ifind/features/business/presentation/providers/b2b_provider.dart';
 import 'package:ifind/features/business/presentation/screens/create_business_screen.dart';
 import 'package:ifind/features/business/presentation/screens/leads_dashboard.dart';
 import 'package:ifind/features/business/presentation/screens/shop_gallery_screen.dart';
 import 'package:ifind/features/business/presentation/screens/product_management_screen.dart';
+import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
+import 'package:ifind/features/chat/presentation/screens/chat_room_screen.dart';
 import 'package:ifind/core/widgets/empty_state_widget.dart';
+import 'package:ifind/features/needs/presentation/providers/need_provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:ui';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:ifind/features/reviews/presentation/providers/review_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class BusinessAnalytics {
+  final int profileViews;
+  final int inquiries;
+  final int saved;
+  final int activeLeads;
+  final int conversations;
+  final int products;
+  final int availableProducts;
+  final int lowStockProducts;
+  final int portfolioItems;
+  final int reviews;
+  final double rating;
+  final DateTime updatedAt;
+
+  const BusinessAnalytics({
+    required this.profileViews,
+    required this.inquiries,
+    required this.saved,
+    required this.activeLeads,
+    required this.conversations,
+    required this.products,
+    required this.availableProducts,
+    required this.lowStockProducts,
+    required this.portfolioItems,
+    required this.reviews,
+    required this.rating,
+    required this.updatedAt,
+  });
+
+  factory BusinessAnalytics.empty(Business business) {
+    return BusinessAnalytics(
+      profileViews: 0,
+      inquiries: 0,
+      saved: 0,
+      activeLeads: 0,
+      conversations: 0,
+      products: 0,
+      availableProducts: 0,
+      lowStockProducts: 0,
+      portfolioItems: 0,
+      reviews: business.reviewCount,
+      rating: business.rating,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  int get reach => profileViews + saved;
+
+  int get healthScore {
+    final inventoryScore = products == 0 ? 0 : 20;
+    final availabilityScore = products == 0
+        ? 0
+        : ((availableProducts / products).clamp(0.0, 1.0) * 20).round();
+    final contentScore = portfolioItems == 0 ? 0 : 15;
+    final ratingScore = ((rating / 5).clamp(0.0, 1.0) * 20).round();
+    final demandScore =
+        ((inquiries + activeLeads).clamp(0, 10) / 10 * 15).round();
+    final trustScore = reviews == 0 ? 0 : 10;
+    return (inventoryScore +
+            availabilityScore +
+            contentScore +
+            ratingScore +
+            demandScore +
+            trustScore)
+        .clamp(0, 100)
+        .toInt();
+  }
+}
+
+final businessAnalyticsProvider =
+    StreamProvider.autoDispose.family<BusinessAnalytics, Business>(
+  (ref, business) async* {
+    var latest = BusinessAnalytics.empty(business);
+    while (true) {
+      latest = await _loadBusinessAnalytics(business, latest);
+      yield latest;
+      await Future<void>.delayed(const Duration(seconds: 8));
+    }
+  },
+);
+
+Future<BusinessAnalytics> _loadBusinessAnalytics(
+  Business business,
+  BusinessAnalytics fallback,
+) async {
+  try {
+    final client = Supabase.instance.client;
+    final since =
+        DateTime.now().subtract(const Duration(days: 30)).toIso8601String();
+
+    final interactions = await _safeList(() => client
+        .from('interactions')
+        .select('interaction_type')
+        .eq('business_id', business.id)
+        .gte('created_at', since));
+    final products = await _safeList(() => client
+        .from('products')
+        .select('is_available, stock_quantity')
+        .eq('business_id', business.id));
+    final portfolio = await _safeList(() => client
+        .from('portfolio_items')
+        .select('id')
+        .eq('business_id', business.id));
+    final chats = await _safeList(
+        () => client.from('chats').select('id').eq('business_id', business.id));
+    final needs = await _safeList(
+        () => client.from('needs').select().eq('status', 'active').limit(80));
+
+    int interactionCount(String type) => interactions
+        .where((row) => row['interaction_type']?.toString() == type)
+        .length;
+
+    final matchingLeads = needs.where((row) {
+      final category = row['category']?.toString() ?? '';
+      final lat = (row['latitude'] as num?)?.toDouble();
+      final lon = (row['longitude'] as num?)?.toDouble();
+      if (lat == null || lon == null) return false;
+      return businessCategoryForNeedCategory(category) == business.category &&
+          DistanceCalculator.isWithinRadius(
+            lat1: business.latitude,
+            lon1: business.longitude,
+            lat2: lat,
+            lon2: lon,
+            radiusInKm: 20,
+          );
+    }).length;
+
+    final availableProducts =
+        products.where((row) => row['is_available'] == true).length;
+    final lowStockProducts = products.where((row) {
+      final stock = (row['stock_quantity'] as num?)?.toInt() ?? 0;
+      return stock <= 3;
+    }).length;
+
+    return BusinessAnalytics(
+      profileViews: interactionCount('profile_view') + interactionCount('view'),
+      inquiries: interactionCount('inquiry_sent'),
+      saved: interactionCount('saved_business'),
+      activeLeads: matchingLeads,
+      conversations: chats.length,
+      products: products.length,
+      availableProducts: availableProducts,
+      lowStockProducts: lowStockProducts,
+      portfolioItems: portfolio.length,
+      reviews: business.reviewCount,
+      rating: business.rating,
+      updatedAt: DateTime.now(),
+    );
+  } catch (_) {
+    return fallback;
+  }
+}
+
+Future<List<Map<String, dynamic>>> _safeList(
+  Future<dynamic> Function() load,
+) async {
+  try {
+    final data = await load();
+    return (data as List)
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
+  } catch (_) {
+    return const [];
+  }
+}
 
 class MyShopScreen extends ConsumerWidget {
   const MyShopScreen({super.key});
+
+  static final _partnerSectionKey = GlobalKey();
 
   Future<void> _handleSignOut(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
@@ -174,6 +349,8 @@ class MyShopScreen extends ConsumerWidget {
                             const SizedBox(height: 32),
                             _buildReviewsSection(business.id),
                             const SizedBox(height: 32),
+                            _buildPartnerRecommendations(context, business),
+                            const SizedBox(height: 32),
                             Row(
                               children: [
                                 Container(
@@ -197,6 +374,8 @@ class MyShopScreen extends ConsumerWidget {
                               ],
                             ),
                             const SizedBox(height: 20),
+                            _buildAnalyticsDashboard(context, business),
+                            const SizedBox(height: 24),
                             _buildManagementGrid(context, ref, business),
                             const SizedBox(height: 40),
                             _buildDangerZone(context, ref, business.id),
@@ -212,7 +391,45 @@ class MyShopScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')),
+        error: (e, s) => _buildShopLoadError(context, ref, user.id),
+      ),
+    );
+  }
+
+  Widget _buildShopLoadError(
+      BuildContext context, WidgetRef ref, String userId) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_rounded, size: 48, color: Colors.grey[500]),
+            const SizedBox(height: 16),
+            Text(
+              'Could not load your business center',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: AppColors.darkText,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Check your connection and refresh.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 18),
+            OutlinedButton.icon(
+              onPressed: () =>
+                  ref.invalidate(myBusinessesStreamProvider(userId)),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -225,11 +442,11 @@ class MyShopScreen extends ConsumerWidget {
         child: SizedBox(
           height: MediaQuery.of(context).size.height,
           child: EmptyStateWidget(
-            title: 'Your Business Empire Starts Here',
+            title: 'Start Your Business Workspace',
             message:
-                'Connect with thousands of customers in Uganda by launching your digital shop today.',
-            icon: Icons.rocket_launch_rounded,
-            actionLabel: 'Launch My Shop',
+                'Create a shop with business contact details. Customer accounts are upgraded automatically when the first valid shop is submitted.',
+            icon: Icons.handshake_rounded,
+            actionLabel: 'Create Shop',
             onAction: () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -680,9 +897,9 @@ class MyShopScreen extends ConsumerWidget {
               MaterialPageRoute(builder: (_) => const LeadsDashboardScreen())),
         ),
         _buildManageCard(
-          'Product Lab',
+          'Inventory',
           'Manage Inventory',
-          Icons.layers_rounded,
+          Icons.inventory_2_rounded,
           const Color(0xFFF59E0B),
           () => Navigator.push(
               context,
@@ -700,16 +917,360 @@ class MyShopScreen extends ConsumerWidget {
               MaterialPageRoute(
                   builder: (_) => ShopGalleryScreen(business: business))),
         ),
-        _buildManageCard(
-          'Growth AI',
-          'Insights & Trends',
-          Icons.blur_on_rounded,
-          const Color(0xFF10B981),
-          () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Growth AI coming soon!'))),
-        ),
       ],
     ).animate().fadeIn(delay: 200.ms).scale(begin: const Offset(0.95, 0.95));
+  }
+
+  Widget _buildAnalyticsDashboard(BuildContext context, Business business) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final analyticsAsync = ref.watch(businessAnalyticsProvider(business));
+        final analytics =
+            analyticsAsync.valueOrNull ?? BusinessAnalytics.empty(business);
+        final health = analytics.healthScore;
+        final healthColor = health >= 75
+            ? const Color(0xFF10B981)
+            : health >= 45
+                ? const Color(0xFFF59E0B)
+                : const Color(0xFFEF4444);
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryGreen.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(
+                      Icons.analytics_rounded,
+                      color: AppColors.primaryGreen,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Analytics Dashboard',
+                          style: GoogleFonts.outfit(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.darkText,
+                          ),
+                        ),
+                        Text(
+                          'Live shop performance and customer demand',
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  _LiveStatusPill(updatedAt: analytics.updatedAt),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFB),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: healthColor.withValues(alpha: 0.16),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Business health',
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '$health%',
+                          style: GoogleFonts.outfit(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                            color: healthColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(999),
+                      child: LinearProgressIndicator(
+                        value: health / 100,
+                        minHeight: 9,
+                        backgroundColor: Colors.grey.withValues(alpha: 0.12),
+                        color: healthColor,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      _analyticsSuggestion(analytics),
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.35,
+                children: [
+                  _AnalyticsMetricCard(
+                    label: 'Reach',
+                    value: analytics.reach.toString(),
+                    detail:
+                        '${analytics.profileViews} views, ${analytics.saved} saves',
+                    icon: Icons.visibility_rounded,
+                    color: const Color(0xFF6366F1),
+                  ),
+                  _AnalyticsMetricCard(
+                    label: 'Inquiries',
+                    value: analytics.inquiries.toString(),
+                    detail: '${analytics.conversations} active chats',
+                    icon: Icons.forum_rounded,
+                    color: const Color(0xFF0EA5E9),
+                  ),
+                  _AnalyticsMetricCard(
+                    label: 'Open Leads',
+                    value: analytics.activeLeads.toString(),
+                    detail: 'Nearby matching needs',
+                    icon: Icons.local_activity_rounded,
+                    color: const Color(0xFF10B981),
+                  ),
+                  _AnalyticsMetricCard(
+                    label: 'Inventory',
+                    value:
+                        '${analytics.availableProducts}/${analytics.products}',
+                    detail: '${analytics.lowStockProducts} low stock',
+                    icon: Icons.inventory_2_rounded,
+                    color: const Color(0xFFF59E0B),
+                  ),
+                  _AnalyticsMetricCard(
+                    label: 'Showcase',
+                    value: analytics.portfolioItems.toString(),
+                    detail: 'Gallery posts',
+                    icon: Icons.auto_awesome_motion_rounded,
+                    color: const Color(0xFFEC4899),
+                  ),
+                  _AnalyticsMetricCard(
+                    label: 'Rating',
+                    value: analytics.rating.toStringAsFixed(1),
+                    detail: '${analytics.reviews} reviews',
+                    icon: Icons.star_rounded,
+                    color: const Color(0xFFF97316),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ).animate().fadeIn(delay: 120.ms).slideY(begin: 0.06);
+      },
+    );
+  }
+
+  String _analyticsSuggestion(BusinessAnalytics analytics) {
+    if (analytics.products == 0) {
+      return 'Add products so customers can see what you sell before they message you.';
+    }
+    if (analytics.portfolioItems == 0) {
+      return 'Add photos or short videos to make your shop easier to trust.';
+    }
+    if (analytics.lowStockProducts > 0) {
+      return 'Restock low inventory items so interested customers do not bounce.';
+    }
+    if (analytics.activeLeads > 0) {
+      return 'There are matching customer needs nearby. Open Customer Inquiries and respond early.';
+    }
+    if (analytics.inquiries == 0) {
+      return 'Your shop is set up. Keep products and gallery fresh to attract the first inquiry.';
+    }
+    return 'Your shop has healthy signals. Keep replying fast and updating inventory.';
+  }
+
+  Widget _buildPartnerRecommendations(BuildContext context, Business business) {
+    return Consumer(
+      builder: (context, ref, child) {
+        final partnersAsync = ref.watch(b2bPartnerCandidatesProvider(business));
+        final user = ref.watch(currentUserProvider);
+
+        return Container(
+          key: _partnerSectionKey,
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryGreen,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'B2B Partner Matches',
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkText,
+                      ),
+                    ),
+                  ),
+                  const Icon(Icons.near_me_rounded,
+                      color: AppColors.primaryGreen, size: 20),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Best nearby businesses for supply, referral, and service partnerships.',
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              partnersAsync.when(
+                data: (partners) {
+                  final candidates = partners.take(5).toList();
+
+                  if (candidates.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      child: Center(
+                        child: Text(
+                          'As more verified businesses join nearby, your strongest partner matches will appear here.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            color: Colors.grey[500],
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Column(
+                    children: candidates.map((partner) {
+                      final matchAsync = ref.watch(
+                        b2bCompatibilityProvider((
+                          myBusiness: business,
+                          targetBusiness: partner,
+                        )),
+                      );
+
+                      return _PartnerMatchTile(
+                        partner: partner,
+                        matchAsync: matchAsync,
+                        onMessage: user == null
+                            ? null
+                            : () async {
+                                final messenger = ScaffoldMessenger.of(context);
+                                try {
+                                  final chat = await ref
+                                      .read(chatRemoteDataSourceProvider)
+                                      .getOrCreateChat(
+                                        customerId: user.id,
+                                        businessId: partner.id,
+                                      );
+
+                                  if (context.mounted) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ChatRoomScreen(
+                                          chat: chat,
+                                          otherPartyName: partner.name,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  messenger.showSnackBar(
+                                    SnackBar(content: Text('Error: $e')),
+                                  );
+                                }
+                              },
+                      );
+                    }).toList(),
+                  );
+                },
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 18),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (e, s) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  child: Text(
+                    'Unable to load partner matches right now.',
+                    style: GoogleFonts.outfit(color: Colors.grey[600]),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.08);
+      },
+    );
   }
 
   Widget _buildManageCard(String title, String subtitle, IconData icon,
@@ -843,5 +1404,230 @@ class MyShopScreen extends ConsumerWidget {
         ],
       ),
     ).animate().fadeIn(delay: 400.ms);
+  }
+}
+
+class _PartnerMatchTile extends StatelessWidget {
+  final Business partner;
+  final AsyncValue<B2bCompatibilityResult> matchAsync;
+  final VoidCallback? onMessage;
+
+  const _PartnerMatchTile({
+    required this.partner,
+    required this.matchAsync,
+    required this.onMessage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final distanceLabel = partner.distance == null
+        ? 'Nearby'
+        : '${partner.distance!.toStringAsFixed(1)} km';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFB),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            height: 46,
+            width: 46,
+            decoration: BoxDecoration(
+              color: AppColors.primaryGreen.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.storefront_rounded,
+              color: AppColors.primaryGreen,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  partner.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkText,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${partner.category.name.toUpperCase()} • $distanceLabel',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                matchAsync.when(
+                  data: (match) {
+                    final percent = (match.compatibilityScore * 100).round();
+                    return Text(
+                      '$percent% partner fit',
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryGreen,
+                      ),
+                    );
+                  },
+                  loading: () => Text(
+                    'Checking partner fit...',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                  error: (_, __) => Text(
+                    'Recommended nearby',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Message partner',
+            onPressed: onMessage,
+            icon: const Icon(Icons.forum_rounded),
+            color: AppColors.primaryGreen,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LiveStatusPill extends StatelessWidget {
+  final DateTime updatedAt;
+
+  const _LiveStatusPill({required this.updatedAt});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.primaryGreen.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: const BoxDecoration(
+              color: AppColors.primaryGreen,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            timeago.format(updatedAt, locale: 'en_short'),
+            style: GoogleFonts.outfit(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primaryGreen,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnalyticsMetricCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final String detail;
+  final IconData icon;
+  final Color color;
+
+  const _AnalyticsMetricCard({
+    required this.label,
+    required this.value,
+    required this.detail,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFB),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 18),
+              ),
+              const Spacer(),
+              Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.outfit(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.darkText,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.outfit(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: AppColors.darkText,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            detail,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.outfit(
+              fontSize: 10,
+              color: Colors.grey[500],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

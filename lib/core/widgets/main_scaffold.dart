@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/notifications/presentation/providers/notification_provider.dart';
+import 'package:ifind/features/notifications/domain/entities/notification.dart';
+import 'package:ifind/features/notifications/utils/notification_preview_formatter.dart';
 
 class MainScaffold extends ConsumerStatefulWidget {
   final StatefulNavigationShell navigationShell;
@@ -45,53 +47,42 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    if (user == null)
+    if (user == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
-    // Listen to notification count to show a quick toast if it increases
-    ref.listen(unreadNotificationCountProvider, (previous, next) {
-      if (next > (previous ?? 0)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.notifications_active_rounded,
-                    color: Colors.white),
-                const SizedBox(width: 12),
-                const Expanded(child: Text('You have a new customer inquiry!')),
-                TextButton(
-                  onPressed: () {
-                    _onTap(3); // Go to My Shop (Index 3)
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  },
-                  child: const Text('VIEW',
-                      style: TextStyle(
-                          color: AppColors.primaryGreen,
-                          fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.deepGreen,
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.fromLTRB(
-                20, 0, 20, 100), // Position above navbar
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-        );
+    // Listen to real-time notification stream for custom toasts
+    ref.listen(userNotificationsProvider, (previous, next) {
+      final notificationsEnabled =
+          ref.read(notificationSettingsProvider).value ?? true;
+      if (!notificationsEnabled) return;
+
+      final oldNotifications = previous?.value ?? [];
+      final newNotifications = next.value ?? [];
+
+      if (newNotifications.length > oldNotifications.length) {
+        final newlyAdded = newNotifications
+            .where((n) =>
+                !n.isRead && !oldNotifications.any((oldN) => oldN.id == n.id))
+            .toList();
+
+        for (final notification in newlyAdded) {
+          _showPremiumNotificationToast(context, notification);
+        }
       }
     });
 
     return Scaffold(
-      extendBody: true,
+      resizeToAvoidBottomInset: true,
       body: widget.navigationShell,
       bottomNavigationBar: _buildFloatingNavBar(),
     );
   }
 
   Widget _buildFloatingNavBar() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: Container(
         height: 64,
         decoration: BoxDecoration(
@@ -124,7 +115,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
                   _buildNavItem(0, Icons.home_rounded, 'Home'),
                   _buildNavItem(1, Icons.explore_rounded, 'Discover'),
                   _buildNavItem(2, Icons.chat_bubble_rounded, 'Chat'),
-                  _buildNavItem(3, Icons.business_center_rounded, 'Shop'),
+                  _buildNavItem(3, Icons.handshake_rounded, 'B2B'),
                 ],
               ),
             ),
@@ -180,6 +171,123 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showPremiumNotificationToast(
+      BuildContext context, AppNotification notification) {
+    IconData iconData;
+    Color iconColor;
+    VoidCallback onTapAction;
+    String actionLabel;
+    final previewBody =
+        NotificationPreviewFormatter.cleanBody(notification.body);
+
+    switch (notification.type) {
+      case 'chat':
+        iconData = Icons.chat_bubble_rounded;
+        iconColor = Colors.blue;
+        actionLabel = 'CHAT';
+        onTapAction = () {
+          _onTap(2); // Chat list tab
+        };
+        break;
+      case 'b2b_match':
+        iconData = Icons.handshake_rounded;
+        iconColor = Colors.amber.shade700;
+        actionLabel = 'VIEW';
+        onTapAction = () {
+          _onTap(3); // Shop tab (B2B Leads/Matches)
+        };
+        break;
+      case 'need_match':
+        iconData = Icons.local_offer_rounded;
+        iconColor = AppColors.primaryGreen;
+        actionLabel = 'LEADS';
+        onTapAction = () {
+          _onTap(3); // Shop tab (Customer leads)
+        };
+        break;
+      default:
+        iconData = Icons.notifications_active_rounded;
+        iconColor = AppColors.deepGreen;
+        actionLabel = 'OPEN';
+        onTapAction = () {
+          context.push('/notifications');
+        };
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: InkWell(
+          onTap: () {
+            onTapAction();
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(iconData, color: iconColor, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      notification.title,
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      previewBody,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  onTapAction();
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                },
+                child: Text(
+                  actionLabel,
+                  style: GoogleFonts.outfit(
+                    color: AppColors.primaryGreen,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        backgroundColor: Colors.grey.shade900.withValues(alpha: 0.95),
+        behavior: SnackBarBehavior.floating,
+        margin:
+            const EdgeInsets.fromLTRB(20, 0, 20, 100), // Position above navbar
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side:
+              BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1),
+        ),
+        duration: const Duration(seconds: 4),
       ),
     );
   }

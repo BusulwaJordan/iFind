@@ -76,15 +76,11 @@ class ChatRemoteDataSource {
   }
 
   /// Stream messages for real-time updates
-  Stream<List<Message>> streamMessages(String chatId) {
-    return supabaseClient
-        .from('messages')
-        .stream(primaryKey: ['id'])
-        .eq('chat_id', chatId)
-        .order('created_at', ascending: true)
-        .map((list) => list
-            .map((json) => MessageModel.fromJson(json).toEntity())
-            .toList());
+  Stream<List<Message>> streamMessages(String chatId) async* {
+    while (true) {
+      yield await getMessages(chatId);
+      await Future<void>.delayed(const Duration(seconds: 2));
+    }
   }
 
   /// Fetch user-specific chats

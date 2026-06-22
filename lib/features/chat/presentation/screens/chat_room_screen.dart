@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -64,6 +66,7 @@ class _ChatRoomBody extends ConsumerStatefulWidget {
 }
 
 class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
+  static const _productInquiryPrefix = 'IFIND_PRODUCT_INQUIRY::';
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final List<Message> _optimisticMessages = [];
@@ -193,12 +196,31 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
   Widget _buildMessageBubble(Message msg, bool isMe) {
     bool isOptimistic = msg.id.startsWith('temp-');
     bool isRichInquiry = msg.content.startsWith('[MEDIA_INQUIRY]');
+    bool isProductInquiry = msg.content.startsWith(_productInquiryPrefix);
     String displayContent = msg.content;
     String? mediaUrl;
     String? mediaType;
     String? caption;
+    String? productTitle;
+    String? productPrice;
 
-    if (isRichInquiry) {
+    if (isProductInquiry) {
+      try {
+        final raw = msg.content.substring(_productInquiryPrefix.length);
+        final data = jsonDecode(raw) as Map<String, dynamic>;
+        mediaType = data['media_type'] as String?;
+        mediaUrl = (data['thumbnail_url'] ?? data['media_url']) as String?;
+        caption = data['message'] as String? ?? 'I am interested in this item.';
+        productTitle = data['title'] as String? ?? 'Product inquiry';
+        final price = data['price'];
+        if (price is num) {
+          productPrice = _formatPrice(price.toDouble());
+        }
+        displayContent = caption;
+      } catch (_) {
+        isProductInquiry = false;
+      }
+    } else if (isRichInquiry) {
       try {
         final parts = msg.content.split('|');
         if (parts.length >= 3) {
@@ -241,52 +263,23 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
                   isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 if (isRichInquiry && mediaUrl != null) ...[
-                  GestureDetector(
-                    onTap: () {
-                      final portfolioItem = PortfolioItem(
-                        id: 'inquiry-media',
-                        businessId: widget.chat.businessId,
-                        mediaType: mediaType == 'video'
-                            ? MediaType.video
-                            : MediaType.image,
-                        mediaUrl: mediaUrl!,
-                        caption: caption,
-                        createdAt: msg.createdAt,
-                      );
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              GalleryMediaViewScreen(item: portfolioItem),
-                        ),
-                      );
-                    },
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          CachedNetworkImage(
-                            imageUrl: mediaUrl,
-                            height: 120,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) =>
-                                Container(color: Colors.grey[200], height: 120),
-                            errorWidget: (context, url, error) => Container(
-                              color: Colors.grey[300],
-                              height: 120,
-                              child: const Icon(Icons.error),
-                            ),
-                          ),
-                          if (mediaType == 'video')
-                            const Icon(Icons.play_circle_fill,
-                                color: Colors.white70, size: 40),
-                        ],
-                      ),
-                    ),
+                  _buildInquiryMediaPreview(
+                    mediaUrl: mediaUrl,
+                    mediaType: mediaType,
+                    caption: caption,
+                    createdAt: msg.createdAt,
                   ),
                   const SizedBox(height: 8),
+                ],
+                if (isProductInquiry && mediaUrl != null) ...[
+                  _buildProductInquiryCard(
+                    mediaUrl: mediaUrl,
+                    mediaType: mediaType,
+                    title: productTitle ?? 'Product inquiry',
+                    price: productPrice,
+                    createdAt: msg.createdAt,
+                  ),
+                  const SizedBox(height: 10),
                 ],
                 Text(
                   displayContent,
@@ -317,6 +310,152 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
         ),
       ),
     );
+  }
+
+  Widget _buildProductInquiryCard({
+    required String mediaUrl,
+    required String? mediaType,
+    required String title,
+    required String? price,
+    required DateTime createdAt,
+  }) {
+    return GestureDetector(
+      onTap: () => _openInquiryMedia(mediaUrl, mediaType, title, createdAt),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: CachedNetworkImage(
+                imageUrl: mediaUrl,
+                width: 58,
+                height: 58,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => Container(
+                  width: 58,
+                  height: 58,
+                  color: Colors.grey.shade200,
+                ),
+                errorWidget: (_, __, ___) => Container(
+                  width: 58,
+                  height: 58,
+                  color: Colors.grey.shade300,
+                  child: const Icon(Icons.image_not_supported_outlined),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Product inquiry',
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.deepGreen,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.outfit(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  if (price != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      price,
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryGreen,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInquiryMediaPreview({
+    required String mediaUrl,
+    required String? mediaType,
+    required String? caption,
+    required DateTime createdAt,
+  }) {
+    return GestureDetector(
+      onTap: () => _openInquiryMedia(mediaUrl, mediaType, caption, createdAt),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            CachedNetworkImage(
+              imageUrl: mediaUrl,
+              height: 120,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              placeholder: (context, url) =>
+                  Container(color: Colors.grey[200], height: 120),
+              errorWidget: (context, url, error) => Container(
+                color: Colors.grey[300],
+                height: 120,
+                child: const Icon(Icons.error),
+              ),
+            ),
+            if (mediaType == 'video')
+              const Icon(Icons.play_circle_fill,
+                  color: Colors.white70, size: 40),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openInquiryMedia(
+    String mediaUrl,
+    String? mediaType,
+    String? caption,
+    DateTime createdAt,
+  ) {
+    final portfolioItem = PortfolioItem(
+      id: 'inquiry-media',
+      businessId: widget.chat.businessId,
+      mediaType: mediaType == 'video' ? MediaType.video : MediaType.image,
+      mediaUrl: mediaUrl,
+      caption: caption,
+      createdAt: createdAt,
+    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GalleryMediaViewScreen(item: portfolioItem),
+      ),
+    );
+  }
+
+  String _formatPrice(double price) {
+    return 'UGX ${price.toInt().toString().replaceAllMapped(
+          RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"),
+          (match) => "${match[1]},",
+        )}';
   }
 
   void _showMessageMenu(Message msg) {
@@ -354,6 +493,8 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
   Future<void> _deleteMessage(Message msg) async {
     try {
       await ref.read(chatRemoteDataSourceProvider).deleteMessage(msg.id);
+      ref.invalidate(messagesStreamProvider(widget.chat.id));
+      ref.invalidate(myChatsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Message deleted')),

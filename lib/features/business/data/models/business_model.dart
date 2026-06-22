@@ -52,7 +52,7 @@ class BusinessModel with _$BusinessModel {
 
     data['latitude'] = lat;
     data['longitude'] = lng;
-    
+
     // Safely cast ratings since Postgres NUMERIC can be returned as int, double, or String
     if (data['rating_average'] != null) {
       final val = data['rating_average'];
@@ -62,13 +62,24 @@ class BusinessModel with _$BusinessModel {
         data['rating_average'] = val.toDouble();
       }
     }
-    
+
     if (data['rating_count'] != null) {
       final val = data['rating_count'];
       if (val is String) {
         data['rating_count'] = int.tryParse(val) ?? 0;
       } else if (val is num) {
         data['rating_count'] = val.toInt();
+      }
+    }
+
+    if (data['distance'] != null) {
+      final val = data['distance'];
+      final parsed =
+          val is String ? double.tryParse(val) : (val as num?)?.toDouble();
+      if (parsed != null) {
+        // Older RPCs returned meters while the app displays kilometers.
+        // Nearby queries in this app are small-radius, so large values are legacy meters.
+        data['distance'] = parsed > 500 ? parsed / 1000 : parsed;
       }
     }
 

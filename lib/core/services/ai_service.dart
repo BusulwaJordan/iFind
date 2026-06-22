@@ -1,106 +1,32 @@
-import 'dart:convert';
-import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:http/http.dart' as http;   // <-- ADD THIS
+// ⚠️ DEPRECATED: This file (AiService / OpenRouter) has been replaced.
+//
+// iFind now uses CUSTOM-TRAINED AI models running on Supabase Edge Functions.
+// No third-party API keys are required.
+//
+// REPLACEMENT SERVICES:
+//   → MODEL 1 (Proximity):       lib/core/services/proximity_service.dart
+//   → MODEL 2 (B2C Recommender): lib/core/services/recommendation_service.dart
+//   → MODEL 3 (B2B Matcher):     lib/core/services/b2b_service.dart
+//
+// PROVIDERS:                      lib/core/providers/ai_providers.dart
+//
+// This file is kept temporarily as a stub to avoid breaking existing imports
+// until all call-sites are migrated. Do NOT add new code here.
 
+@Deprecated('Use RecommendationService or B2bService instead.')
 class AiService {
-  late final GenerativeModel _model;
-  AiService() {
-    final apiKey = dotenv.env['GEMINI_API_KEY'] ?? 'YOUR_GEMINI_API_KEY';
-    _model = GenerativeModel(
-      model: 'gemini-1.5-flash',
-      apiKey: apiKey,
-    );
+  @Deprecated('Use RecommendationService.getRecommendations() instead.')
+  Future<List<Map<String, dynamic>>> rankNearbyBusinesses(
+    String intent,
+    List<Map<String, dynamic>> businesses,
+  ) async {
+    // No-op stub — returns empty list so existing call-sites don't crash
+    // while migration is in progress.
+    return [];
   }
 
-  /// Analyzes a user's raw text need to extract structured data
+  @Deprecated('No longer used — intent analysis is handled by local logic.')
   Future<Map<String, dynamic>> analyzeNeed(String text) async {
-    final prompt = '''
-    Analyze this user request: "$text"
-    Return ONLY a JSON object with:
-    - category: string (one of: food, service, retail, unknown)
-    - urgency: string (high, medium, low)
-    - tags: list of strings (keywords)
-    ''';
-    try {
-      final content = [Content.text(prompt)];
-      final response = await _model.generateContent(content);
-      final textResponse = response.text;
-      if (textResponse != null) {
-        final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(textResponse);
-        if (jsonMatch != null) {
-          final jsonStr = jsonMatch.group(0)!;
-          final result = json.decode(jsonStr) as Map<String, dynamic>;
-          debugPrint('AI Analysis Success: $result');
-          return result;
-        }
-      }
-      debugPrint('AI returned unparseable response: $textResponse');
-      throw Exception('AI response could not be parsed as JSON');
-    } catch (e) {
-      debugPrint('AI Service Error: $e');
-      rethrow;
-    }
-  }
-
-  /// Takes a user intent and a raw JSON list of businesses and returns top ranked items
-  Future<List<Map<String, dynamic>>> rankNearbyBusinesses(String intent, List<Map<String, dynamic>> businesses) async {
-    final prompt = '''
-    You are a local business hyper-assistant. 
-    A user's intent is: "$intent".
-    Here is a JSON list of nearby businesses:
-    ${jsonEncode(businesses)}
-
-    Analyze the user's intent against these businesses (look at name, description, category, and distance).
-    Return ONLY a JSON array of the top 3 matching businesses in this exact format:
-    [
-      {
-        "business_id": "the uuid",
-        "reason": "1 short sentence why this is a good match based on their intent."
-      }
-    ]
-    ''';
-    try {
-      final response = await _model.generateContent([Content.text(prompt)]);
-      final textResponse = response.text;
-      if (textResponse != null) {
-        final jsonMatch = RegExp(r'\[[\s\S]*\]').firstMatch(textResponse);
-        if (jsonMatch != null) {
-          final jsonStr = jsonMatch.group(0)!;
-          final List<dynamic> result = json.decode(jsonStr);
-          return List<Map<String, dynamic>>.from(result);
-        }
-      }
-      throw Exception('Could not parse array from AI');
-    } catch (e) {
-      debugPrint('AI Ranking Error: $e');
-      rethrow;
-    }
-  }
-
-  // ---------- NEW: Python backend methods ----------
-  static const String _pythonBaseUrl = 'http://localhost:8000';
-
-  Future<List<Map<String, dynamic>>> getHybridRecommendations(String businessId, int topN) async {
-    final response = await http.get(
-      Uri.parse('$_pythonBaseUrl/recommend/business/$businessId?top_n=$topN'),
-    );
-    if (response.statusCode == 200) {
-      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
-    } else {
-      throw Exception('Failed to load hybrid recommendations: ${response.statusCode}');
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> searchNearbyBusinesses(double lat, double lon, double radiusKm) async {
-    final response = await http.get(
-      Uri.parse('$_pythonBaseUrl/search/nearby?lat=$lat&lon=$lon&radius_km=$radiusKm'),
-    );
-    if (response.statusCode == 200) {
-      return List<Map<String, dynamic>>.from(jsonDecode(response.body));
-    } else {
-      throw Exception('Failed to load nearby businesses: ${response.statusCode}');
-    }
+    return {'category': 'unknown', 'urgency': 'low', 'tags': []};
   }
 }

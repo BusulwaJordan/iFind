@@ -3,21 +3,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ifind/features/reviews/data/repositories/review_repository_impl.dart';
 import 'package:ifind/features/reviews/domain/entities/review.dart';
 import 'package:ifind/features/reviews/domain/repositories/review_repository.dart';
-import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 
 final reviewRepositoryProvider = Provider<ReviewRepository>((ref) {
-  return ReviewRepositoryImpl(
-    Supabase.instance.client,
-    ref.watch(businessRepositoryProvider),
-  );
+  return ReviewRepositoryImpl(Supabase.instance.client);
 });
 
-final businessReviewsProvider = StreamProvider.family<List<Review>, String>((ref, businessId) {
+final businessReviewsProvider =
+    FutureProvider.family<List<Review>, String>((ref, businessId) async {
   final repository = ref.watch(reviewRepositoryProvider);
-  return repository.streamReviews(businessId).asyncMap((either) {
-    return either.fold(
-      (failure) => throw Exception(failure.message),
-      (reviews) => reviews,
-    );
-  });
+  final either = await repository.getReviews(businessId);
+
+  return either.fold(
+    (failure) => throw Exception(failure.message),
+    (reviews) => reviews,
+  );
 });

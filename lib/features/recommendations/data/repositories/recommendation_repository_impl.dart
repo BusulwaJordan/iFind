@@ -11,25 +11,22 @@ class RecommendationRepositoryImpl implements RecommendationRepository {
   RecommendationRepositoryImpl(this.remoteDataSource);
 
   @override
-  Future<Either<Failure, List<Recommendation>>> getAiRecommendations({
-    required String intent,
-    required double latitude,
-    required double longitude,
-    double radiusInMeters = 5000.0,
+  Future<Either<Failure, List<Recommendation>>> getRecommendationsForUser({
+    required String userId,
+    int n = 5,
   }) async {
     try {
-      final models = await remoteDataSource.getAiRecommendations(
-        intent: intent,
-        latitude: latitude,
-        longitude: longitude,
-        radiusInMeters: radiusInMeters,
+      final models = await remoteDataSource.getRecommendationsForUser(
+        userId: userId,
+        n: n,
       );
       final recommendations = models.map((model) => model.toEntity()).toList();
       return Right(recommendations);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } catch (e) {
-      return const Left(ServerFailure('An unexpected error occurred during AI matchmaking'));
+      return const Left(
+          ServerFailure('Failed to load personalized recommendations.'));
     }
   }
 }

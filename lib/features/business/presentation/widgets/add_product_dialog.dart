@@ -20,7 +20,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
   final _descriptionController = TextEditingController();
   final _priceController = TextEditingController();
   final _stockController = TextEditingController();
-  
+
   File? _imageFile;
   bool _isLoading = false;
 
@@ -34,37 +34,52 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
+    final price =
+        double.tryParse(_priceController.text.trim().replaceAll(',', ''));
+    final stock = int.tryParse(_stockController.text.trim());
+    if (price == null || stock == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid price and stock count.')),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
-    
+
     try {
       final repository = ref.read(productRepositoryProvider);
       final result = await repository.createProduct(
         businessId: widget.businessId,
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim(),
-        price: double.parse(_priceController.text.trim().replaceAll(',', '')),
-        stockQuantity: int.parse(_stockController.text.trim()),
+        price: price,
+        stockQuantity: stock,
         imageFiles: _imageFile != null ? [_imageFile!] : null,
       );
 
       result.fold(
         (failure) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${failure.message}')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(_friendlyProductError(failure.message))),
+            );
           }
         },
         (_) {
           ref.invalidate(businessProductsProvider(widget.businessId));
           if (mounted) {
             Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Product added successfully')));
+            ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Product added successfully')));
           }
         },
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_friendlyProductError(e.toString()))),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -74,7 +89,8 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Add New Product', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+      title: Text('Add New Product',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -99,9 +115,11 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                       : Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.add_a_photo_rounded, color: Colors.grey),
+                            const Icon(Icons.add_a_photo_rounded,
+                                color: Colors.grey),
                             const SizedBox(height: 8),
-                            Text('Add image', style: GoogleFonts.outfit(color: Colors.grey)),
+                            Text('Add image',
+                                style: GoogleFonts.outfit(color: Colors.grey)),
                           ],
                         ),
                 ),
@@ -111,7 +129,8 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                 controller: _nameController,
                 decoration: InputDecoration(
                   labelText: 'Product Name',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 validator: (v) => v?.isEmpty == true ? 'Required' : null,
               ),
@@ -121,7 +140,8 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                 maxLines: 2,
                 decoration: InputDecoration(
                   labelText: 'Description',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 validator: (v) => v?.isEmpty == true ? 'Required' : null,
               ),
@@ -134,9 +154,16 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
                         labelText: 'Price (UGX)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
-                      validator: (v) => v?.isEmpty == true ? 'Required' : null,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Required';
+                        final value =
+                            double.tryParse(v.trim().replaceAll(',', ''));
+                        if (value == null || value < 0) return 'Invalid price';
+                        return null;
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -146,9 +173,15 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
                         labelText: 'Stock',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
-                      validator: (v) => v?.isEmpty == true ? 'Required' : null,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return 'Required';
+                        final value = int.tryParse(v.trim());
+                        if (value == null || value < 0) return 'Invalid stock';
+                        return null;
+                      },
                     ),
                   ),
                 ],
@@ -158,17 +191,40 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel')),
         ElevatedButton(
           onPressed: _isLoading ? null : _submit,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryGreen,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          child: _isLoading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Add Product'),
+          child: _isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                      color: Colors.white, strokeWidth: 2))
+              : const Text('Add Product'),
         ),
       ],
     );
   }
+}
+
+String _friendlyProductError(String error) {
+  final lower = error.toLowerCase();
+  if (lower.contains('row-level security') || lower.contains('rls')) {
+    return 'You do not have permission to add products to this shop.';
+  }
+  if (lower.contains('product_images') || lower.contains('storage')) {
+    return 'The product was not saved because image upload is not configured.';
+  }
+  if (lower.contains('network') || lower.contains('socketexception')) {
+    return 'Check your internet connection and try again.';
+  }
+  return 'Could not add product. Please try again.';
 }

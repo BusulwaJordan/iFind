@@ -5,18 +5,20 @@ import 'package:ifind/features/notifications/presentation/providers/notification
 import 'package:badges/badges.dart' as badges;
 
 class NotificationBadge extends ConsumerWidget {
-  final String businessId;
+  final String? businessId;
   final Widget child;
 
   const NotificationBadge({
     super.key,
-    required this.businessId,
+    this.businessId,
     required this.child,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final unreadCount = ref.watch(businessUnreadCountProvider(businessId));
+    final unreadCount = businessId != null
+        ? ref.watch(businessUnreadCountProvider(businessId!))
+        : ref.watch(unreadNotificationCountProvider);
 
     return badges.Badge(
       position: badges.BadgePosition.topEnd(top: 0, end: 0),

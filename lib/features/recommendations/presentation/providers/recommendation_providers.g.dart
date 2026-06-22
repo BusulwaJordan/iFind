@@ -7,7 +7,7 @@ part of 'recommendation_providers.dart';
 // **************************************************************************
 
 String _$aiRecommendationDataSourceHash() =>
-    r'e12409780a1fb026c1ec0cfb1b4343015917722c';
+    r'29dc25a3434f4ff0ef1ed8fff28dc3952ca3d6c3';
 
 /// See also [aiRecommendationDataSource].
 @ProviderFor(aiRecommendationDataSource)
@@ -46,7 +46,8 @@ final recommendationRepositoryProvider =
 // ignore: unused_element
 typedef RecommendationRepositoryRef
     = AutoDisposeProviderRef<RecommendationRepository>;
-String _$aiMatchmakingHash() => r'ec6df9c8345db58dc1166134de315660299704aa';
+String _$userRecommendationsHash() =>
+    r'302b8c0713ca0557236299abcd7b52858382382b';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -69,39 +70,54 @@ class _SystemHash {
   }
 }
 
-/// See also [aiMatchmaking].
-@ProviderFor(aiMatchmaking)
-const aiMatchmakingProvider = AiMatchmakingFamily();
+/// Fetches personalized B2C recommendations for [userId].
+///
+/// New users (no interactions yet) will get an empty list — the UI should
+/// fall back to featured or popular businesses in that case.
+///
+/// Copied from [userRecommendations].
+@ProviderFor(userRecommendations)
+const userRecommendationsProvider = UserRecommendationsFamily();
 
-/// See also [aiMatchmaking].
-class AiMatchmakingFamily extends Family<AsyncValue<List<Recommendation>>> {
-  /// See also [aiMatchmaking].
-  const AiMatchmakingFamily();
+/// Fetches personalized B2C recommendations for [userId].
+///
+/// New users (no interactions yet) will get an empty list — the UI should
+/// fall back to featured or popular businesses in that case.
+///
+/// Copied from [userRecommendations].
+class UserRecommendationsFamily
+    extends Family<AsyncValue<List<Recommendation>>> {
+  /// Fetches personalized B2C recommendations for [userId].
+  ///
+  /// New users (no interactions yet) will get an empty list — the UI should
+  /// fall back to featured or popular businesses in that case.
+  ///
+  /// Copied from [userRecommendations].
+  const UserRecommendationsFamily();
 
-  /// See also [aiMatchmaking].
-  AiMatchmakingProvider call({
-    required String intent,
-    required double latitude,
-    required double longitude,
-    double radius = 5000.0,
+  /// Fetches personalized B2C recommendations for [userId].
+  ///
+  /// New users (no interactions yet) will get an empty list — the UI should
+  /// fall back to featured or popular businesses in that case.
+  ///
+  /// Copied from [userRecommendations].
+  UserRecommendationsProvider call({
+    required String userId,
+    int n = 5,
   }) {
-    return AiMatchmakingProvider(
-      intent: intent,
-      latitude: latitude,
-      longitude: longitude,
-      radius: radius,
+    return UserRecommendationsProvider(
+      userId: userId,
+      n: n,
     );
   }
 
   @override
-  AiMatchmakingProvider getProviderOverride(
-    covariant AiMatchmakingProvider provider,
+  UserRecommendationsProvider getProviderOverride(
+    covariant UserRecommendationsProvider provider,
   ) {
     return call(
-      intent: provider.intent,
-      latitude: provider.latitude,
-      longitude: provider.longitude,
-      radius: provider.radius,
+      userId: provider.userId,
+      n: provider.n,
     );
   }
 
@@ -117,101 +133,96 @@ class AiMatchmakingFamily extends Family<AsyncValue<List<Recommendation>>> {
       _allTransitiveDependencies;
 
   @override
-  String? get name => r'aiMatchmakingProvider';
+  String? get name => r'userRecommendationsProvider';
 }
 
-/// See also [aiMatchmaking].
-class AiMatchmakingProvider
+/// Fetches personalized B2C recommendations for [userId].
+///
+/// New users (no interactions yet) will get an empty list — the UI should
+/// fall back to featured or popular businesses in that case.
+///
+/// Copied from [userRecommendations].
+class UserRecommendationsProvider
     extends AutoDisposeFutureProvider<List<Recommendation>> {
-  /// See also [aiMatchmaking].
-  AiMatchmakingProvider({
-    required String intent,
-    required double latitude,
-    required double longitude,
-    double radius = 5000.0,
+  /// Fetches personalized B2C recommendations for [userId].
+  ///
+  /// New users (no interactions yet) will get an empty list — the UI should
+  /// fall back to featured or popular businesses in that case.
+  ///
+  /// Copied from [userRecommendations].
+  UserRecommendationsProvider({
+    required String userId,
+    int n = 5,
   }) : this._internal(
-          (ref) => aiMatchmaking(
-            ref as AiMatchmakingRef,
-            intent: intent,
-            latitude: latitude,
-            longitude: longitude,
-            radius: radius,
+          (ref) => userRecommendations(
+            ref as UserRecommendationsRef,
+            userId: userId,
+            n: n,
           ),
-          from: aiMatchmakingProvider,
-          name: r'aiMatchmakingProvider',
+          from: userRecommendationsProvider,
+          name: r'userRecommendationsProvider',
           debugGetCreateSourceHash:
               const bool.fromEnvironment('dart.vm.product')
                   ? null
-                  : _$aiMatchmakingHash,
-          dependencies: AiMatchmakingFamily._dependencies,
+                  : _$userRecommendationsHash,
+          dependencies: UserRecommendationsFamily._dependencies,
           allTransitiveDependencies:
-              AiMatchmakingFamily._allTransitiveDependencies,
-          intent: intent,
-          latitude: latitude,
-          longitude: longitude,
-          radius: radius,
+              UserRecommendationsFamily._allTransitiveDependencies,
+          userId: userId,
+          n: n,
         );
 
-  AiMatchmakingProvider._internal(
+  UserRecommendationsProvider._internal(
     super._createNotifier, {
     required super.name,
     required super.dependencies,
     required super.allTransitiveDependencies,
     required super.debugGetCreateSourceHash,
     required super.from,
-    required this.intent,
-    required this.latitude,
-    required this.longitude,
-    required this.radius,
+    required this.userId,
+    required this.n,
   }) : super.internal();
 
-  final String intent;
-  final double latitude;
-  final double longitude;
-  final double radius;
+  final String userId;
+  final int n;
 
   @override
   Override overrideWith(
-    FutureOr<List<Recommendation>> Function(AiMatchmakingRef provider) create,
+    FutureOr<List<Recommendation>> Function(UserRecommendationsRef provider)
+        create,
   ) {
     return ProviderOverride(
       origin: this,
-      override: AiMatchmakingProvider._internal(
-        (ref) => create(ref as AiMatchmakingRef),
+      override: UserRecommendationsProvider._internal(
+        (ref) => create(ref as UserRecommendationsRef),
         from: from,
         name: null,
         dependencies: null,
         allTransitiveDependencies: null,
         debugGetCreateSourceHash: null,
-        intent: intent,
-        latitude: latitude,
-        longitude: longitude,
-        radius: radius,
+        userId: userId,
+        n: n,
       ),
     );
   }
 
   @override
   AutoDisposeFutureProviderElement<List<Recommendation>> createElement() {
-    return _AiMatchmakingProviderElement(this);
+    return _UserRecommendationsProviderElement(this);
   }
 
   @override
   bool operator ==(Object other) {
-    return other is AiMatchmakingProvider &&
-        other.intent == intent &&
-        other.latitude == latitude &&
-        other.longitude == longitude &&
-        other.radius == radius;
+    return other is UserRecommendationsProvider &&
+        other.userId == userId &&
+        other.n == n;
   }
 
   @override
   int get hashCode {
     var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, intent.hashCode);
-    hash = _SystemHash.combine(hash, latitude.hashCode);
-    hash = _SystemHash.combine(hash, longitude.hashCode);
-    hash = _SystemHash.combine(hash, radius.hashCode);
+    hash = _SystemHash.combine(hash, userId.hashCode);
+    hash = _SystemHash.combine(hash, n.hashCode);
 
     return _SystemHash.finish(hash);
   }
@@ -219,33 +230,24 @@ class AiMatchmakingProvider
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-mixin AiMatchmakingRef on AutoDisposeFutureProviderRef<List<Recommendation>> {
-  /// The parameter `intent` of this provider.
-  String get intent;
+mixin UserRecommendationsRef
+    on AutoDisposeFutureProviderRef<List<Recommendation>> {
+  /// The parameter `userId` of this provider.
+  String get userId;
 
-  /// The parameter `latitude` of this provider.
-  double get latitude;
-
-  /// The parameter `longitude` of this provider.
-  double get longitude;
-
-  /// The parameter `radius` of this provider.
-  double get radius;
+  /// The parameter `n` of this provider.
+  int get n;
 }
 
-class _AiMatchmakingProviderElement
+class _UserRecommendationsProviderElement
     extends AutoDisposeFutureProviderElement<List<Recommendation>>
-    with AiMatchmakingRef {
-  _AiMatchmakingProviderElement(super.provider);
+    with UserRecommendationsRef {
+  _UserRecommendationsProviderElement(super.provider);
 
   @override
-  String get intent => (origin as AiMatchmakingProvider).intent;
+  String get userId => (origin as UserRecommendationsProvider).userId;
   @override
-  double get latitude => (origin as AiMatchmakingProvider).latitude;
-  @override
-  double get longitude => (origin as AiMatchmakingProvider).longitude;
-  @override
-  double get radius => (origin as AiMatchmakingProvider).radius;
+  int get n => (origin as UserRecommendationsProvider).n;
 }
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
