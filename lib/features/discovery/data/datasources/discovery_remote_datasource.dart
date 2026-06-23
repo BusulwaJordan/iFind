@@ -23,9 +23,9 @@ class DiscoveryRemoteDataSourceImpl implements DiscoveryRemoteDataSource {
   }) async {
     try {
       final response = await supabase.rpc('get_nearby_businesses', params: {
-        'user_lat': latitude,
-        'user_lon': longitude,
-        'radius_meters': radiusInMeters,
+        'lat': latitude,
+        'long': longitude,
+        'radius_km': radiusInMeters / 1000.0,
       });
 
       final List<dynamic> data = response as List<dynamic>;

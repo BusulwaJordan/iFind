@@ -87,17 +87,14 @@ class ChatRemoteDataSource {
   Future<List<Chat>> getMyChats(String userId) async {
     try {
       // 1. Get businesses owned by this user
-      final myBusinesses = await supabaseClient
-          .from('businesses')
-          .select('id')
-          .eq('owner_id', userId);
-
-      final businessIds =
-          (myBusinesses as List).map((b) => b['id'].toString()).toList();
+      final myBusinesses = await _getBusinessesOwnedBy(userId);
+      final businessIds = myBusinesses
+          .map((b) => (b['business_id'] ?? b['id']).toString())
+          .toList();
 
       // 2. Fetch chats with business AND customer info joined
       var query = supabaseClient.from('chats').select(
-          '*, businesses(id, name, logo_url), profiles:customer_id(full_name)');
+          '*, businesses(name, logo_url), profiles:customer_id(full_name)');
 
       if (businessIds.isEmpty) {
         query = query.eq('customer_id', userId);
@@ -116,6 +113,27 @@ class ChatRemoteDataSource {
           .toList();
     } catch (e) {
       throw Exception('Failed to fetch chats: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _getBusinessesOwnedBy(
+      String userId) async {
+    try {
+      final response = await supabaseClient
+          .from('businesses')
+          .select('id, business_id')
+          .eq('owner_id', userId);
+      return (response as List)
+          .map((row) => Map<String, dynamic>.from(row as Map))
+          .toList();
+    } catch (_) {
+      final response = await supabaseClient
+          .from('businesses')
+          .select('business_id')
+          .eq('owner_id', userId);
+      return (response as List)
+          .map((row) => Map<String, dynamic>.from(row as Map))
+          .toList();
     }
   }
 
