@@ -37,7 +37,6 @@ ALTER TABLE public.users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME
 
 -- Fallback for primary/unique keys if user_id was NOT NULL
 ALTER TABLE public.users ALTER COLUMN user_id SET DEFAULT gen_random_uuid()::text;
-ALTER TABLE public.users ALTER COLUMN user_id DROP NOT NULL;
 
 -- Migrate existing users seed data to the new columns
 UPDATE public.users
