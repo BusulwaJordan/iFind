@@ -492,7 +492,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onTap: () => context.go('/discover'),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _QuickActionButton(
+                  title: 'For You',
+                  subtitle: 'AI recommendations',
+                  icon: Icons.auto_awesome_rounded,
+                  color: Colors.deepPurple,
+                  onTap: () => context.push('/ai-search'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _QuickActionButton(
+                  title: 'Favourites',
+                  subtitle: 'Saved businesses',
+                  icon: Icons.bookmark_rounded,
+                  color: Colors.amber.shade700,
+                  onTap: () => context.push('/favourites'),
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: _QuickActionButton(
                   title: 'Create Shop',

@@ -75,41 +75,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('Edit Profile Coming Soon')));
-                  },
+                  onPressed: () => context.push('/profile'),
                 ),
               ],
             ),
           ),
 
-          if (user?.role.toString().contains('business') == true || true) ...[
-            // Force true for MVP testing
-            const SizedBox(height: 32),
-            const _SectionHeader(title: 'Business Center'),
-            _SettingsTile(
-              icon: Icons.dashboard_outlined,
-              title: 'Leads Dashboard',
-              subtitle: 'Open customer inquiries',
-              onTap: () {
-                context.push('/leads-dashboard');
-              },
-              trailing: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: const BoxDecoration(
-                    color: Colors.red, shape: BoxShape.circle),
-                child: const Text('3',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-
           const SizedBox(height: 32),
+          const _SectionHeader(title: 'My Account'),
+          _SettingsTile(
+            icon: Icons.person_rounded,
+            title: 'Edit Profile',
+            subtitle: 'Update your name, phone and details',
+            onTap: () => context.push('/profile'),
+          ),
+          _SettingsTile(
+            icon: Icons.bookmark_rounded,
+            title: 'My Favourites',
+            subtitle: 'View saved businesses',
+            onTap: () => context.push('/favourites'),
+          ),
 
+          const SizedBox(height: 8),
+          const _SectionHeader(title: 'Business Center'),
+          _SettingsTile(
+            icon: Icons.inbox_rounded,
+            title: 'Customer Inquiries',
+            subtitle: 'View and respond to customer messages',
+            onTap: () => context.push('/inquiries'),
+          ),
+          _SettingsTile(
+            icon: Icons.dashboard_outlined,
+            title: 'Leads Dashboard',
+            subtitle: 'Open B2B leads and customer needs',
+            onTap: () => context.push('/leads-dashboard'),
+          ),
+
+          const SizedBox(height: 8),
           const _SectionHeader(title: 'General'),
           _SettingsTile(
             icon: Icons.notifications_outlined,
@@ -136,11 +138,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const _SectionHeader(title: 'Support'),
           _SettingsTile(
             icon: Icons.help_outline,
-            title: 'Help Center',
-            onTap: () async {
-              final uri = Uri.parse('https://ifind.ug/help');
-              if (await canLaunchUrl(uri)) launchUrl(uri);
-            },
+            title: 'Help & Support',
+            subtitle: 'FAQ and contact support',
+            onTap: () => context.push('/help'),
           ),
           _SettingsTile(
             icon: Icons.policy_outlined,

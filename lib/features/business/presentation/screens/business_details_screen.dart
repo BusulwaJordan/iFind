@@ -20,6 +20,7 @@ import 'package:ifind/features/reviews/presentation/widgets/add_review_dialog.da
 import 'package:ifind/features/portfolio/presentation/screens/gallery_media_view_screen.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:ifind/features/favourites/presentation/providers/favourites_provider.dart';
 
 final _hasLoggedProfileViewProvider =
     StateProvider.family<bool, String>((ref, businessId) => false);
@@ -123,6 +124,64 @@ class BusinessDetailScreen extends ConsumerWidget {
                       ),
                       onPressed: () => context.pop(),
                     ),
+                    actions: [
+                      // Bookmark / Save button
+                      Consumer(builder: (ctx, bookmarkRef, _) {
+                        final savedIds =
+                            bookmarkRef.watch(favouritesProvider);
+                        final isSaved =
+                            savedIds.contains(displayBusiness.id);
+                        return IconButton(
+                          tooltip: isSaved
+                              ? 'Remove from favourites'
+                              : 'Save to favourites',
+                          icon: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isSaved
+                                  ? Icons.bookmark_rounded
+                                  : Icons.bookmark_border_rounded,
+                              color: isSaved
+                                  ? Colors.amber
+                                  : Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                          onPressed: () {
+                            bookmarkRef
+                                .read(favouritesProvider.notifier)
+                                .toggle(displayBusiness.id);
+                            // Log saved_business interaction for AI model
+                            final user =
+                                bookmarkRef.read(currentUserProvider);
+                            if (user != null && !isSaved) {
+                              bookmarkRef
+                                  .read(interactionServiceProvider)
+                                  .logInteraction(
+                                    userId: user.id,
+                                    businessId: displayBusiness.id,
+                                    type: InteractionType.savedBusiness,
+                                  );
+                            }
+                            ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(
+                                content: Text(isSaved
+                                    ? 'Removed from favourites'
+                                    : 'Saved to favourites'),
+                                behavior: SnackBarBehavior.floating,
+                                duration: const Duration(seconds: 2),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                              ),
+                            );
+                          },
+                        );
+                      }),
+                    ],
                     flexibleSpace: FlexibleSpaceBar(
                       stretchModes: const [StretchMode.zoomBackground],
                       background: Stack(

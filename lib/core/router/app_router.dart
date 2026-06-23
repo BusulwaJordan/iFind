@@ -26,6 +26,10 @@ import 'package:ifind/features/business/presentation/screens/business_details_sc
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/recommendations/presentation/screens/ai_search_screen.dart';
 import 'package:ifind/features/notifications/presentation/screens/notifications_screen.dart';
+import 'package:ifind/features/favourites/presentation/screens/favourites_screen.dart';
+import 'package:ifind/features/profile/presentation/screens/profile_screen.dart';
+import 'package:ifind/features/help/presentation/screens/help_support_screen.dart';
+import 'package:ifind/features/inquiries/presentation/screens/inquiries_screen.dart';
 import 'package:ifind/app.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -223,6 +227,26 @@ final routerProvider = Provider<GoRouter>((ref) {
             otherPartyName: extra['otherPartyName'] as String,
           );
         },
+      ),
+      GoRoute(
+        path: '/favourites',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const FavouritesScreen(),
+      ),
+      GoRoute(
+        path: '/profile',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/help',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const HelpSupportScreen(),
+      ),
+      GoRoute(
+        path: '/inquiries',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const InquiriesScreen(),
       ),
     ],
   );
