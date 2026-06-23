@@ -1,68 +1,65 @@
+import 'package:flutter/foundation.dart';
 import 'package:ifind/core/errors/exceptions.dart';
-import 'package:ifind/core/services/ai_service.dart';
-import 'package:ifind/features/business/data/models/business_model.dart';
-import 'package:ifind/features/discovery/data/datasources/discovery_remote_datasource.dart';
+import 'package:ifind/core/services/recommendation_service.dart';
 import 'package:ifind/features/recommendations/data/models/recommendation_model.dart';
 
+/// Abstract contract for the B2C recommendation data source.
 abstract class AiRecommendationDataSource {
-  Future<List<RecommendationModel>> getAiRecommendations({
-    required String intent,
-    required double latitude,
-    required double longitude,
-    double radiusInMeters = 5000.0,
+  /// Returns personalized business recommendations for [userId].
+  ///
+  /// [n] controls how many recommendations to return.
+  /// Returns an empty list for new users (cold-start) — caller should fall
+  /// back to popular/featured businesses.
+  Future<List<RecommendationModel>> getRecommendationsForUser({
+    required String userId,
+    int n = 5,
   });
 }
 
+/// Implementation backed by our custom B2C ALS model running on a
+/// Supabase Edge Function (`recommend-businesses`).
+///
+/// Model files are stored in the `ai_models` Supabase Storage bucket and
+/// loaded on Edge Function cold-start. Subsequent requests are fast (<500ms).
 class AiRecommendationDataSourceImpl implements AiRecommendationDataSource {
-  final AiService aiService;
-  final DiscoveryRemoteDataSource discoveryDataSource;
+  final RecommendationService recommendationService;
 
-  AiRecommendationDataSourceImpl({
-    required this.aiService,
-    required this.discoveryDataSource,
-  });
+  AiRecommendationDataSourceImpl({required this.recommendationService});
 
   @override
-  Future<List<RecommendationModel>> getAiRecommendations({
-    required String intent,
-    required double latitude,
-    required double longitude,
-    double radiusInMeters = 5000.0,
+  Future<List<RecommendationModel>> getRecommendationsForUser({
+    required String userId,
+    int n = 5,
   }) async {
     try {
-      // 1. Get raw local shops from Postgres
-      final List<BusinessModel> localShops = await discoveryDataSource.getNearbyBusinesses(
-        latitude: latitude,
-        longitude: longitude,
-        radiusInMeters: radiusInMeters,
+      debugPrint(
+          'AiRecommendationDataSource: Fetching $n recs for user $userId');
+
+      final results = await recommendationService.getRecommendations(
+        userId: userId,
+        n: n,
       );
 
-      if (localShops.isEmpty) {
+      if (results.isEmpty) {
+        debugPrint(
+            'AiRecommendationDataSource: No recs returned (cold-start or new user)');
         return [];
       }
 
-      // 2. Format them for AI
-      // Limit to 20 to prevent enormous JSON payloads
-      final shopsToAnalyze = localShops.take(20).map((b) => {
-        'id': b.id,
-        'name': b.name,
-        'description': b.description,
-        'category': b.category.toString(),
-        'distance': b.distance,
+      // Map Edge Function results to RecommendationModel
+      // The Edge Function returns: {business_id, name, category, score}
+      // We adapt this to RecommendationModel which needs {businessId, aiReasoning}
+      return results.map((rec) {
+        final scorePercent = (rec.score * 100).round();
+        final reasoning =
+            '${rec.name} (${rec.category}) — $scorePercent% personalized match';
+        return RecommendationModel(
+          businessId: rec.businessId,
+          aiReasoning: reasoning,
+        );
       }).toList();
-
-      // 3. Ask Gemini for rankings
-      final rawRecommendations = await aiService.rankNearbyBusinesses(
-        intent,
-        shopsToAnalyze,
-      );
-
-      // 4. Map back to models
-      return rawRecommendations
-          .map((json) => RecommendationModel.fromJson(json))
-          .toList();
     } catch (e) {
-      throw ServerException('Failed to generate AI recommendations: $e');
+      throw ServerException('Failed to get B2C recommendations: $e');
     }
   }
 }

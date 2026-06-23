@@ -5,16 +5,24 @@ import 'package:go_router/go_router.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
+import 'package:ifind/features/business/presentation/providers/b2b_provider.dart';
 import 'package:ifind/features/portfolio/presentation/providers/portfolio_provider.dart';
 import 'package:ifind/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:ifind/features/reviews/presentation/providers/review_provider.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
+import 'package:ifind/features/auth/domain/entities/user.dart';
+import 'package:ifind/core/services/b2b_service.dart';
+import 'package:ifind/core/providers/ai_providers.dart';
+import 'package:ifind/core/services/interaction_service.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:ifind/features/reviews/presentation/widgets/add_review_dialog.dart';
 import 'package:ifind/features/portfolio/presentation/screens/gallery_media_view_screen.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:cached_network_image/cached_network_image.dart';
+
+final _hasLoggedProfileViewProvider =
+    StateProvider.family<bool, String>((ref, businessId) => false);
 
 class BusinessDetailScreen extends ConsumerWidget {
   final Business business;
@@ -46,6 +54,13 @@ class BusinessDetailScreen extends ConsumerWidget {
         content: inquiryMessage,
       );
 
+      // Log B2C interaction
+      ref.read(interactionServiceProvider).logInteraction(
+            userId: user.id,
+            businessId: business.id,
+            type: InteractionType.inquirySent,
+          );
+
       if (context.mounted) {
         context.push('/chat', extra: {
           'chat': chat,
@@ -62,7 +77,24 @@ class BusinessDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final businessAsync = ref.watch(businessProvider(business.id));
+    final businessAsync = ref.watch(businessStreamProvider(business.id));
+    final currentUser = ref.watch(currentUserProvider);
+
+    // Log profile view interaction once
+    if (currentUser != null && currentUser.id != business.ownerId) {
+      final hasLogged = ref.watch(_hasLoggedProfileViewProvider(business.id));
+      if (!hasLogged) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(_hasLoggedProfileViewProvider(business.id).notifier).state =
+              true;
+          ref.read(interactionServiceProvider).logInteraction(
+                userId: currentUser.id,
+                businessId: business.id,
+                type: InteractionType.profileView,
+              );
+        });
+      }
+    }
 
     return businessAsync.when(
       data: (reactiveBusiness) {
@@ -220,7 +252,51 @@ class BusinessDetailScreen extends ConsumerWidget {
       },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, s) => Scaffold(body: Center(child: Text('Error: $e'))),
+      error: (e, s) => Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          foregroundColor: AppColors.darkText,
+          elevation: 0,
+        ),
+        body: _buildBusinessLoadError(context, ref),
+      ),
+    );
+  }
+
+  Widget _buildBusinessLoadError(BuildContext context, WidgetRef ref) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_rounded, size: 48, color: Colors.grey[500]),
+            const SizedBox(height: 16),
+            Text(
+              'Could not refresh this business',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: AppColors.darkText,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'The saved details are still available when the connection returns.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 18),
+            OutlinedButton.icon(
+              onPressed: () =>
+                  ref.invalidate(businessStreamProvider(business.id)),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -282,6 +358,14 @@ class BusinessDetailScreen extends ConsumerWidget {
                           customerId: user.id,
                           businessId: business.id,
                         );
+
+                    // Log interaction (inquiry_sent)
+                    ref.read(interactionServiceProvider).logInteraction(
+                          userId: user.id,
+                          businessId: business.id,
+                          type: InteractionType.inquirySent,
+                        );
+
                     if (context.mounted) {
                       context.push('/chat', extra: {
                         'chat': chat,
@@ -422,6 +506,9 @@ class _AboutTab extends ConsumerWidget {
               Expanded(child: Text(business.address ?? 'No address provided')),
             ],
           ),
+          const SizedBox(height: 24),
+          // B2B Compatibility Widget (visible only to business owners)
+          _B2bCompatibilityCard(targetBusiness: business),
         ],
       ),
     );
@@ -756,6 +843,195 @@ class _ReviewsTab extends ConsumerWidget {
             },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, s) => Center(child: Text('Error: $e')),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── B2B Compatibility Card ─────────────────────────────────────────────────
+/// Shown inside the Discovery tab when the current user is a business owner.
+/// Calls MODEL 3 (B2B Random Forest) to predict partnership compatibility.
+class _B2bCompatibilityCard extends ConsumerWidget {
+  final Business targetBusiness;
+  const _B2bCompatibilityCard({required this.targetBusiness});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(currentUserProvider);
+
+    // Only show to business owners
+    if (currentUser == null || currentUser.role != UserRole.businessOwner) {
+      return const SizedBox.shrink();
+    }
+
+    // Get the current user's businesses
+    final myBusinessesAsync = ref.watch(myBusinessesProvider(currentUser.id));
+
+    return myBusinessesAsync.when(
+      data: (myBusinesses) {
+        if (myBusinesses.isEmpty) return const SizedBox.shrink();
+
+        // Use the first business the user owns
+        final myBusiness = myBusinesses.first;
+
+        // Don't show for the user's own business
+        if (myBusiness.id == targetBusiness.id) return const SizedBox.shrink();
+
+        final compatibilityAsync = ref.watch(
+          b2bCompatibilityProvider(
+              (myBusiness: myBusiness, targetBusiness: targetBusiness)),
+        );
+
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.deepGreen.withValues(alpha: 0.05),
+                AppColors.primaryGreen.withValues(alpha: 0.08),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+                color: AppColors.primaryGreen.withValues(alpha: 0.2)),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryGreen.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.handshake_rounded,
+                        color: AppColors.primaryGreen, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'B2B Partnership Score',
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: AppColors.deepGreen,
+                        ),
+                      ),
+                      Text(
+                        'AI-powered compatibility prediction',
+                        style: GoogleFonts.outfit(
+                            fontSize: 11, color: AppColors.lightText),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              compatibilityAsync.when(
+                data: (result) => _buildScoreDisplay(result),
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primaryGreen,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Text('Calculating compatibility...',
+                            style: TextStyle(
+                                color: AppColors.lightText, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ),
+                error: (e, _) => Text(
+                  'Could not compute score. Try again later.',
+                  style: GoogleFonts.outfit(
+                      color: AppColors.lightText, fontSize: 12),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Your business (${myBusiness.category.name}) ↔ ${targetBusiness.name} (${targetBusiness.category.name})',
+                style: GoogleFonts.outfit(
+                    fontSize: 11, color: AppColors.lightText),
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildScoreDisplay(B2bCompatibilityResult result) {
+    final score = result.compatibilityScore;
+    final pct = (score * 100).round();
+
+    Color barColor;
+    if (score >= 0.75) {
+      barColor = const Color(0xFF22C55E); // green
+    } else if (score >= 0.50) {
+      barColor = const Color(0xFFF59E0B); // amber
+    } else if (score >= 0.25) {
+      barColor = const Color(0xFFF97316); // orange
+    } else {
+      barColor = const Color(0xFFEF4444); // red
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              result.label,
+              style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold, fontSize: 16, color: barColor),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: barColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '$pct% match',
+                style: GoogleFonts.outfit(
+                  fontWeight: FontWeight.bold,
+                  color: barColor,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        // Progress bar
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: score,
+            backgroundColor: Colors.grey.shade200,
+            valueColor: AlwaysStoppedAnimation<Color>(barColor),
+            minHeight: 8,
           ),
         ),
       ],

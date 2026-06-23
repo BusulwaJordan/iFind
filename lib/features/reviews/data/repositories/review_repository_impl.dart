@@ -4,13 +4,11 @@ import 'package:ifind/core/errors/failures.dart';
 import 'package:ifind/features/reviews/data/models/review_model.dart';
 import 'package:ifind/features/reviews/domain/entities/review.dart';
 import 'package:ifind/features/reviews/domain/repositories/review_repository.dart';
-import 'package:ifind/features/business/domain/repositories/business_repository.dart';
 
 class ReviewRepositoryImpl implements ReviewRepository {
   final SupabaseClient _client;
-  final BusinessRepository _businessRepository;
 
-  ReviewRepositoryImpl(this._client, this._businessRepository);
+  ReviewRepositoryImpl(this._client);
 
   @override
   Future<Either<Failure, List<Review>>> getReviews(String businessId) async {

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:ifind/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:ifind/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:ifind/features/auth/domain/entities/registration_result.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
 import 'package:ifind/features/auth/domain/repositories/auth_repository.dart';
 import 'package:ifind/features/auth/domain/usecases/get_current_user.dart';
@@ -53,7 +54,8 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
 });
 
 /// Onboarding state provider
-final onboardingCompleteProvider = StateNotifierProvider<OnboardingNotifier, bool>((ref) {
+final onboardingCompleteProvider =
+    StateNotifierProvider<OnboardingNotifier, bool>((ref) {
   final prefs = ref.watch(sharedPreferencesProvider);
   return OnboardingNotifier(prefs);
 });
@@ -90,7 +92,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
 
   Future<void> _init() async {
     final session = Supabase.instance.client.auth.currentSession;
-    
+
     if (session != null) {
       debugPrint('Found existing Supabase session for: ${session.user.id}');
       final result = await getCurrentUserUseCase();
@@ -98,7 +100,8 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
         (failure) {
           // Network issue — don't log the user out, keep them authenticated
           // using basic info from the JWT session token. They can still use the app.
-          debugPrint('Profile fetch failed (likely network issue). Keeping session alive.');
+          debugPrint(
+              'Profile fetch failed (likely network issue). Keeping session alive.');
           final u = session.user;
           final metadata = u.userMetadata ?? {};
           final roleStr = metadata['role'] as String? ?? 'customer';
@@ -142,9 +145,10 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     state = const AsyncValue.loading();
     final result = await authRepository.loginWithGoogle();
     result.fold(
-      (failure) => state = AsyncValue.error(failure.message, StackTrace.current),
+      (failure) =>
+          state = AsyncValue.error(failure.message, StackTrace.current),
       (_) {
-        // Redirection handled by Supabase OAuth. 
+        // Redirection handled by Supabase OAuth.
         // We wait for onAuthStateChange to bring the user back.
         // It's possible the user cancels, so we set a timeout or rely on GoRouter.
         // For now, let's reset state to null to clear loading spinner.
@@ -153,7 +157,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     );
   }
 
-  Future<User?> register({
+  Future<RegistrationResult?> register({
     required String email,
     required String password,
     required String fullName,
@@ -174,19 +178,61 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
         state = AsyncValue.error(failure.message, StackTrace.current);
         return null;
       },
-      (user) {
-        // If Supabase confirms the user immediately (no email verification), set state
-        // Let's use the actual client session
-        final hasSession = Supabase.instance.client.auth.currentSession != null;
-        
-        if (hasSession) {
-          state = AsyncValue.data(user);
-        } else {
-          // Stay as null/unauthenticated state so screen can show confirmation
+      (registrationResult) {
+        // Pause on confirmation only if email confirmation is required.
+        if (registrationResult.requiresEmailConfirmation) {
           state = const AsyncValue.data(null);
+        } else {
+          state = AsyncValue.data(registrationResult.user);
         }
-        return user;
+        return registrationResult;
       },
+    );
+  }
+
+  /// Attempt sign-in after the user confirms their email (works cross-device).
+  Future<bool> tryLoginAfterVerification({
+    required String email,
+    required String password,
+  }) async {
+    final result = await loginUseCase(email: email, password: password);
+    return result.fold(
+      (_) => false,
+      (user) {
+        state = AsyncValue.data(user);
+        return true;
+      },
+    );
+  }
+
+  Future<void> refreshCurrentUser() async {
+    final result = await getCurrentUserUseCase();
+    result.fold(
+      (_) => state = const AsyncValue.data(null),
+      (user) => state = AsyncValue.data(user),
+    );
+  }
+
+  Future<String?> upgradeToBusinessOwner() async {
+    final user = state.valueOrNull;
+    if (user == null) return 'You must be logged in';
+    if (user.role == UserRole.businessOwner) return null;
+
+    final result = await authRepository.upgradeToBusinessOwner(userId: user.id);
+    return result.fold(
+      (failure) => failure.message,
+      (updatedUser) {
+        state = AsyncValue.data(updatedUser);
+        return null;
+      },
+    );
+  }
+
+  Future<String?> resendConfirmationEmail(String email) async {
+    final result = await authRepository.resendConfirmationEmail(email);
+    return result.fold(
+      (failure) => failure.message,
+      (_) => null,
     );
   }
 
@@ -218,7 +264,8 @@ final currentUserProvider = Provider<User?>((ref) {
 });
 
 /// Fetch user profile by ID
-final userProfileProvider = FutureProvider.family<User, String>((ref, userId) async {
+final userProfileProvider =
+    FutureProvider.family<User, String>((ref, userId) async {
   final repo = ref.watch(authRepositoryProvider);
   final result = await repo.getUserById(userId);
   return result.fold(

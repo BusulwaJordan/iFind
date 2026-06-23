@@ -8,22 +8,32 @@ import 'package:ifind/features/business/presentation/providers/business_provider
 import 'package:ifind/features/business/presentation/screens/business_details_screen.dart';
 import 'package:ifind/core/widgets/loading_widget.dart';
 import 'package:ifind/core/widgets/empty_state_widget.dart';
+import 'package:ifind/core/utils/distance_calculator.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-class BusinessDiscoveryScreen extends ConsumerWidget {
+class BusinessDiscoveryScreen extends ConsumerStatefulWidget {
   final BusinessCategory? initialCategory;
   const BusinessDiscoveryScreen({super.key, this.initialCategory});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Set initial category if provided
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (initialCategory != null &&
-          ref.read(selectedCategoryProvider) == null) {
-        ref.read(selectedCategoryProvider.notifier).state = initialCategory;
-      }
-    });
+  ConsumerState<BusinessDiscoveryScreen> createState() =>
+      _BusinessDiscoveryScreenState();
+}
 
+class _BusinessDiscoveryScreenState
+    extends ConsumerState<BusinessDiscoveryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(selectedCategoryProvider.notifier).state =
+          widget.initialCategory;
+      ref.read(searchQueryProvider.notifier).state = '';
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final businessesState = ref.watch(nearbyBusinessesProvider);
     final selectedCategory = ref.watch(selectedCategoryProvider);
 
@@ -115,7 +125,8 @@ class BusinessDiscoveryScreen extends ConsumerWidget {
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.search_rounded, color: Colors.white),
+                                const Icon(Icons.search_rounded,
+                                    color: Colors.white),
                                 const SizedBox(width: 12),
                                 Text(
                                   'Search shops or products...',
@@ -289,7 +300,9 @@ class _CategoryBall extends StatelessWidget {
           color: isSelected ? AppColors.primaryGreen : Colors.white,
           borderRadius: BorderRadius.circular(20),
           elevation: isSelected ? 8 : 2,
-          shadowColor: isSelected ? AppColors.primaryGreen.withValues(alpha: 0.4) : Colors.black12,
+          shadowColor: isSelected
+              ? AppColors.primaryGreen.withValues(alpha: 0.4)
+              : Colors.black12,
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(20),
@@ -299,9 +312,10 @@ class _CategoryBall extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
-                border: isSelected 
-                  ? null 
-                  : Border.all(color: AppColors.divider.withValues(alpha: 0.5)),
+                border: isSelected
+                    ? null
+                    : Border.all(
+                        color: AppColors.divider.withValues(alpha: 0.5)),
               ),
               child: Icon(
                 _getCategoryIcon(label),
@@ -331,17 +345,24 @@ class _CategoryBall extends StatelessWidget {
   }
 }
 
-class _BusinessGridTile extends StatelessWidget {
+class _BusinessGridTile extends ConsumerWidget {
   final Business business;
   const _BusinessGridTile({required this.business});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final streamedBusiness =
+        ref.watch(businessStreamProvider(business.id)).valueOrNull;
+    final liveBusiness = streamedBusiness == null
+        ? business
+        : streamedBusiness.copyWith(
+            distance: streamedBusiness.distance ?? business.distance);
+
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-            builder: (_) => BusinessDetailScreen(business: business)),
+            builder: (_) => BusinessDetailScreen(business: liveBusiness)),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -367,27 +388,27 @@ class _BusinessGridTile extends StatelessWidget {
                     Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16),
-                        image: business.logoUrl != null
-                          ? DecorationImage(
-                              image: NetworkImage(business.logoUrl!),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
+                        image: liveBusiness.logoUrl != null
+                            ? DecorationImage(
+                                image: NetworkImage(liveBusiness.logoUrl!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
                         color: AppColors.primaryGreen.withValues(alpha: 0.1),
                       ),
                       alignment: Alignment.center,
-                      child: business.logoUrl == null
-                        ? Text(
-                            business.name.substring(0, 1).toUpperCase(),
-                            style: GoogleFonts.outfit(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primaryGreen,
-                            ),
-                          )
-                        : null,
+                      child: liveBusiness.logoUrl == null
+                          ? Text(
+                              liveBusiness.name.substring(0, 1).toUpperCase(),
+                              style: GoogleFonts.outfit(
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryGreen,
+                              ),
+                            )
+                          : null,
                     ),
-                    if (business.isVerified)
+                    if (liveBusiness.isVerified)
                       Positioned(
                         top: 6,
                         right: 6,
@@ -416,7 +437,7 @@ class _BusinessGridTile extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     Text(
-                      business.name,
+                      liveBusiness.name,
                       textAlign: TextAlign.center,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -428,7 +449,7 @@ class _BusinessGridTile extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      business.description,
+                      liveBusiness.description,
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -441,10 +462,11 @@ class _BusinessGridTile extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
+                        const Icon(Icons.star_rounded,
+                            color: Colors.amber, size: 14),
                         const SizedBox(width: 2),
                         Text(
-                          business.rating.toStringAsFixed(1),
+                          liveBusiness.rating.toStringAsFixed(1),
                           style: GoogleFonts.outfit(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
@@ -453,15 +475,17 @@ class _BusinessGridTile extends StatelessWidget {
                         ),
                       ],
                     ),
-                    if (business.distance != null)
+                    if (liveBusiness.distance != null)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: AppColors.primaryGreen.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          '${business.distance!.toStringAsFixed(1)}km',
+                          DistanceCalculator.formatDistance(
+                              liveBusiness.distance!),
                           style: GoogleFonts.outfit(
                             fontSize: 10,
                             color: AppColors.primaryGreen,

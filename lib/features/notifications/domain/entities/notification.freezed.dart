@@ -17,8 +17,11 @@ final _privateConstructorUsedError = UnsupportedError(
 /// @nodoc
 mixin _$AppNotification {
   String get id => throw _privateConstructorUsedError;
-  String get businessId => throw _privateConstructorUsedError;
+  String get userId => throw _privateConstructorUsedError;
+  String? get businessId => throw _privateConstructorUsedError;
   String? get needId => throw _privateConstructorUsedError;
+  String get type => throw _privateConstructorUsedError;
+  Map<String, dynamic> get data => throw _privateConstructorUsedError;
   String get title => throw _privateConstructorUsedError;
   String get body => throw _privateConstructorUsedError;
   bool get isRead => throw _privateConstructorUsedError;
@@ -39,8 +42,11 @@ abstract class $AppNotificationCopyWith<$Res> {
   @useResult
   $Res call(
       {String id,
-      String businessId,
+      String userId,
+      String? businessId,
       String? needId,
+      String type,
+      Map<String, dynamic> data,
       String title,
       String body,
       bool isRead,
@@ -63,8 +69,11 @@ class _$AppNotificationCopyWithImpl<$Res, $Val extends AppNotification>
   @override
   $Res call({
     Object? id = null,
-    Object? businessId = null,
+    Object? userId = null,
+    Object? businessId = freezed,
     Object? needId = freezed,
+    Object? type = null,
+    Object? data = null,
     Object? title = null,
     Object? body = null,
     Object? isRead = null,
@@ -75,14 +84,26 @@ class _$AppNotificationCopyWithImpl<$Res, $Val extends AppNotification>
           ? _value.id
           : id // ignore: cast_nullable_to_non_nullable
               as String,
-      businessId: null == businessId
+      userId: null == userId
+          ? _value.userId
+          : userId // ignore: cast_nullable_to_non_nullable
+              as String,
+      businessId: freezed == businessId
           ? _value.businessId
           : businessId // ignore: cast_nullable_to_non_nullable
-              as String,
+              as String?,
       needId: freezed == needId
           ? _value.needId
           : needId // ignore: cast_nullable_to_non_nullable
               as String?,
+      type: null == type
+          ? _value.type
+          : type // ignore: cast_nullable_to_non_nullable
+              as String,
+      data: null == data
+          ? _value.data
+          : data // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>,
       title: null == title
           ? _value.title
           : title // ignore: cast_nullable_to_non_nullable
@@ -113,8 +134,11 @@ abstract class _$$AppNotificationImplCopyWith<$Res>
   @useResult
   $Res call(
       {String id,
-      String businessId,
+      String userId,
+      String? businessId,
       String? needId,
+      String type,
+      Map<String, dynamic> data,
       String title,
       String body,
       bool isRead,
@@ -135,8 +159,11 @@ class __$$AppNotificationImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? id = null,
-    Object? businessId = null,
+    Object? userId = null,
+    Object? businessId = freezed,
     Object? needId = freezed,
+    Object? type = null,
+    Object? data = null,
     Object? title = null,
     Object? body = null,
     Object? isRead = null,
@@ -147,14 +174,26 @@ class __$$AppNotificationImplCopyWithImpl<$Res>
           ? _value.id
           : id // ignore: cast_nullable_to_non_nullable
               as String,
-      businessId: null == businessId
+      userId: null == userId
+          ? _value.userId
+          : userId // ignore: cast_nullable_to_non_nullable
+              as String,
+      businessId: freezed == businessId
           ? _value.businessId
           : businessId // ignore: cast_nullable_to_non_nullable
-              as String,
+              as String?,
       needId: freezed == needId
           ? _value.needId
           : needId // ignore: cast_nullable_to_non_nullable
               as String?,
+      type: null == type
+          ? _value.type
+          : type // ignore: cast_nullable_to_non_nullable
+              as String,
+      data: null == data
+          ? _value._data
+          : data // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>,
       title: null == title
           ? _value.title
           : title // ignore: cast_nullable_to_non_nullable
@@ -180,19 +219,36 @@ class __$$AppNotificationImplCopyWithImpl<$Res>
 class _$AppNotificationImpl implements _AppNotification {
   const _$AppNotificationImpl(
       {required this.id,
-      required this.businessId,
+      required this.userId,
+      this.businessId,
       this.needId,
+      required this.type,
+      final Map<String, dynamic> data = const {},
       required this.title,
       required this.body,
       this.isRead = false,
-      required this.createdAt});
+      required this.createdAt})
+      : _data = data;
 
   @override
   final String id;
   @override
-  final String businessId;
+  final String userId;
+  @override
+  final String? businessId;
   @override
   final String? needId;
+  @override
+  final String type;
+  final Map<String, dynamic> _data;
+  @override
+  @JsonKey()
+  Map<String, dynamic> get data {
+    if (_data is EqualUnmodifiableMapView) return _data;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_data);
+  }
+
   @override
   final String title;
   @override
@@ -205,7 +261,7 @@ class _$AppNotificationImpl implements _AppNotification {
 
   @override
   String toString() {
-    return 'AppNotification(id: $id, businessId: $businessId, needId: $needId, title: $title, body: $body, isRead: $isRead, createdAt: $createdAt)';
+    return 'AppNotification(id: $id, userId: $userId, businessId: $businessId, needId: $needId, type: $type, data: $data, title: $title, body: $body, isRead: $isRead, createdAt: $createdAt)';
   }
 
   @override
@@ -214,9 +270,12 @@ class _$AppNotificationImpl implements _AppNotification {
         (other.runtimeType == runtimeType &&
             other is _$AppNotificationImpl &&
             (identical(other.id, id) || other.id == id) &&
+            (identical(other.userId, userId) || other.userId == userId) &&
             (identical(other.businessId, businessId) ||
                 other.businessId == businessId) &&
             (identical(other.needId, needId) || other.needId == needId) &&
+            (identical(other.type, type) || other.type == type) &&
+            const DeepCollectionEquality().equals(other._data, _data) &&
             (identical(other.title, title) || other.title == title) &&
             (identical(other.body, body) || other.body == body) &&
             (identical(other.isRead, isRead) || other.isRead == isRead) &&
@@ -226,7 +285,17 @@ class _$AppNotificationImpl implements _AppNotification {
 
   @override
   int get hashCode => Object.hash(
-      runtimeType, id, businessId, needId, title, body, isRead, createdAt);
+      runtimeType,
+      id,
+      userId,
+      businessId,
+      needId,
+      type,
+      const DeepCollectionEquality().hash(_data),
+      title,
+      body,
+      isRead,
+      createdAt);
 
   /// Create a copy of AppNotification
   /// with the given fields replaced by the non-null parameter values.
@@ -241,8 +310,11 @@ class _$AppNotificationImpl implements _AppNotification {
 abstract class _AppNotification implements AppNotification {
   const factory _AppNotification(
       {required final String id,
-      required final String businessId,
+      required final String userId,
+      final String? businessId,
       final String? needId,
+      required final String type,
+      final Map<String, dynamic> data,
       required final String title,
       required final String body,
       final bool isRead,
@@ -251,9 +323,15 @@ abstract class _AppNotification implements AppNotification {
   @override
   String get id;
   @override
-  String get businessId;
+  String get userId;
+  @override
+  String? get businessId;
   @override
   String? get needId;
+  @override
+  String get type;
+  @override
+  Map<String, dynamic> get data;
   @override
   String get title;
   @override

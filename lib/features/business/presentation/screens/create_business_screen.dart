@@ -4,7 +4,9 @@ import 'package:dartz/dartz.dart';
 import 'package:ifind/core/errors/failures.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/tutorial/app_tutorial.dart';
 import 'package:ifind/core/utils/validators.dart';
+import 'package:ifind/features/auth/domain/entities/user.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/domain/usecases/configure_business.dart';
@@ -159,6 +161,29 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
   Future<void> _getCurrentLocation() async {
     setState(() => _isGettingLocation = true);
     try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        await Geolocator.openLocationSettings();
+        throw Exception('Please turn on location services and try again.');
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        await Geolocator.openAppSettings();
+        throw Exception(
+          'Location permission is blocked. Enable it in app settings.',
+        );
+      }
+
+      if (permission != LocationPermission.whileInUse &&
+          permission != LocationPermission.always) {
+        throw Exception('Location permission is required.');
+      }
+
       final position = await Geolocator.getCurrentPosition();
       setState(() {
         _latitude = position.latitude;
@@ -201,8 +226,25 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
         return;
       }
 
+      var ownerId = user.id;
+      if (widget.business == null && user.role == UserRole.customer) {
+        final upgradeError =
+            await ref.read(authProvider.notifier).upgradeToBusinessOwner();
+        if (upgradeError != null) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(upgradeError),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          return;
+        }
+        ownerId = ref.read(currentUserProvider)?.id ?? user.id;
+      }
+
       await ref.read(createBusinessProvider.notifier).saveBusiness(
-            ownerId: user.id,
+            ownerId: ownerId,
             name: _nameController.text.trim(),
             description: _descriptionController.text.trim(),
             category: _selectedCategory,
@@ -234,7 +276,7 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
           );
         } else {
           // Success: Invalidate providers to trigger UI updates
-          ref.invalidate(myBusinessesProvider(user.id));
+          ref.invalidate(myBusinessesProvider(ownerId));
           ref.invalidate(nearbyBusinessesProvider);
           ref.invalidate(featuredBusinessesProvider);
 
@@ -247,6 +289,58 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
                 backgroundColor: AppColors.success,
               ),
             );
+            if (widget.business == null &&
+                ref
+                    .read(tutorialProvider)
+                    .shouldShow(AppTutorialService.businessSetupKey)) {
+              await showAppTutorial(
+                context: context,
+                ref: ref,
+                storageKey: AppTutorialService.businessSetupKey,
+                steps: const [
+                  TutorialStep(
+                    icon: Icons.dashboard_customize_rounded,
+                    title: 'Your business command center',
+                    description:
+                        'My Shop shows your profile health, reviews, nearby demand, conversations, and the main tools for managing the business customers see.',
+                    action: 'Open My Shop anytime from the bottom navigation.',
+                  ),
+                  TutorialStep(
+                    icon: Icons.inventory_2_rounded,
+                    title: 'Use inventory for products',
+                    description:
+                        'Inventory is your public catalog. Add products with prices, photos, stock quantity, and availability so customers know exactly what you sell.',
+                    action:
+                        'Tap Inventory or Manage Catalog, then Add Product.',
+                  ),
+                  TutorialStep(
+                    icon: Icons.photo_library_rounded,
+                    title: 'Build trust with media',
+                    description:
+                        'Gallery and business images help customers recognize your shop, inspect your work, and feel confident before contacting you.',
+                    action:
+                        'Add clear product, service, shop-front, or portfolio photos.',
+                  ),
+                  TutorialStep(
+                    icon: Icons.trending_up_rounded,
+                    title: 'Follow leads and performance',
+                    description:
+                        'Leads show nearby customer needs that match your category. Analytics help you see views, saved shops, inquiries, product coverage, and review health.',
+                    action:
+                        'Check leads often and respond quickly to active demand.',
+                  ),
+                  TutorialStep(
+                    icon: Icons.handshake_rounded,
+                    title: 'Connect with other businesses',
+                    description:
+                        'Partner recommendations help you find compatible businesses near you for supply, referrals, collaborations, and B2B conversations.',
+                    action:
+                        'Review suggested partners and start a conversation when useful.',
+                  ),
+                ],
+              );
+            }
+            if (!mounted) return;
             Navigator.pop(context);
           }
         }
@@ -325,7 +419,10 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(createBusinessProvider);
+    final user = ref.watch(currentUserProvider);
     final isLoading = state.isLoading;
+    final willAutoUpgrade =
+        widget.business == null && user?.role == UserRole.customer;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -342,6 +439,10 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
+            if (willAutoUpgrade) ...[
+              _buildAutoUpgradeNotice(),
+              const SizedBox(height: 20),
+            ],
             _buildImageSection(),
             const SizedBox(height: 32),
             Text('Shop Details',
@@ -378,7 +479,9 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
                 );
               }).toList(),
               onChanged: (value) {
-                if (value != null) setState(() => _selectedCategory = value);
+                if (value != null) {
+                  setState(() => _selectedCategory = value);
+                }
               },
             ),
             const SizedBox(height: 16),
@@ -401,10 +504,14 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
             TextFormField(
               controller: _addressController,
               decoration: const InputDecoration(
-                labelText: 'Address',
+                labelText: 'Business Address',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.location_on),
               ),
+              validator: (value) => widget.business == null &&
+                      (value == null || value.trim().length < 6)
+                  ? 'A clear business address is required'
+                  : null,
             ),
             const SizedBox(height: 16),
 
@@ -515,23 +622,31 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
             TextFormField(
               controller: _phoneController,
               decoration: const InputDecoration(
-                labelText: 'Phone (Optional)',
+                labelText: 'Business Phone',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.phone),
               ),
               keyboardType: TextInputType.phone,
+              validator: (value) => widget.business == null &&
+                      (value == null || value.trim().length < 7)
+                  ? 'A reachable business phone is required'
+                  : null,
             ),
             const SizedBox(height: 16),
 
             TextFormField(
               controller: _emailController,
               decoration: const InputDecoration(
-                labelText: 'Email (Optional)',
+                labelText: 'Business Email',
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.email),
               ),
               keyboardType: TextInputType.emailAddress,
               validator: (value) {
+                if (widget.business == null &&
+                    (value == null || value.trim().isEmpty)) {
+                  return 'A business email is required';
+                }
                 if (value != null && value.isNotEmpty) {
                   return Validators.validateEmail(value);
                 }
@@ -574,6 +689,40 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
             const SizedBox(height: 40),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAutoUpgradeNotice() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primaryGreen.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.primaryGreen.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.verified_user_outlined,
+            color: AppColors.primaryGreen,
+            size: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Submitting a valid shop will automatically upgrade your customer account to a business account and approve the shop using iFind trust checks.',
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                color: AppColors.darkText,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

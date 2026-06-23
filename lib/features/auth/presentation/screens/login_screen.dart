@@ -5,6 +5,7 @@ import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/constants/app_strings.dart';
 import 'package:ifind/core/utils/validators.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
+import 'package:ifind/features/auth/presentation/providers/pending_registration_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -44,37 +45,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             // Intercept email not confirmed error with a friendly, actionable dialog
             if (errorStr.contains('email not confirmed') ||
                 errorStr.contains('email_not_confirmed')) {
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  title: Row(
-                    children: [
-                      const Icon(Icons.mark_email_unread_rounded, color: Colors.orange, size: 28),
-                      const SizedBox(width: 10),
-                      Text('Verify Your Email', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  content: Text(
-                    'You have not verified your email address yet.\n\n'
-                    'Please check your inbox at:\n${_emailController.text.trim()}\n\n'
-                    'Click the link in the email we sent you, then come back and log in.',
-                    style: GoogleFonts.outfit(height: 1.5),
-                  ),
-                  actions: [
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.check_circle_outline),
-                      label: const Text('Got it!'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryGreen,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-              );
+              final email = _emailController.text.trim();
+              final password = _passwordController.text;
+              ref.read(pendingRegistrationProvider.notifier).state =
+                  PendingRegistration(email: email, password: password);
+              context.go('/confirmation?email=${Uri.encodeComponent(email)}');
+            } else if (errorStr.contains('invalid login credentials') ||
+                errorStr.contains('invalid credentials') ||
+                errorStr.contains('user not found')) {
+              _showCreateAccountDialog();
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -88,6 +67,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
       }
     }
+  }
+
+  Future<void> _showCreateAccountDialog() async {
+    final email = _emailController.text.trim();
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(
+          Icons.person_add_alt_1_rounded,
+          color: AppColors.primaryGreen,
+        ),
+        title: const Text('Create your iFind account'),
+        content: Text(
+          email.isEmpty
+              ? 'We could not find an account for those details. Register first so we can set up your customer or business owner profile.'
+              : 'We could not find an account for $email. Register first so we can set up your customer or business owner profile.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Try again'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.go('/register');
+            },
+            icon: const Icon(Icons.app_registration_rounded),
+            label: const Text('Register'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _handleGoogleLogin() async {
@@ -258,8 +271,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   backgroundColor: AppColors.primaryGreen,
                                   foregroundColor: Colors.white,
                                   elevation: 8,
-                                  shadowColor:
-                                      AppColors.primaryGreen.withValues(alpha: 0.4),
+                                  shadowColor: AppColors.primaryGreen
+                                      .withValues(alpha: 0.4),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
@@ -291,7 +304,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               children: [
                                 const Expanded(child: Divider()),
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16),
                                   child: Text(
                                     'OR',
                                     style: GoogleFonts.outfit(
@@ -309,9 +323,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             SizedBox(
                               height: 56,
                               child: OutlinedButton(
-                                onPressed: isLoading ? null : _handleGoogleLogin,
+                                onPressed:
+                                    isLoading ? null : _handleGoogleLogin,
                                 style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: Colors.grey[300]!, width: 1.5),
+                                  side: BorderSide(
+                                      color: Colors.grey[300]!, width: 1.5),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
@@ -324,7 +340,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       'https://www.svgrepo.com/show/475656/google-color.svg',
                                       height: 22,
                                       width: 22,
-                                      placeholderBuilder: (_) => const Icon(Icons.g_mobiledata, size: 22),
+                                      placeholderBuilder: (_) => const Icon(
+                                          Icons.g_mobiledata,
+                                          size: 22),
                                     ),
                                     const SizedBox(width: 12),
                                     Text(

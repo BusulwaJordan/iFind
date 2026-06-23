@@ -4,9 +4,23 @@ class ApiConstants {
   ApiConstants._();
 
   // Supabase Configuration
-  // Strictly loaded from environment variables (.env)
-  static String get supabaseUrl => dotenv.env['SUPABASE_URL'] ?? '';
-  static String get supabaseAnonKey => dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+  // Prefer build-time defines for CI/release builds, then local .env for dev.
+  static String get supabaseUrl {
+    const fromDefine = String.fromEnvironment('SUPABASE_URL');
+    return fromDefine.isNotEmpty
+        ? fromDefine
+        : dotenv.env['SUPABASE_URL'] ?? '';
+  }
+
+  static String get supabaseAnonKey {
+    const fromDefine = String.fromEnvironment('SUPABASE_ANON_KEY');
+    return fromDefine.isNotEmpty
+        ? fromDefine
+        : dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+  }
+
+  static const String appUpdateManifestUrl =
+      'https://pub-731188e08dc6400ba34b53ac6113afcc.r2.dev/latest.json';
 
   // Table Names
   static const String usersTable = 'users';

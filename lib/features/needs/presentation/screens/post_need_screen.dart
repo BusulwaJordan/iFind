@@ -79,8 +79,6 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
           title: _textController.text,
           description: _descController.text,
           category: _analysisResult?['category'] ?? 'General',
-          lat: 0.3476, // Mock location for MVP
-          long: 32.5825,
         );
 
     if (success && mounted) {

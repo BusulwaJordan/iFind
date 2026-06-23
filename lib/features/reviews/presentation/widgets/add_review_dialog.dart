@@ -5,6 +5,8 @@ import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/reviews/presentation/providers/review_provider.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
+import 'package:ifind/core/providers/ai_providers.dart';
+import 'package:ifind/core/services/interaction_service.dart';
 
 class AddReviewDialog extends ConsumerStatefulWidget {
   final String businessId;
@@ -48,6 +50,13 @@ class _AddReviewDialogState extends ConsumerState<AddReviewDialog> {
           ref.invalidate(businessReviewsProvider(widget.businessId));
           ref.invalidate(featuredBusinessesProvider);
           ref.invalidate(nearbyBusinessesProvider);
+
+          // Log B2C interaction
+          ref.read(interactionServiceProvider).logInteraction(
+            userId: user.id,
+            businessId: widget.businessId,
+            type: InteractionType.reviewPosted,
+          );
           
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(

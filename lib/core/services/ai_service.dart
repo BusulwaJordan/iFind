@@ -2,10 +2,26 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:http/http.dart' as http;   // <-- ADD THIS
+import 'package:http/http.dart' as http;
+
+// ⚠️ DEPRECATED: This file (AiService / OpenRouter) is being replaced.
+//
+// iFind is moving to CUSTOM-TRAINED AI models running on Supabase Edge Functions.
+// No third-party API keys are required.
+//
+// REPLACEMENT SERVICES (in progress):
+//   → MODEL 1 (Proximity):       lib/core/services/proximity_service.dart
+//   → MODEL 2 (B2C Recommender): lib/core/services/recommendation_service.dart
+//   → MODEL 3 (B2B Matcher):     lib/core/services/b2b_service.dart
+//
+// PROVIDERS:                      lib/core/providers/ai_providers.dart
+//
+// This file is kept temporarily to avoid breaking existing imports until
+// all call-sites are migrated. Do NOT add new code here unless necessary.
 
 class AiService {
   late final GenerativeModel _model;
+
   AiService() {
     final apiKey = dotenv.env['GEMINI_API_KEY'] ?? 'YOUR_GEMINI_API_KEY';
     _model = GenerativeModel(
@@ -45,7 +61,8 @@ class AiService {
   }
 
   /// Takes a user intent and a raw JSON list of businesses and returns top ranked items
-  Future<List<Map<String, dynamic>>> rankNearbyBusinesses(String intent, List<Map<String, dynamic>> businesses) async {
+  Future<List<Map<String, dynamic>>> rankNearbyBusinesses(
+      String intent, List<Map<String, dynamic>> businesses) async {
     final prompt = '''
     You are a local business hyper-assistant. 
     A user's intent is: "$intent".
@@ -79,28 +96,35 @@ class AiService {
     }
   }
 
-  // ---------- NEW: Python backend methods ----------
-  static const String _pythonBaseUrl = 'https://ifind-backend-9wvd.onrender.com';
+  // ---------- Python backend methods ----------
+  static const String _pythonBaseUrl =
+      'https://ifind-backend-9wvd.onrender.com';
 
-  Future<List<Map<String, dynamic>>> getHybridRecommendations(String businessId, int topN) async {
+  Future<List<Map<String, dynamic>>> getHybridRecommendations(
+      String businessId, int topN) async {
     final response = await http.get(
-      Uri.parse('$_pythonBaseUrl/recommend/business/$businessId?top_n=$topN'),
+      Uri.parse(
+          '$_pythonBaseUrl/recommend/business/$businessId?top_n=$topN'),
     );
     if (response.statusCode == 200) {
       return List<Map<String, dynamic>>.from(jsonDecode(response.body));
     } else {
-      throw Exception('Failed to load hybrid recommendations: ${response.statusCode}');
+      throw Exception(
+          'Failed to load hybrid recommendations: ${response.statusCode}');
     }
   }
 
-  Future<List<Map<String, dynamic>>> searchNearbyBusinesses(double lat, double lon, double radiusKm) async {
+  Future<List<Map<String, dynamic>>> searchNearbyBusinesses(
+      double lat, double lon, double radiusKm) async {
     final response = await http.get(
-      Uri.parse('$_pythonBaseUrl/search/nearby?lat=$lat&lon=$lon&radius_km=$radiusKm'),
+      Uri.parse(
+          '$_pythonBaseUrl/search/nearby?lat=$lat&lon=$lon&radius_km=$radiusKm'),
     );
     if (response.statusCode == 200) {
       return List<Map<String, dynamic>>.from(jsonDecode(response.body));
     } else {
-      throw Exception('Failed to load nearby businesses: ${response.statusCode}');
+      throw Exception(
+          'Failed to load nearby businesses: ${response.statusCode}');
     }
   }
 }

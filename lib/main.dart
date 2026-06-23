@@ -5,11 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ifind/app.dart';
 import 'package:ifind/core/constants/api_constants.dart';
+import 'package:ifind/core/services/deep_link_service.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
+  await dotenv.load(fileName: ".env", isOptional: true);
 
   // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();
@@ -18,7 +19,13 @@ void main() async {
   await Supabase.initialize(
     url: ApiConstants.supabaseUrl,
     anonKey: ApiConstants.supabaseAnonKey,
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+    ),
   );
+
+  // Handle email-verification and OAuth deep links
+  await DeepLinkService().initialize();
 
   runApp(
     ProviderScope(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
+import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:ifind/features/products/domain/entities/product.dart';
 import 'package:ifind/features/products/presentation/providers/product_provider.dart';
@@ -10,11 +11,20 @@ import 'package:ifind/features/products/presentation/screens/add_product_screen.
 import 'package:ifind/core/widgets/empty_state_widget.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-class ProductManagementScreen extends ConsumerWidget {
+class ProductManagementScreen extends ConsumerStatefulWidget {
   const ProductManagementScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProductManagementScreen> createState() =>
+      _ProductManagementScreenState();
+}
+
+class _ProductManagementScreenState
+    extends ConsumerState<ProductManagementScreen> {
+  String? _selectedBusinessId;
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     if (user == null) {
       return const Scaffold(body: Center(child: Text('Please login')));
@@ -41,12 +51,24 @@ class ProductManagementScreen extends ConsumerWidget {
             );
           }
 
-          final business = businesses.first;
+          final business = businesses.firstWhere(
+            (b) => b.id == (_selectedBusinessId ?? businesses.first.id),
+            orElse: () => businesses.first,
+          );
+          _selectedBusinessId ??= business.id;
+
           final productsAsync =
               ref.watch(businessProductsProvider(business.id));
 
           return productsAsync.when(
             data: (products) {
+              final sortedProducts = [...products]..sort((a, b) {
+                  if (a.isAvailable != b.isAvailable) {
+                    return a.isAvailable ? -1 : 1;
+                  }
+                  return b.createdAt.compareTo(a.createdAt);
+                });
+
               if (products.isEmpty) {
                 return EmptyStateWidget(
                   title: 'No products yet',
@@ -63,11 +85,25 @@ class ProductManagementScreen extends ConsumerWidget {
                     ref.refresh(businessProductsProvider(business.id)),
                 child: ListView.separated(
                   padding: const EdgeInsets.all(24),
-                  itemCount: products.length,
+                  itemCount: sortedProducts.length + 1,
                   separatorBuilder: (_, __) => const SizedBox(height: 16),
                   itemBuilder: (context, index) {
-                    final product = products[index];
-                    return _ProductListTile(product: product);
+                    if (index == 0) {
+                      return _BusinessSelector(
+                        businesses: businesses,
+                        selectedBusinessId: business.id,
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() => _selectedBusinessId = value);
+                        },
+                      );
+                    }
+
+                    final product = sortedProducts[index - 1];
+                    return _ProductListTile(
+                      product: product,
+                      businessId: business.id,
+                    );
                   },
                 ),
               );
@@ -82,8 +118,8 @@ class ProductManagementScreen extends ConsumerWidget {
       floatingActionButton: myBusinessesAsync.maybeWhen(
         data: (businesses) => businesses.isNotEmpty
             ? FloatingActionButton.extended(
-                onPressed: () =>
-                    _navigateToAddProduct(context, businesses.first.id),
+                onPressed: () => _navigateToAddProduct(
+                    context, _selectedBusinessId ?? businesses.first.id),
                 backgroundColor: AppColors.primaryGreen,
                 label: const Text('Add Product',
                     style: TextStyle(color: Colors.white)),
@@ -103,9 +139,47 @@ class ProductManagementScreen extends ConsumerWidget {
   }
 }
 
+class _BusinessSelector extends StatelessWidget {
+  final List<Business> businesses;
+  final String selectedBusinessId;
+  final ValueChanged<String?> onChanged;
+
+  const _BusinessSelector({
+    required this.businesses,
+    required this.selectedBusinessId,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (businesses.length == 1) {
+      return Text(
+        businesses.first.name,
+        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+      );
+    }
+
+    return DropdownButtonFormField<String>(
+      initialValue: selectedBusinessId,
+      decoration: const InputDecoration(
+        labelText: 'Managing shop',
+        prefixIcon: Icon(Icons.storefront_rounded),
+      ),
+      items: businesses
+          .map((business) => DropdownMenuItem(
+                value: business.id,
+                child: Text(business.name),
+              ))
+          .toList(),
+      onChanged: onChanged,
+    );
+  }
+}
+
 class _ProductListTile extends ConsumerWidget {
   final Product product;
-  const _ProductListTile({required this.product});
+  final String businessId;
+  const _ProductListTile({required this.product, required this.businessId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -174,12 +248,52 @@ class _ProductListTile extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.red),
-            onPressed: () {
-              // Delete logic
-            },
+            onPressed: () => _confirmDelete(context, ref),
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete product?'),
+        content: Text('Remove "${product.name}" from your shop?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true) return;
+
+    final result =
+        await ref.read(productRepositoryProvider).deleteProduct(product.id);
+    if (!context.mounted) return;
+
+    result.fold(
+      (failure) => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(failure.message)),
+      ),
+      (_) {
+        ref.invalidate(businessProductsProvider(businessId));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Product deleted')),
+        );
+      },
     );
   }
 }

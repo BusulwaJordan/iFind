@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
+import 'package:ifind/features/notifications/presentation/providers/notification_provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -14,11 +16,11 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _notificationsEnabled = true;
-
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
+    final notificationsEnabled =
+        ref.watch(notificationSettingsProvider).value ?? true;
 
     return Scaffold(
       appBar: AppBar(
@@ -89,12 +91,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _SettingsTile(
               icon: Icons.dashboard_outlined,
               title: 'Leads Dashboard',
-              subtitle: 'View nearby customer needs',
+              subtitle: 'Open customer inquiries',
               onTap: () {
-                // TODO: Migrate LeadsDashboard to GoRouter if needed
-                // For now, if it's not a main tab, we can push it
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Dashboard coming soon')));
+                context.push('/leads-dashboard');
               },
               trailing: Container(
                 padding: const EdgeInsets.all(6),
@@ -116,16 +115,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             icon: Icons.notifications_outlined,
             title: 'Notifications',
             onTap: () {
-              setState(() {
-                _notificationsEnabled = !_notificationsEnabled;
-              });
+              ref
+                  .read(notificationSettingsProvider.notifier)
+                  .setEnabled(!notificationsEnabled);
             },
             trailing: Switch(
-              value: _notificationsEnabled,
+              value: notificationsEnabled,
               onChanged: (val) {
-                setState(() {
-                  _notificationsEnabled = val;
-                });
+                ref.read(notificationSettingsProvider.notifier).setEnabled(val);
               },
             ),
           ),

@@ -24,6 +24,14 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>iFind uses the camera so businesses can capture shop, product, and gallery photos.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>iFind uses your location to show nearby shops, recommend local businesses, and set accurate shop locations.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>iFind uses the microphone when recording videos for shop and product galleries.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>iFind uses your photo library so you can upload shop logos, covers, products, and gallery media.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

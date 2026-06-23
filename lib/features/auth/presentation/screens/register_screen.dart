@@ -9,6 +9,7 @@ import 'package:ifind/core/constants/app_strings.dart';
 import 'package:ifind/core/utils/validators.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
+import 'package:ifind/features/auth/presentation/providers/pending_registration_provider.dart';
 
 /// Registration Screen
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -51,9 +52,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         return;
       }
 
-      await ref.read(authProvider.notifier).register(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+
+      final result = await ref.read(authProvider.notifier).register(
+            email: email,
+            password: password,
             fullName: _fullNameController.text.trim(),
             role: _selectedRole,
             phone: _phoneController.text.trim().isEmpty
@@ -61,9 +65,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 : _phoneController.text.trim(),
           );
 
-      if (mounted) {
+      if (!mounted) return;
+
+      if (result == null) {
+        ref.read(pendingRegistrationProvider.notifier).state = null;
+
         final authState = ref.read(authProvider);
-        
         authState.whenOrNull(
           error: (error, _) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -73,45 +80,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               ),
             );
           },
-          data: (_) async {
-            // Registration successful
-            await ref.read(onboardingCompleteProvider.notifier).completeOnboarding();
-            if (mounted) {
-              final email = _emailController.text.trim();
-              
-              // Show an unmistakable dialog instead of navigating immediately.
-              // This completely avoids any GoRouter race conditions and forces user attention.
-              await showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => AlertDialog(
-                  title: const Text('Registration Successful! 🎉'),
-                  content: Text(
-                      'Your account has been created successfully.\n\nA verification link has been sent to $email. Please check your email and verify your account before logging in.'),
-                  actions: [
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryGreen,
-                        foregroundColor: AppColors.white,
-                      ),
-                      onPressed: () {
-                        // Pop the dialog and then go to login
-                        Navigator.of(context).pop();
-                        context.go('/login');
-                      },
-                      child: const Text('Go to Login'),
-                    ),
-                  ],
-                ),
-              );
-            }
-          },
         );
+        return;
       }
+
+      // Ensure onboarding is complete
+      await ref.read(onboardingCompleteProvider.notifier).completeOnboarding();
+
+      if (!mounted) return;
+
+      ref.read(pendingRegistrationProvider.notifier).state =
+          PendingRegistration(email: email, password: password);
+      context.go('/confirmation?email=${Uri.encodeComponent(email)}');
     }
   }
 
   Future<void> _handleGoogleSignUp() async {
+    await ref.read(onboardingCompleteProvider.notifier).completeOnboarding();
     await ref.read(authProvider.notifier).loginWithGoogle();
     if (mounted) {
       final authState = ref.read(authProvider);
@@ -302,12 +287,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 SizedBox(
                                   height: 56,
                                   child: ElevatedButton(
-                                    onPressed: isLoading ? null : _handleRegister,
+                                    onPressed:
+                                        isLoading ? null : _handleRegister,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppColors.primaryGreen,
                                       foregroundColor: Colors.white,
                                       elevation: 6,
-                                      shadowColor: AppColors.primaryGreen.withValues(alpha: 0.4),
+                                      shadowColor: AppColors.primaryGreen
+                                          .withValues(alpha: 0.4),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(16),
                                       ),
@@ -318,7 +305,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                             width: 24,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                      Colors.white),
                                             ),
                                           )
                                         : Text(
@@ -337,7 +326,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   children: [
                                     const Expanded(child: Divider()),
                                     Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16),
                                       child: Text(
                                         'OR',
                                         style: GoogleFonts.outfit(
@@ -355,22 +345,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 SizedBox(
                                   height: 56,
                                   child: OutlinedButton(
-                                    onPressed: isLoading ? null : _handleGoogleSignUp,
+                                    onPressed:
+                                        isLoading ? null : _handleGoogleSignUp,
                                     style: OutlinedButton.styleFrom(
-                                      side: BorderSide(color: Colors.grey[300]!, width: 1.5),
+                                      side: BorderSide(
+                                          color: Colors.grey[300]!, width: 1.5),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(16),
                                       ),
                                       backgroundColor: Colors.white,
                                     ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         SvgPicture.network(
                                           'https://www.svgrepo.com/show/475656/google-color.svg',
                                           height: 22,
                                           width: 22,
-                                          placeholderBuilder: (_) => const Icon(Icons.g_mobiledata, size: 22),
+                                          placeholderBuilder: (_) => const Icon(
+                                              Icons.g_mobiledata,
+                                              size: 22),
                                         ),
                                         const SizedBox(width: 12),
                                         Text(

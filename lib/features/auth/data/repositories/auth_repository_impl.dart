@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:ifind/core/errors/failures.dart';
 import 'package:ifind/features/auth/data/datasources/auth_remote_datasource.dart';
+import 'package:ifind/features/auth/domain/entities/registration_result.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
 import 'package:ifind/features/auth/domain/repositories/auth_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
@@ -43,7 +44,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, User>> register({
+  Future<Either<Failure, RegistrationResult>> register({
     required String email,
     required String password,
     required String fullName,
@@ -51,14 +52,26 @@ class AuthRepositoryImpl implements AuthRepository {
     String? phone,
   }) async {
     try {
-      final user = await remoteDataSource.register(
+      final result = await remoteDataSource.register(
         email: email,
         password: password,
         fullName: fullName,
         role: role,
         phone: phone,
       );
-      return Right(user);
+      return Right(result);
+    } on AuthException catch (e) {
+      return Left(AuthFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> resendConfirmationEmail(String email) async {
+    try {
+      await remoteDataSource.resendConfirmationEmail(email);
+      return const Right(null);
     } on AuthException catch (e) {
       return Left(AuthFailure(e.message));
     } catch (e) {
@@ -107,6 +120,20 @@ class AuthRepositoryImpl implements AuthRepository {
         userId: userId,
         fullName: fullName,
         phone: phone,
+      );
+      return Right(user);
+    } catch (e) {
+      return Left(AuthFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, User>> upgradeToBusinessOwner({
+    required String userId,
+  }) async {
+    try {
+      final user = await remoteDataSource.upgradeToBusinessOwner(
+        userId: userId,
       );
       return Right(user);
     } catch (e) {

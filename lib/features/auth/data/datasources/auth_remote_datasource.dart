@@ -1,8 +1,31 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:supabase_flutter/supabase_flutter.dart' as sb show User;
 import 'package:ifind/core/constants/api_constants.dart';
 import 'package:ifind/features/auth/data/models/user_model.dart';
+import 'package:ifind/features/auth/domain/entities/registration_result.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
+
+/// Redirect Supabase uses after email confirmation and OAuth.
+String get kAuthRedirectUrl {
+  final envWebRedirect = dotenv.env['AUTH_REDIRECT_URL_WEB']?.trim();
+  final envMobileRedirect = dotenv.env['AUTH_REDIRECT_URL_MOBILE']?.trim();
+
+  if (kIsWeb) {
+    if (envWebRedirect != null && envWebRedirect.isNotEmpty) {
+      return envWebRedirect;
+    }
+
+    return '${Uri.base.origin}/auth/callback';
+  }
+
+  if (envMobileRedirect != null && envMobileRedirect.isNotEmpty) {
+    return envMobileRedirect;
+  }
+
+  return 'ifind://auth/callback';
+}
 
 /// Remote data source for authentication
 /// Handles all Supabase authentication operations
@@ -35,8 +58,8 @@ class AuthRemoteDataSource {
     }
   }
 
-  /// Register new user
-  Future<User> register({
+  /// Register new user. Sends a confirmation email when enabled in Supabase.
+  Future<RegistrationResult> register({
     required String email,
     required String password,
     required String fullName,
@@ -44,11 +67,10 @@ class AuthRemoteDataSource {
     String? phone,
   }) async {
     try {
-      // Create auth user with metadata
       final response = await supabaseClient.auth.signUp(
         email: email,
         password: password,
-        emailRedirectTo: 'ifind://auth/verify', // Deep link for mobile
+        emailRedirectTo: kAuthRedirectUrl,
         data: {
           'full_name': fullName,
           'role': role == UserRole.businessOwner ? 'business_owner' : role.name,
@@ -61,9 +83,7 @@ class AuthRemoteDataSource {
       }
 
       final now = DateTime.now();
-
-      // Return user entity directly
-      return User(
+      final user = User(
         id: response.user!.id,
         email: email,
         fullName: fullName,
@@ -72,10 +92,33 @@ class AuthRemoteDataSource {
         createdAt: now,
         updatedAt: now,
       );
+
+      // No session means Supabase is waiting for email confirmation.
+      final requiresEmailConfirmation = response.session == null;
+
+      return RegistrationResult(
+        user: user,
+        requiresEmailConfirmation: requiresEmailConfirmation,
+      );
     } on AuthException {
       rethrow;
     } catch (e) {
       throw Exception('Registration failed: ${e.toString()}');
+    }
+  }
+
+  /// Resend the signup confirmation email.
+  Future<void> resendConfirmationEmail(String email) async {
+    try {
+      await supabaseClient.auth.resend(
+        type: OtpType.signup,
+        email: email,
+        emailRedirectTo: kAuthRedirectUrl,
+      );
+    } on AuthException {
+      rethrow;
+    } catch (e) {
+      throw Exception('Failed to resend confirmation email: ${e.toString()}');
     }
   }
 
@@ -93,7 +136,7 @@ class AuthRemoteDataSource {
     try {
       await supabaseClient.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: 'io.supabase.ifind://login-callback/',
+        redirectTo: kAuthRedirectUrl,
       );
     } catch (e) {
       throw Exception('Google Sign-In failed: ${e.toString()}');
@@ -156,6 +199,36 @@ class AuthRemoteDataSource {
     }
   }
 
+  /// Automatically upgrade a customer to a business owner.
+  Future<User> upgradeToBusinessOwner({
+    required String userId,
+  }) async {
+    try {
+      final response = await supabaseClient
+          .from(ApiConstants.usersTable)
+          .update({
+            'role': 'business_owner',
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', userId)
+          .select()
+          .single();
+
+      try {
+        await supabaseClient.auth.updateUser(
+          UserAttributes(data: {'role': 'business_owner'}),
+        );
+      } catch (e) {
+        debugPrint('Auth metadata role sync failed: $e');
+      }
+
+      final model = UserModel.fromJson(response);
+      return model.toEntity();
+    } catch (e) {
+      throw Exception('Business upgrade failed: ${e.toString()}');
+    }
+  }
+
   /// Listen to auth state changes
   Stream<User?> get authStateChanges {
     return supabaseClient.auth.onAuthStateChange.asyncMap((state) async {
@@ -165,10 +238,29 @@ class AuthRemoteDataSource {
       try {
         final model = await _mapSupabaseUserToModel(user);
         return model.toEntity();
-      } catch (e) {
-        return null;
+      } catch (_) {
+        return _userFromSessionMetadata(user);
       }
     });
+  }
+
+  User _userFromSessionMetadata(sb.User user) {
+    final metadata = user.userMetadata ?? {};
+    final now = DateTime.now();
+    final roleStr = metadata['role'] as String? ?? 'customer';
+    final parsedRole = roleStr == 'business_owner'
+        ? UserRole.businessOwner
+        : (roleStr == 'manager' ? UserRole.manager : UserRole.customer);
+
+    return User(
+      id: user.id,
+      email: user.email ?? '',
+      fullName: metadata['full_name'] as String? ?? 'iFind User',
+      role: parsedRole,
+      phone: metadata['phone'] as String?,
+      createdAt: DateTime.tryParse(user.createdAt) ?? now,
+      updatedAt: now,
+    );
   }
 
   /// Map Supabase auth User to iFind UserModel
@@ -188,8 +280,8 @@ class AuthRemoteDataSource {
       final now = DateTime.now();
 
       final roleStr = metadata['role'] as String? ?? 'customer';
-      final parsedRole = roleStr == 'business_owner' 
-          ? UserRole.businessOwner 
+      final parsedRole = roleStr == 'business_owner'
+          ? UserRole.businessOwner
           : (roleStr == 'manager' ? UserRole.manager : UserRole.customer);
 
       return UserModel(

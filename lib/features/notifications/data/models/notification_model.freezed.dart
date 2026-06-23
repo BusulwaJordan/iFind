@@ -21,10 +21,14 @@ NotificationModel _$NotificationModelFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$NotificationModel {
   String get id => throw _privateConstructorUsedError;
+  @JsonKey(name: 'user_id')
+  String get userId => throw _privateConstructorUsedError;
   @JsonKey(name: 'business_id')
-  String get businessId => throw _privateConstructorUsedError;
+  String? get businessId => throw _privateConstructorUsedError;
   @JsonKey(name: 'need_id')
   String? get needId => throw _privateConstructorUsedError;
+  String get type => throw _privateConstructorUsedError;
+  Map<String, dynamic> get data => throw _privateConstructorUsedError;
   String get title => throw _privateConstructorUsedError;
   String get body => throw _privateConstructorUsedError;
   @JsonKey(name: 'is_read')
@@ -50,8 +54,11 @@ abstract class $NotificationModelCopyWith<$Res> {
   @useResult
   $Res call(
       {String id,
-      @JsonKey(name: 'business_id') String businessId,
+      @JsonKey(name: 'user_id') String userId,
+      @JsonKey(name: 'business_id') String? businessId,
       @JsonKey(name: 'need_id') String? needId,
+      String type,
+      Map<String, dynamic> data,
       String title,
       String body,
       @JsonKey(name: 'is_read') bool isRead,
@@ -74,8 +81,11 @@ class _$NotificationModelCopyWithImpl<$Res, $Val extends NotificationModel>
   @override
   $Res call({
     Object? id = null,
-    Object? businessId = null,
+    Object? userId = null,
+    Object? businessId = freezed,
     Object? needId = freezed,
+    Object? type = null,
+    Object? data = null,
     Object? title = null,
     Object? body = null,
     Object? isRead = null,
@@ -86,14 +96,26 @@ class _$NotificationModelCopyWithImpl<$Res, $Val extends NotificationModel>
           ? _value.id
           : id // ignore: cast_nullable_to_non_nullable
               as String,
-      businessId: null == businessId
+      userId: null == userId
+          ? _value.userId
+          : userId // ignore: cast_nullable_to_non_nullable
+              as String,
+      businessId: freezed == businessId
           ? _value.businessId
           : businessId // ignore: cast_nullable_to_non_nullable
-              as String,
+              as String?,
       needId: freezed == needId
           ? _value.needId
           : needId // ignore: cast_nullable_to_non_nullable
               as String?,
+      type: null == type
+          ? _value.type
+          : type // ignore: cast_nullable_to_non_nullable
+              as String,
+      data: null == data
+          ? _value.data
+          : data // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>,
       title: null == title
           ? _value.title
           : title // ignore: cast_nullable_to_non_nullable
@@ -124,8 +146,11 @@ abstract class _$$NotificationModelImplCopyWith<$Res>
   @useResult
   $Res call(
       {String id,
-      @JsonKey(name: 'business_id') String businessId,
+      @JsonKey(name: 'user_id') String userId,
+      @JsonKey(name: 'business_id') String? businessId,
       @JsonKey(name: 'need_id') String? needId,
+      String type,
+      Map<String, dynamic> data,
       String title,
       String body,
       @JsonKey(name: 'is_read') bool isRead,
@@ -146,8 +171,11 @@ class __$$NotificationModelImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? id = null,
-    Object? businessId = null,
+    Object? userId = null,
+    Object? businessId = freezed,
     Object? needId = freezed,
+    Object? type = null,
+    Object? data = null,
     Object? title = null,
     Object? body = null,
     Object? isRead = null,
@@ -158,14 +186,26 @@ class __$$NotificationModelImplCopyWithImpl<$Res>
           ? _value.id
           : id // ignore: cast_nullable_to_non_nullable
               as String,
-      businessId: null == businessId
+      userId: null == userId
+          ? _value.userId
+          : userId // ignore: cast_nullable_to_non_nullable
+              as String,
+      businessId: freezed == businessId
           ? _value.businessId
           : businessId // ignore: cast_nullable_to_non_nullable
-              as String,
+              as String?,
       needId: freezed == needId
           ? _value.needId
           : needId // ignore: cast_nullable_to_non_nullable
               as String?,
+      type: null == type
+          ? _value.type
+          : type // ignore: cast_nullable_to_non_nullable
+              as String,
+      data: null == data
+          ? _value._data
+          : data // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>,
       title: null == title
           ? _value.title
           : title // ignore: cast_nullable_to_non_nullable
@@ -191,13 +231,17 @@ class __$$NotificationModelImplCopyWithImpl<$Res>
 class _$NotificationModelImpl extends _NotificationModel {
   const _$NotificationModelImpl(
       {required this.id,
-      @JsonKey(name: 'business_id') required this.businessId,
+      @JsonKey(name: 'user_id') required this.userId,
+      @JsonKey(name: 'business_id') this.businessId,
       @JsonKey(name: 'need_id') this.needId,
+      required this.type,
+      final Map<String, dynamic> data = const {},
       required this.title,
       required this.body,
       @JsonKey(name: 'is_read') this.isRead = false,
       @JsonKey(name: 'created_at') required this.createdAt})
-      : super._();
+      : _data = data,
+        super._();
 
   factory _$NotificationModelImpl.fromJson(Map<String, dynamic> json) =>
       _$$NotificationModelImplFromJson(json);
@@ -205,11 +249,25 @@ class _$NotificationModelImpl extends _NotificationModel {
   @override
   final String id;
   @override
+  @JsonKey(name: 'user_id')
+  final String userId;
+  @override
   @JsonKey(name: 'business_id')
-  final String businessId;
+  final String? businessId;
   @override
   @JsonKey(name: 'need_id')
   final String? needId;
+  @override
+  final String type;
+  final Map<String, dynamic> _data;
+  @override
+  @JsonKey()
+  Map<String, dynamic> get data {
+    if (_data is EqualUnmodifiableMapView) return _data;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_data);
+  }
+
   @override
   final String title;
   @override
@@ -223,7 +281,7 @@ class _$NotificationModelImpl extends _NotificationModel {
 
   @override
   String toString() {
-    return 'NotificationModel(id: $id, businessId: $businessId, needId: $needId, title: $title, body: $body, isRead: $isRead, createdAt: $createdAt)';
+    return 'NotificationModel(id: $id, userId: $userId, businessId: $businessId, needId: $needId, type: $type, data: $data, title: $title, body: $body, isRead: $isRead, createdAt: $createdAt)';
   }
 
   @override
@@ -232,9 +290,12 @@ class _$NotificationModelImpl extends _NotificationModel {
         (other.runtimeType == runtimeType &&
             other is _$NotificationModelImpl &&
             (identical(other.id, id) || other.id == id) &&
+            (identical(other.userId, userId) || other.userId == userId) &&
             (identical(other.businessId, businessId) ||
                 other.businessId == businessId) &&
             (identical(other.needId, needId) || other.needId == needId) &&
+            (identical(other.type, type) || other.type == type) &&
+            const DeepCollectionEquality().equals(other._data, _data) &&
             (identical(other.title, title) || other.title == title) &&
             (identical(other.body, body) || other.body == body) &&
             (identical(other.isRead, isRead) || other.isRead == isRead) &&
@@ -245,7 +306,17 @@ class _$NotificationModelImpl extends _NotificationModel {
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hash(
-      runtimeType, id, businessId, needId, title, body, isRead, createdAt);
+      runtimeType,
+      id,
+      userId,
+      businessId,
+      needId,
+      type,
+      const DeepCollectionEquality().hash(_data),
+      title,
+      body,
+      isRead,
+      createdAt);
 
   /// Create a copy of NotificationModel
   /// with the given fields replaced by the non-null parameter values.
@@ -267,8 +338,11 @@ class _$NotificationModelImpl extends _NotificationModel {
 abstract class _NotificationModel extends NotificationModel {
   const factory _NotificationModel(
           {required final String id,
-          @JsonKey(name: 'business_id') required final String businessId,
+          @JsonKey(name: 'user_id') required final String userId,
+          @JsonKey(name: 'business_id') final String? businessId,
           @JsonKey(name: 'need_id') final String? needId,
+          required final String type,
+          final Map<String, dynamic> data,
           required final String title,
           required final String body,
           @JsonKey(name: 'is_read') final bool isRead,
@@ -282,11 +356,18 @@ abstract class _NotificationModel extends NotificationModel {
   @override
   String get id;
   @override
+  @JsonKey(name: 'user_id')
+  String get userId;
+  @override
   @JsonKey(name: 'business_id')
-  String get businessId;
+  String? get businessId;
   @override
   @JsonKey(name: 'need_id')
   String? get needId;
+  @override
+  String get type;
+  @override
+  Map<String, dynamic> get data;
   @override
   String get title;
   @override

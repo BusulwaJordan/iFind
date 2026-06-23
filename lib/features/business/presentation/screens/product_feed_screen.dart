@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,6 +12,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:ifind/core/providers/ai_providers.dart';
+import 'package:ifind/core/services/interaction_service.dart';
+import 'package:ifind/features/notifications/presentation/providers/notification_provider.dart';
 
 import 'package:ifind/features/portfolio/presentation/providers/comment_provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -119,6 +124,7 @@ class _ProductItemView extends ConsumerStatefulWidget {
 }
 
 class _ProductItemViewState extends ConsumerState<_ProductItemView> {
+  static const _productInquiryPrefix = 'IFIND_PRODUCT_INQUIRY::';
   VideoPlayerController? _videoController;
 
   @override
@@ -149,6 +155,9 @@ class _ProductItemViewState extends ConsumerState<_ProductItemView> {
       return;
     }
 
+    final message = await _showInquiryComposer();
+    if (message == null || message.trim().isEmpty) return;
+
     try {
       final chatDataSource = ref.read(chatRemoteDataSourceProvider);
       final chat = await chatDataSource.getOrCreateChat(
@@ -156,13 +165,18 @@ class _ProductItemViewState extends ConsumerState<_ProductItemView> {
         businessId: widget.businessId,
       );
 
-      final inquiryMessage =
-          '[MEDIA_INQUIRY]|${widget.item.mediaType.name}|${widget.item.mediaUrl}|Interested in: ${widget.item.caption ?? 'this product'}';
       await chatDataSource.sendMessage(
         chatId: chat.id,
         senderId: user.id,
-        content: inquiryMessage,
+        content: _buildProductInquiryPayload(message.trim()),
       );
+
+      // Log B2C interaction
+      ref.read(interactionServiceProvider).logInteraction(
+            userId: user.id,
+            businessId: widget.businessId,
+            type: InteractionType.inquirySent,
+          );
 
       if (mounted) {
         Navigator.push(
@@ -181,6 +195,207 @@ class _ProductItemViewState extends ConsumerState<_ProductItemView> {
             .showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
+  }
+
+  Future<String?> _showInquiryComposer() async {
+    final itemTitle = widget.item.caption?.trim().isNotEmpty == true
+        ? widget.item.caption!.trim()
+        : 'this product';
+    final defaultMessage =
+        'Hi ${widget.businessName}, I am interested in $itemTitle. Is it still available?';
+    final controller = TextEditingController(text: defaultMessage);
+
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 12,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Message seller',
+                  style: GoogleFonts.outfit(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkText,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: CachedNetworkImage(
+                        imageUrl:
+                            widget.item.thumbnailUrl ?? widget.item.mediaUrl,
+                        width: 64,
+                        height: 64,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => Container(
+                          width: 64,
+                          height: 64,
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.image_not_supported_outlined),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            itemTitle,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.darkText,
+                            ),
+                          ),
+                          if (widget.item.price != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              _formatPrice(widget.item.price!),
+                              style: GoogleFonts.outfit(
+                                color: AppColors.primaryGreen,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  minLines: 3,
+                  maxLines: 5,
+                  textInputAction: TextInputAction.newline,
+                  decoration: InputDecoration(
+                    hintText: 'Write your message',
+                    filled: true,
+                    fillColor: const Color(0xFFF5F7F8),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => Navigator.pop(context, controller.text),
+                    icon: const Icon(Icons.send_rounded),
+                    label: const Text('Send message'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreen,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    controller.dispose();
+    return result;
+  }
+
+  String _buildProductInquiryPayload(String message) {
+    return _productInquiryPrefix +
+        jsonEncode({
+          'version': 1,
+          'portfolio_item_id': widget.item.id,
+          'business_id': widget.businessId,
+          'business_name': widget.businessName,
+          'media_type': widget.item.mediaType.name,
+          'media_url': widget.item.mediaUrl,
+          'thumbnail_url': widget.item.thumbnailUrl,
+          'title': widget.item.caption ?? 'Product inquiry',
+          'price': widget.item.price,
+          'message': message,
+        });
+  }
+
+  Future<void> _handleLike() async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please login to like products')),
+      );
+      return;
+    }
+
+    try {
+      final isLiked = await ref.read(toggleLikeProvider(widget.item.id).future);
+      if (!isLiked) return;
+
+      final title = widget.item.caption?.trim().isNotEmpty == true
+          ? widget.item.caption!.trim()
+          : 'your product';
+      await ref.read(notificationRepositoryProvider).createNotification(
+        businessId: widget.businessId,
+        type: 'product_like',
+        title: 'New product like',
+        body: '${user.fullName} liked $title.',
+        data: {
+          'portfolio_item_id': widget.item.id,
+          'business_id': widget.businessId,
+          'customer_id': user.id,
+          'media_url': widget.item.mediaUrl,
+          'thumbnail_url': widget.item.thumbnailUrl,
+          'title': title,
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not update like: $e')),
+        );
+      }
+    }
+  }
+
+  String _formatPrice(double price) {
+    return 'UGX ${price.toInt().toString().replaceAllMapped(
+          RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"),
+          (match) => "${match[1]},",
+        )}';
   }
 
   @override
@@ -280,16 +495,7 @@ class _ProductItemViewState extends ConsumerState<_ProductItemView> {
                         : Icons.favorite_border_rounded,
                     color: isLiked ? Colors.red : Colors.white,
                     label: 'Like',
-                    onTap: () {
-                      if (ref.read(currentUserProvider) == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Please login to like products')),
-                        );
-                        return;
-                      }
-                      ref.read(toggleLikeProvider(widget.item.id));
-                    },
+                    onTap: _handleLike,
                   ),
                   const SizedBox(height: 24),
                   _InteractionButton(
@@ -313,7 +519,7 @@ class _ProductItemViewState extends ConsumerState<_ProductItemView> {
                   _InteractionButton(
                     icon: Icons.message_rounded,
                     color: AppColors.primaryGreen,
-                    label: 'Message',
+                    label: 'I want this',
                     onTap: _handleInquiry,
                   ),
                 ],

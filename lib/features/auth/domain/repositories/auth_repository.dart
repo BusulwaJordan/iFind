@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:ifind/core/errors/failures.dart';
+import 'package:ifind/features/auth/domain/entities/registration_result.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
 
 /// Abstract auth repository - domain layer
@@ -15,13 +16,16 @@ abstract class AuthRepository {
   Future<Either<Failure, void>> loginWithGoogle();
 
   /// Register new user
-  Future<Either<Failure, User>> register({
+  Future<Either<Failure, RegistrationResult>> register({
     required String email,
     required String password,
     required String fullName,
     required UserRole role,
     String? phone,
   });
+
+  /// Resend signup confirmation email
+  Future<Either<Failure, void>> resendConfirmationEmail(String email);
 
   /// Logout current user
   Future<Either<Failure, void>> logout();
@@ -37,6 +41,11 @@ abstract class AuthRepository {
     required String userId,
     String? fullName,
     String? phone,
+  });
+
+  /// Upgrade a customer account so they can create and manage a business.
+  Future<Either<Failure, User>> upgradeToBusinessOwner({
+    required String userId,
   });
 
   /// Listen to auth state changes

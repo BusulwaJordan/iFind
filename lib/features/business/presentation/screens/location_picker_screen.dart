@@ -23,12 +23,36 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   void initState() {
     super.initState();
     _mapController = MapController();
-    _selectedLocation = widget.initialLocation ?? const LatLng(0.3476, 32.5825); // Default to Kampala
+    _selectedLocation = widget.initialLocation ??
+        const LatLng(0.3476, 32.5825); // Default to Kampala
   }
 
   Future<void> _getCurrentLocation() async {
     setState(() => _isLocating = true);
     try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        await Geolocator.openLocationSettings();
+        throw Exception('Please turn on location services and try again.');
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        await Geolocator.openAppSettings();
+        throw Exception(
+          'Location permission is blocked. Enable it in app settings.',
+        );
+      }
+
+      if (permission != LocationPermission.whileInUse &&
+          permission != LocationPermission.always) {
+        throw Exception('Location permission is required.');
+      }
+
       final position = await Geolocator.getCurrentPosition();
       final newLoc = LatLng(position.latitude, position.longitude);
       setState(() {
@@ -50,11 +74,15 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Pin Shop Location', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text('Pin Shop Location',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, _selectedLocation),
-            child: Text('SAVE', style: GoogleFonts.outfit(color: AppColors.primaryGreen, fontWeight: FontWeight.bold)),
+            child: Text('SAVE',
+                style: GoogleFonts.outfit(
+                    color: AppColors.primaryGreen,
+                    fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -81,13 +109,14 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                       point: _selectedLocation!,
                       width: 80,
                       height: 80,
-                      child: const Icon(Icons.location_on, color: Colors.red, size: 40),
+                      child: const Icon(Icons.location_on,
+                          color: Colors.red, size: 40),
                     ),
                   ],
                 ),
             ],
           ),
-          
+
           // Instructions Overlay
           Positioned(
             top: 20,
@@ -99,13 +128,16 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 color: Colors.white.withValues(alpha: 0.9),
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10),
+                  BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 10),
                 ],
               ),
               child: Text(
                 'Tap on the map to pin your exact shop location.',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w500),
+                style: GoogleFonts.outfit(
+                    fontSize: 13, fontWeight: FontWeight.w500),
               ),
             ),
           ),
@@ -117,9 +149,13 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             child: FloatingActionButton(
               onPressed: _isLocating ? null : _getCurrentLocation,
               backgroundColor: Colors.white,
-              child: _isLocating 
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.my_location, color: AppColors.primaryGreen),
+              child: _isLocating
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.my_location,
+                      color: AppColors.primaryGreen),
             ),
           ),
         ],

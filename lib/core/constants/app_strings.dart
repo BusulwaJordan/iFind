@@ -76,6 +76,22 @@ class AppStrings {
   static const String registrationSuccess = 'Registration successful!';
   static const String checkEmailToVerify = 'Please check your email to verify your account.';
   static const String emailVerifiedSuccess = 'Email verified successfully! You can now login.';
+  static const String verifyYourEmail = 'Check your email';
+  static const String verifyEmailSubtitle =
+      'We sent a confirmation link. Tap it to activate your account.';
+  static const String verifyStep1 = 'Open your email inbox on any device.';
+  static const String verifyStep2 = 'Tap the confirmation link in the email from iFind.';
+  static const String verifyStep3 =
+      'Come back here — we\'ll sign you in automatically.';
+  static const String waitingForVerification =
+      'Waiting for confirmation… Works even if you verify on another device.';
+  static const String emailVerifiedRedirecting = 'Verified! Taking you home…';
+  static const String resendConfirmationEmail = 'Resend confirmation email';
+  static const String confirmationEmailResent = 'Confirmation email sent again.';
+  static const String wrongEmailStartOver = 'Wrong email? Start over';
+  static const String verifyThenSignIn =
+      'Verified your email? Sign in to continue.';
+  static const String alreadyVerifiedSignIn = 'Sign in';
   static const String profileUpdated = 'Profile updated successfully';
   static const String businessCreated = 'Business created successfully';
   static const String productAdded = 'Product added successfully';
