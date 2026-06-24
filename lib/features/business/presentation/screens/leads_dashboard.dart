@@ -15,7 +15,40 @@ import 'package:ifind/features/notifications/presentation/screens/notifications_
 import 'package:ifind/features/notifications/presentation/widgets/notification_badge.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'dart:ui';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
+// ---------- Provider for Dashboard Stats ----------
+final dashboardStatsProvider = FutureProvider.family<Map<String, int>, String>((ref, businessId) async {
+  final supabase = ref.watch(supabaseClientProvider);
+
+  // Count profile views
+  final viewsResponse = await supabase
+      .from('interactions')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('interaction_type', 'profile_view');
+
+  // Count inquiries
+  final inquiriesResponse = await supabase
+      .from('interactions')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('interaction_type', 'inquiry_sent');
+
+  // Count B2B matches
+  final matchesResponse = await supabase
+      .from('b2b_matches')
+      .select('id')
+      .or('business_a_id.eq.$businessId,business_b_id.eq.$businessId');
+
+  return {
+    'views': viewsResponse.length,
+    'inquiries': inquiriesResponse.length,
+    'matches': matchesResponse.length,
+  };
+});
+
+// ---------- The Screen ----------
 class LeadsDashboardScreen extends ConsumerWidget {
   const LeadsDashboardScreen({super.key});
 
@@ -28,6 +61,9 @@ class LeadsDashboardScreen extends ConsumerWidget {
     final leadsAsync = business == null
         ? const AsyncValue<List<Need>>.data([])
         : ref.watch(businessLeadsProvider(business));
+    final statsAsync = businessId != null
+        ? ref.watch(dashboardStatsProvider(businessId))
+        : const AsyncValue<Map<String, int>>.data({});
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFB),
@@ -52,6 +88,7 @@ class LeadsDashboardScreen extends ConsumerWidget {
               ref.invalidate(myBusinessesProvider(user?.id ?? ''));
               if (business != null) {
                 ref.invalidate(businessLeadsProvider(business));
+                ref.invalidate(dashboardStatsProvider(businessId!));
               }
             },
             child: CustomScrollView(
@@ -95,7 +132,24 @@ class LeadsDashboardScreen extends ConsumerWidget {
                       icon: Icons.business_center_outlined,
                     ),
                   )
-                else
+                else ...[
+                  // Stats Section
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _buildStatsSection(context, ref, statsAsync),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                  // Quick Actions
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _buildQuickActions(context, business),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                  // Leads List
                   leadsAsync.when(
                     data: (needs) {
                       if (needs.isEmpty) {
@@ -158,6 +212,7 @@ class LeadsDashboardScreen extends ConsumerWidget {
                     error: (e, s) => SliverFillRemaining(
                         child: Center(child: Text('Error: $e'))),
                   ),
+                ],
                 const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
             ),
@@ -210,8 +265,159 @@ class LeadsDashboardScreen extends ConsumerWidget {
       ],
     );
   }
+
+  // ---- Stats Section ----
+  Widget _buildStatsSection(BuildContext context, WidgetRef ref, AsyncValue<Map<String, int>> statsAsync) {
+    return statsAsync.when(
+      data: (stats) {
+        final statItems = [
+          {'label': 'Profile Views', 'value': stats['views'] ?? 0, 'icon': Icons.visibility_rounded},
+          {'label': 'Inquiries', 'value': stats['inquiries'] ?? 0, 'icon': Icons.chat_bubble_outline_rounded},
+          {'label': 'B2B Matches', 'value': stats['matches'] ?? 0, 'icon': Icons.handshake_rounded},
+        ];
+
+        return Row(
+          children: statItems.map((item) {
+            return Expanded(
+              child: Container(
+                margin: const EdgeInsets.only(right: 10),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(item['icon'] as IconData, color: AppColors.primaryGreen, size: 20),
+                    const SizedBox(height: 8),
+                    Text(
+                      item['value'].toString(),
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkText,
+                      ),
+                    ),
+                    Text(
+                      item['label'] as String,
+                      style: GoogleFonts.outfit(
+                        fontSize: 11,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
+      loading: () => const Center(
+        child: SizedBox(
+          height: 80,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+            ],
+          ),
+        ),
+      ),
+      error: (e, _) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, color: Colors.red[400]),
+            const SizedBox(width: 8),
+            Text('Could not load stats', style: TextStyle(color: Colors.grey[600])),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---- Quick Actions Section ----
+  Widget _buildQuickActions(BuildContext context, Business business) {
+    final actions = [
+      {'label': 'Edit Profile', 'icon': Icons.edit_outlined, 'route': '/edit-business'},
+      {'label': 'B2B Matches', 'icon': Icons.handshake_rounded, 'route': '/b2b-matches'},
+      {'label': 'Analytics', 'icon': Icons.analytics_outlined, 'route': '/analytics'},
+      {'label': 'Add Product', 'icon': Icons.add_box_outlined, 'route': '/add-product'},
+      {'label': 'Reviews', 'icon': Icons.star_outline, 'route': '/reviews'},
+      {'label': 'Settings', 'icon': Icons.settings_outlined, 'route': '/business-settings'},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Actions',
+          style: GoogleFonts.outfit(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AppColors.darkText,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: actions.map((action) {
+            return GestureDetector(
+              onTap: () {
+                // TODO: Navigate to actual screen
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Navigate to ${action['label']}')),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      action['icon'] as IconData,
+                      size: 18,
+                      color: AppColors.primaryGreen,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      action['label'] as String,
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.darkText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
 }
 
+// ---------- Lead Card ----------
 class _LeadCard extends ConsumerWidget {
   final Need need;
   final Business business;
