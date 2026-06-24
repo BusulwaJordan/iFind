@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
@@ -8,19 +9,19 @@ import 'package:ifind/features/discovery/domain/repositories/discovery_repositor
 part 'discovery_providers.g.dart';
 
 @riverpod
-DiscoveryRemoteDataSource discoveryRemoteDataSource(DiscoveryRemoteDataSourceRef ref) {
+DiscoveryRemoteDataSource discoveryRemoteDataSource(Ref ref) {
   return DiscoveryRemoteDataSourceImpl(Supabase.instance.client);
 }
 
 @riverpod
-DiscoveryRepository discoveryRepository(DiscoveryRepositoryRef ref) {
+DiscoveryRepository discoveryRepository(Ref ref) {
   final remoteDataSource = ref.watch(discoveryRemoteDataSourceProvider);
   return DiscoveryRepositoryImpl(remoteDataSource);
 }
 
 @riverpod
 Future<List<Business>> nearbyBusinesses(
-  NearbyBusinessesRef ref, {
+  Ref ref, {
   required double latitude,
   required double longitude,
   double radius = 5000.0,

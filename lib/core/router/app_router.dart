@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/auth/presentation/providers/pending_registration_provider.dart';
@@ -31,6 +31,7 @@ import 'package:ifind/features/profile/presentation/screens/profile_screen.dart'
 import 'package:ifind/features/help/presentation/screens/help_support_screen.dart';
 import 'package:ifind/features/inquiries/presentation/screens/inquiries_screen.dart';
 import 'package:ifind/app.dart';
+import 'package:ifind/features/auth/domain/entities/user.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -43,7 +44,6 @@ final routerProvider = Provider<GoRouter>((ref) {
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/',
     redirect: (context, state) {
-      // Never redirect if currently loading — this prevents interference during registration
       if (authState.isLoading) return null;
 
       final isAuth = authState.valueOrNull != null;
@@ -58,7 +58,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/confirmation?email=$email';
       }
 
-      // These routes are always public (no auth required) and should never be redirected
       final isPublicAuthRoute = loc == '/login' ||
           loc == '/register' ||
           loc == '/onboarding' ||
@@ -67,9 +66,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           loc.startsWith('/registration-success') ||
           loc.startsWith('/email-verified');
 
-      // If on any public auth route, do not redirect (allow screens to load normally)
       if (isPublicAuthRoute) {
-        // Exception: if already authenticated, redirect from login/register to home
         if (isAuth && (loc == '/login' || loc == '/register')) {
           return '/';
         }
@@ -77,9 +74,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       if (!isAuth) {
-        // Unauthenticated — send to onboarding first if not done yet
         if (!onboardingComplete) return '/onboarding';
-        // Unauthenticated — send to login for protected routes
         return '/login';
       }
 
@@ -130,52 +125,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
-      // Main Application Shell
+      // Main Application Shell - Role-based Navigation
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
-          return MainScaffold(navigationShell: navigationShell);
+          final user = authState.valueOrNull;
+          return MainScaffold(
+            navigationShell: navigationShell,
+            user: user,
+          );
         },
-        branches: [
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/',
-                builder: (context, state) {
-                  final user = authState.valueOrNull;
-                  if (user == null) return const LoadingScreen();
-                  return HomeScreen(user: user);
-                },
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/discover',
-                builder: (context, state) {
-                  final category = state.extra as BusinessCategory?;
-                  return BusinessDiscoveryScreen(initialCategory: category);
-                },
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/chats',
-                builder: (context, state) => const ChatListScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/my-shop',
-                builder: (context, state) => const MyShopScreen(),
-              ),
-            ],
-          ),
-        ],
+        branches: _buildBranches(ref, authState),
       ),
 
       // Global Detail Routes (Not in Bottom Nav)
@@ -252,6 +211,106 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
+// Helper function to build role-based branches
+List<StatefulShellBranch> _buildBranches(
+  ProviderRef<GoRouter> ref,
+  AsyncValue<User?> authState,
+) {
+  final user = authState.valueOrNull;
+  final isBusinessOwner = user?.role == UserRole.businessOwner;
+
+  // Customer Branches: Home | Discover | Chats | Profile
+  if (!isBusinessOwner) {
+    return [
+      // Home
+      StatefulShellBranch(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) {
+              if (user == null) return const LoadingScreen();
+              return HomeScreen(user: user);
+            },
+          ),
+        ],
+      ),
+      // Discover
+      StatefulShellBranch(
+        routes: [
+          GoRoute(
+            path: '/discover',
+            builder: (context, state) {
+              final category = state.extra as BusinessCategory?;
+              return BusinessDiscoveryScreen(initialCategory: category);
+            },
+          ),
+        ],
+      ),
+      // Chats
+      StatefulShellBranch(
+        routes: [
+          GoRoute(
+            path: '/chats',
+            builder: (context, state) => const ChatListScreen(),
+          ),
+        ],
+      ),
+      // Profile (Settings for customers)
+      StatefulShellBranch(
+        routes: [
+          GoRoute(
+            path: '/profile',
+            builder: (context, state) => const SettingsScreen(),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  // Business Owner Branches: Dashboard | Discover | Chats | My Shop
+  return [
+    // Dashboard (Leads)
+    StatefulShellBranch(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const LeadsDashboardScreen(),
+        ),
+      ],
+    ),
+    // Discover
+    StatefulShellBranch(
+      routes: [
+        GoRoute(
+          path: '/discover',
+          builder: (context, state) {
+            final category = state.extra as BusinessCategory?;
+            return BusinessDiscoveryScreen(initialCategory: category);
+          },
+        ),
+      ],
+    ),
+    // Chats
+    StatefulShellBranch(
+      routes: [
+        GoRoute(
+          path: '/chats',
+          builder: (context, state) => const ChatListScreen(),
+        ),
+      ],
+    ),
+    // My Shop
+    StatefulShellBranch(
+      routes: [
+        GoRoute(
+          path: '/my-shop',
+          builder: (context, state) => const MyShopScreen(),
+        ),
+      ],
+    ),
+  ];
+}
+
 class AuthCallbackScreen extends ConsumerStatefulWidget {
   const AuthCallbackScreen({super.key});
 
@@ -308,6 +367,19 @@ class _AuthCallbackScreenState extends ConsumerState<AuthCallbackScreen> {
             Text('Confirming your email...'),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class LoadingScreen extends StatelessWidget {
+  const LoadingScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
       ),
     );
   }

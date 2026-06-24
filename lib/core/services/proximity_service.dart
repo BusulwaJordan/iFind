@@ -32,7 +32,7 @@ class ProximityService {
         'lat': latitude,
         'long': longitude,
         'radius_km': radiusKm,
-        if (category != null) 'category_filter': category.name,
+        if (category != null) 'category_filter': category.storageValue,
       };
 
       debugPrint('ProximityService: Calling get_nearby_businesses RPC...');

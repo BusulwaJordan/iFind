@@ -34,6 +34,15 @@ class BusinessModel with _$BusinessModel {
   static Map<String, dynamic> _preprocess(Map<String, dynamic> json) {
     final Map<String, dynamic> data = Map<String, dynamic>.from(json);
 
+    data['id'] = (data['business_id'] ?? data['id']).toString();
+    data['owner_id'] = (data['owner_id'] ?? data['user_id'] ?? '').toString();
+    data['description'] = (data['description'] as String?) ?? '';
+    data['category'] =
+        BusinessCategoryStorage.fromStorageValue(data['category'] as String?)
+            .storageValue;
+    data['created_at'] =
+        (data['created_at'] as String?) ?? DateTime.now().toIso8601String();
+
     double lat = (data['latitude'] as num?)?.toDouble() ?? 0.0;
     double lng = (data['longitude'] as num?)?.toDouble() ?? 0.0;
 

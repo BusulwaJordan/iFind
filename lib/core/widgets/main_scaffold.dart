@@ -1,9 +1,7 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
@@ -11,12 +9,14 @@ import 'package:ifind/features/notifications/presentation/providers/notification
 import 'package:ifind/features/notifications/domain/entities/notification.dart';
 import 'package:ifind/features/notifications/utils/notification_preview_formatter.dart';
 
-class MainScaffold extends ConsumerStatefulWidget {
+class MainScaffold extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
+  final User? user;
 
   const MainScaffold({
     super.key,
     required this.navigationShell,
+    this.user,
   });
 
   @override
@@ -82,103 +82,44 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
     });
 
     return Scaffold(
-      resizeToAvoidBottomInset: true,
-      body: widget.navigationShell,
-      bottomNavigationBar: _buildFloatingNavBar(),
-    );
-  }
-
-  Widget _buildFloatingNavBar() {
-    return SafeArea(
-      top: false,
-      minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Container(
-        height: 64,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(32),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(32),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.6),
-                  width: 1.2,
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildNavItem(0, Icons.home_rounded, 'Home'),
-                  _buildNavItem(1, Icons.explore_rounded, 'Discover'),
-                  _buildNavItem(2, Icons.chat_bubble_rounded, 'Chat'),
-                  _buildNavItem(3, Icons.handshake_rounded, 'B2B'),
-                ],
-              ),
-            ),
-          ),
-        ),
+      body: navigationShell,
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        currentIndex: navigationShell.currentIndex,
+        backgroundColor: Colors.white,
+        selectedItemColor: AppColors.primaryGreen,
+        unselectedItemColor: Colors.grey[600],
+        showUnselectedLabels: true,
+        elevation: 8,
+        items: _getNavItems(isBusinessOwner),
+        onTap: (index) {
+          navigationShell.goBranch(
+            index,
+            initialLocation: index == navigationShell.currentIndex,
+          );
+        },
       ),
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
-    final isSelected = widget.navigationShell.currentIndex == index;
-    final color = isSelected ? AppColors.primaryGreen : Colors.grey[500];
-
-    return Expanded(
-      child: InkWell(
-        onTap: () => _onTap(index),
-        highlightColor: Colors.transparent,
-        splashColor: Colors.transparent,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeInOut,
-          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.primaryGreen.withValues(alpha: 0.1)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: color,
-                size: isSelected ? 24 : 22,
-              ).animate(target: isSelected ? 1 : 0).scale(
-                    begin: const Offset(0.85, 0.85),
-                    end: const Offset(1.0, 1.0),
-                    duration: 250.ms,
-                  ),
-              if (isSelected) ...[
-                const SizedBox(height: 3),
-                Text(
-                  label,
-                  style: GoogleFonts.outfit(
-                    color: color,
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                ).animate().fadeIn(duration: 150.ms).slideY(begin: 5, end: 0)
-              ],
-            ],
-          ),
+  List<BottomNavigationBarItem> _getNavItems(bool isBusinessOwner) {
+    if (isBusinessOwner) {
+      // Business Owner Nav: Dashboard | Discover | Chats | My Shop
+      return [
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.dashboard_outlined),
+          activeIcon: Icon(Icons.dashboard),
+          label: 'Dashboard',
+        ),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.search_outlined),
+          activeIcon: Icon(Icons.search),
+          label: 'Discover',
+        ),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.chat_outlined),
+          activeIcon: Icon(Icons.chat),
+          label: 'Chats',
         ),
       ),
     );

@@ -88,7 +88,7 @@ class BusinessRepositoryImpl implements BusinessRepository {
         'owner_id': ownerId,
         'name': name,
         'description': description,
-        'category': category.name,
+        'category': category.storageValue,
         'latitude': latitude,
         'longitude': longitude,
         'location': 'POINT($longitude $latitude)', // PostGIS format
@@ -118,7 +118,8 @@ class BusinessRepositoryImpl implements BusinessRepository {
   }
 
   @override
-  Future<Either<Failure, List<Business>>> getMyBusinesses(String ownerId) async {
+  Future<Either<Failure, List<Business>>> getMyBusinesses(
+      String ownerId) async {
     try {
       final businesses = await remoteDataSource.getMyBusinesses(ownerId);
       return Right(businesses);
@@ -217,7 +218,8 @@ class BusinessRepositoryImpl implements BusinessRepository {
       }
 
       final count = reviews.length;
-      final sum = reviews.fold<int>(0, (prev, element) => prev + (element['rating'] as int));
+      final sum = reviews.fold<int>(
+          0, (prev, element) => prev + (element['rating'] as int));
       final average = sum / count;
 
       await remoteDataSource.updateBusiness(
