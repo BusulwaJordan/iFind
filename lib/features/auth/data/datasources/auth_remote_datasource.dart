@@ -204,15 +204,44 @@ class AuthRemoteDataSource {
     required String userId,
   }) async {
     try {
-      final response = await supabaseClient
+      // First check if the user profile row exists in public.users
+      final existing = await supabaseClient
           .from(ApiConstants.usersTable)
-          .update({
-            'role': 'business_owner',
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('id', userId)
           .select()
-          .single();
+          .eq('id', userId)
+          .maybeSingle();
+
+      final Map<String, dynamic> response;
+      if (existing != null) {
+        // Row exists — just update the role
+        response = await supabaseClient
+            .from(ApiConstants.usersTable)
+            .update({
+              'role': 'business_owner',
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('id', userId)
+            .select()
+            .single();
+      } else {
+        // Row missing — upsert it using auth metadata as fallback
+        final authUser = supabaseClient.auth.currentUser;
+        final metadata = authUser?.userMetadata ?? {};
+        final now = DateTime.now().toIso8601String();
+        response = await supabaseClient
+            .from(ApiConstants.usersTable)
+            .upsert({
+              'id': userId,
+              'email': authUser?.email ?? '',
+              'full_name': metadata['full_name'] as String? ?? 'iFind User',
+              'role': 'business_owner',
+              'phone': metadata['phone'] as String?,
+              'created_at': now,
+              'updated_at': now,
+            })
+            .select()
+            .single();
+      }
 
       try {
         await supabaseClient.auth.updateUser(
