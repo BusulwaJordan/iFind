@@ -30,7 +30,6 @@ import 'package:ifind/features/favourites/presentation/screens/favourites_screen
 import 'package:ifind/features/profile/presentation/screens/profile_screen.dart';
 import 'package:ifind/features/help/presentation/screens/help_support_screen.dart';
 import 'package:ifind/features/inquiries/presentation/screens/inquiries_screen.dart';
-import 'package:ifind/app.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();

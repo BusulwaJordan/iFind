@@ -135,6 +135,9 @@ class ChatRemoteDataSource {
           .toList();
     } catch (e) {
       throw Exception('Failed to fetch business chats: $e');
+    }
+  }
+
   Future<List<Map<String, dynamic>>> _getBusinessesOwnedBy(
       String userId) async {
     try {
