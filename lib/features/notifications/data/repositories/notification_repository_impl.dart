@@ -14,41 +14,49 @@ class NotificationRepositoryImpl implements NotificationRepository {
   Stream<List<AppNotification>> watchNotifications(String businessId) async* {
     while (true) {
       yield await _fetchBusinessNotifications(businessId);
-      await Future<void>.delayed(const Duration(seconds: 2));
+      await Future<void>.delayed(const Duration(seconds: 30));
     }
   }
 
   Future<List<AppNotification>> _fetchBusinessNotifications(
       String businessId) async {
-    final data = await _client
-        .from('notifications')
-        .select()
-        .eq('business_id', businessId)
-        .order('created_at', ascending: false);
+    try {
+      final data = await _client
+          .from('notifications')
+          .select()
+          .eq('business_id', businessId)
+          .order('created_at', ascending: false);
 
-    return (data as List)
-        .map((json) => NotificationModel.fromJson(json).toEntity())
-        .toList();
+      return (data as List)
+          .map((json) => NotificationModel.fromJson(json).toEntity())
+          .toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   @override
   Stream<List<AppNotification>> watchUserNotifications(String userId) async* {
     while (true) {
       yield await _fetchUserNotifications(userId);
-      await Future<void>.delayed(const Duration(seconds: 2));
+      await Future<void>.delayed(const Duration(seconds: 30));
     }
   }
 
   Future<List<AppNotification>> _fetchUserNotifications(String userId) async {
-    final data = await _client
-        .from('notifications')
-        .select()
-        .eq('user_id', userId)
-        .order('created_at', ascending: false);
+    try {
+      final data = await _client
+          .from('notifications')
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
 
-    return (data as List)
-        .map((json) => NotificationModel.fromJson(json).toEntity())
-        .toList();
+      return (data as List)
+          .map((json) => NotificationModel.fromJson(json).toEntity())
+          .toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   @override

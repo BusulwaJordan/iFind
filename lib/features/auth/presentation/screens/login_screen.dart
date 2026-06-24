@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/constants/app_strings.dart';
 import 'package:ifind/core/utils/validators.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
@@ -40,6 +41,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) {
         final authState = ref.read(authProvider);
         authState.whenOrNull(
+          data: (user) {
+            if (user != null) {
+              ref.read(loginWelcomeProvider.notifier).state =
+                  'Welcome back, ${user.fullName.split(' ').first}!';
+            }
+          },
           error: (error, _) {
             final errorStr = error.toString().toLowerCase();
             // Intercept email not confirmed error with a friendly, actionable dialog
@@ -55,12 +62,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 errorStr.contains('user not found')) {
               _showCreateAccountDialog();
             } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(error.toString()),
-                  backgroundColor: AppColors.error,
-                ),
-              );
+              AppToast.show(context, error.toString(), type: ToastType.error);
             }
           },
           // On success, GoRouter intercepts auth state change and redirects automatically
@@ -109,12 +111,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final authState = ref.read(authProvider);
       authState.whenOrNull(
         error: (error, _) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Google Sign-In failed: ${error.toString()}'),
-              backgroundColor: AppColors.error,
-            ),
-          );
+          AppToast.show(context, 'Google Sign-In failed: ${error.toString()}', type: ToastType.error);
         },
       );
     }

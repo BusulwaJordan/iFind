@@ -1,8 +1,14 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/error_retry_widget.dart';
+import 'package:ifind/core/providers/ai_providers.dart';
+import 'package:ifind/core/services/interaction_service.dart';
+import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:ifind/features/business/presentation/screens/business_details_screen.dart';
@@ -22,6 +28,8 @@ class BusinessDiscoveryScreen extends ConsumerStatefulWidget {
 
 class _BusinessDiscoveryScreenState
     extends ConsumerState<BusinessDiscoveryScreen> {
+  String _locationLabel = 'Locating...';
+
   @override
   void initState() {
     super.initState();
@@ -29,26 +37,157 @@ class _BusinessDiscoveryScreenState
       ref.read(selectedCategoryProvider.notifier).state =
           widget.initialCategory;
       ref.read(searchQueryProvider.notifier).state = '';
+      _fetchLocationLabel();
     });
+  }
+
+  Future<void> _fetchLocationLabel() async {
+    try {
+      final perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied ||
+          perm == LocationPermission.deniedForever) {
+        if (mounted) setState(() => _locationLabel = 'Kampala (default)');
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.low);
+      if (mounted) {
+        setState(() => _locationLabel =
+            '${pos.latitude.toStringAsFixed(4)}°N, ${pos.longitude.toStringAsFixed(4)}°E');
+      }
+    } catch (_) {
+      if (mounted) setState(() => _locationLabel = 'Kampala (default)');
+    }
+  }
+
+  void _showRadiusSheet() {
+    final currentRadius = ref.read(searchRadiusProvider);
+    double tempRadius = currentRadius;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(builder: (ctx, setModalState) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    const Icon(Icons.my_location_rounded,
+                        color: AppColors.primaryGreen),
+                    const SizedBox(width: 10),
+                    Text('Search Radius',
+                        style: GoogleFonts.outfit(
+                            fontSize: 18, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _locationLabel,
+                  style: GoogleFonts.outfit(
+                      fontSize: 13, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Radius',
+                        style: GoogleFonts.outfit(
+                            fontSize: 14, color: Colors.grey.shade600)),
+                    Text(
+                      '${tempRadius.toStringAsFixed(0)} km',
+                      style: GoogleFonts.outfit(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primaryGreen,
+                      ),
+                    ),
+                  ],
+                ),
+                Slider(
+                  value: tempRadius,
+                  min: 1,
+                  max: 50,
+                  divisions: 49,
+                  activeColor: AppColors.primaryGreen,
+                  inactiveColor: AppColors.primaryGreen.withValues(alpha: 0.2),
+                  onChanged: (v) => setModalState(() => tempRadius = v),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('1 km',
+                        style: GoogleFonts.outfit(
+                            fontSize: 11, color: Colors.grey)),
+                    Text('50 km',
+                        style: GoogleFonts.outfit(
+                            fontSize: 11, color: Colors.grey)),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      ref.read(searchRadiusProvider.notifier).state =
+                          tempRadius;
+                      Navigator.pop(ctx);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryGreen,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: Text('Apply',
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        });
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final businessesState = ref.watch(nearbyBusinessesProvider);
     final selectedCategory = ref.watch(selectedCategoryProvider);
+    final radius = ref.watch(searchRadiusProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFB),
       body: RefreshIndicator(
         onRefresh: () async {
           await ref.read(nearbyBusinessesProvider.notifier).loadBusinesses();
+          _fetchLocationLabel();
         },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            _buildAppBar(context, ref),
+            _buildAppBar(context, ref, radius),
             _buildCategorySection(ref, selectedCategory),
-            _buildNearMeHeader(),
+            _buildNearMeHeader(context, businessesState),
             _buildBusinessList(businessesState),
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
@@ -57,7 +196,7 @@ class _BusinessDiscoveryScreenState
     );
   }
 
-  Widget _buildAppBar(BuildContext context, WidgetRef ref) {
+  Widget _buildAppBar(BuildContext context, WidgetRef ref, double radius) {
     return SliverAppBar(
       floating: true,
       pinned: true,
@@ -154,8 +293,9 @@ class _BusinessDiscoveryScreenState
           child: CircleAvatar(
             backgroundColor: Colors.white.withValues(alpha: 0.2),
             child: IconButton(
+              tooltip: 'Search radius: ${radius.toStringAsFixed(0)} km',
               icon: const Icon(Icons.location_on_rounded, color: Colors.white),
-              onPressed: () {},
+              onPressed: _showRadiusSheet,
             ),
           ),
         ),
@@ -211,27 +351,60 @@ class _BusinessDiscoveryScreenState
     );
   }
 
-  Widget _buildNearMeHeader() {
+  Widget _buildNearMeHeader(
+      BuildContext context, AsyncValue<List<Business>> businessesState) {
+    final count = businessesState.valueOrNull?.length ?? 0;
+    final radius = ref.watch(searchRadiusProvider);
+
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 32, 20, 16),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Nearby Shops',
-              style: GoogleFonts.outfit(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppColors.darkText,
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Nearby Shops',
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkText,
+                  ),
+                ),
+                Text(
+                  '$count found · within ${radius.toStringAsFixed(0)} km',
+                  style: GoogleFonts.outfit(
+                      fontSize: 12, color: AppColors.lightText),
+                ),
+              ],
             ),
-            Text(
-              'See All',
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primaryGreen,
+            GestureDetector(
+              onTap: _showRadiusSheet,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.tune_rounded,
+                        size: 14, color: AppColors.primaryGreen),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Radius',
+                      style: GoogleFonts.outfit(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryGreen,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -247,7 +420,7 @@ class _BusinessDiscoveryScreenState
           return const SliverFillRemaining(
             child: EmptyStateWidget(
               title: 'Nothing found',
-              message: 'Try a different category or broader search.',
+              message: 'Try a different category or increase the search radius.',
               icon: Icons.search_off_rounded,
             ),
           );
@@ -275,7 +448,7 @@ class _BusinessDiscoveryScreenState
       },
       loading: () => const SliverFillRemaining(child: LoadingWidget()),
       error: (e, s) =>
-          SliverFillRemaining(child: Center(child: Text('Error: $e'))),
+          SliverFillRemaining(child: ErrorRetryWidget(message: friendlyError(e))),
     );
   }
 }
@@ -359,11 +532,22 @@ class _BusinessGridTile extends ConsumerWidget {
             distance: streamedBusiness.distance ?? business.distance);
 
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (_) => BusinessDetailScreen(business: liveBusiness)),
-      ),
+      onTap: () {
+        // Log search_click interaction
+        final user = ref.read(currentUserProvider);
+        if (user != null) {
+          ref.read(interactionServiceProvider).logInteraction(
+                userId: user.id,
+                businessId: liveBusiness.id,
+                type: InteractionType.searchClick,
+              );
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => BusinessDetailScreen(business: liveBusiness)),
+        );
+      },
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -394,7 +578,8 @@ class _BusinessGridTile extends ConsumerWidget {
                                 fit: BoxFit.cover,
                               )
                             : null,
-                        color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                        color:
+                            AppColors.primaryGreen.withValues(alpha: 0.1),
                       ),
                       alignment: Alignment.center,
                       child: liveBusiness.logoUrl == null
@@ -432,7 +617,8 @@ class _BusinessGridTile extends ConsumerWidget {
             Expanded(
               flex: 3,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -480,7 +666,8 @@ class _BusinessGridTile extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                          color:
+                              AppColors.primaryGreen.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(

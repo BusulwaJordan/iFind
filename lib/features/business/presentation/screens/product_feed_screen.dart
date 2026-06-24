@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
@@ -150,8 +152,7 @@ class _ProductItemViewState extends ConsumerState<_ProductItemView> {
   Future<void> _handleInquiry() async {
     final user = ref.read(currentUserProvider);
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please login to inquire')));
+      AppToast.show(context, 'Please login to inquire', type: ToastType.info);
       return;
     }
 
@@ -191,8 +192,7 @@ class _ProductItemViewState extends ConsumerState<_ProductItemView> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
       }
     }
   }
@@ -355,9 +355,7 @@ class _ProductItemViewState extends ConsumerState<_ProductItemView> {
   Future<void> _handleLike() async {
     final user = ref.read(currentUserProvider);
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please login to like products')),
-      );
+      AppToast.show(context, 'Please login to like products', type: ToastType.info);
       return;
     }
 
@@ -384,9 +382,7 @@ class _ProductItemViewState extends ConsumerState<_ProductItemView> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not update like: $e')),
-        );
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
       }
     }
   }
@@ -502,8 +498,7 @@ class _ProductItemViewState extends ConsumerState<_ProductItemView> {
                     icon: Icons.chat_bubble_outline_rounded,
                     label: 'Comment',
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('Comments coming soon!')));
+                      AppToast.show(context, 'Comments coming soon!', type: ToastType.info);
                     },
                   ),
                   const SizedBox(height: 24),

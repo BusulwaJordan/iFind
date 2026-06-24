@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/core/tutorial/app_tutorial.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
@@ -309,7 +311,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
             ),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            error: (e, _) => ErrorRetryWidget(message: friendlyError(e), slim: true),
           ),
         ),
       ],
@@ -492,7 +494,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onTap: () => context.go('/discover'),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _QuickActionButton(
+                  title: 'For You',
+                  subtitle: 'AI recommendations',
+                  icon: Icons.auto_awesome_rounded,
+                  color: Colors.deepPurple,
+                  onTap: () => context.push('/ai-search'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _QuickActionButton(
+                  title: 'Favourites',
+                  subtitle: 'Saved businesses',
+                  icon: Icons.bookmark_rounded,
+                  color: Colors.amber.shade700,
+                  onTap: () => context.push('/favourites'),
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: _QuickActionButton(
                   title: 'Create Shop',
@@ -622,7 +648,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            error: (e, _) => ErrorRetryWidget(message: friendlyError(e), slim: true),
           ),
         ],
       ),

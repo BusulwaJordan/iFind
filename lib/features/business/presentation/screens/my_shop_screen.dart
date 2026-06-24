@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/services/b2b_service.dart';
 import 'package:ifind/core/utils/distance_calculator.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
@@ -272,8 +274,7 @@ class MyShopScreen extends ConsumerWidget {
       result.fold(
         (failure) {
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Error: ${failure.message}')));
+            AppToast.show(context, friendlyError(Exception(failure.message)), type: ToastType.error);
           }
         },
         (_) {
@@ -281,8 +282,7 @@ class MyShopScreen extends ConsumerWidget {
             ref.invalidate(myBusinessesProvider(user.id));
           }
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Shop deleted successfully')));
+            AppToast.show(context, 'Shop deleted successfully', type: ToastType.success);
           }
         },
       );
@@ -811,11 +811,7 @@ class MyShopScreen extends ConsumerWidget {
                     Center(
                       child: TextButton(
                         onPressed: () =>
-                            ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text(
-                                  'View all reviews feature coming soon!')),
-                        ),
+                            AppToast.show(context, 'View all reviews feature coming soon!', type: ToastType.info),
                         child: Text(
                           'View all ${reviews.length} reviews',
                           style: GoogleFonts.outfit(
@@ -1224,7 +1220,6 @@ class MyShopScreen extends ConsumerWidget {
                         onMessage: user == null
                             ? null
                             : () async {
-                                final messenger = ScaffoldMessenger.of(context);
                                 try {
                                   final chat = await ref
                                       .read(chatRemoteDataSourceProvider)
@@ -1245,9 +1240,9 @@ class MyShopScreen extends ConsumerWidget {
                                     );
                                   }
                                 } catch (e) {
-                                  messenger.showSnackBar(
-                                    SnackBar(content: Text('Error: $e')),
-                                  );
+                                  if (context.mounted) {
+                                    AppToast.show(context, friendlyError(e), type: ToastType.error);
+                                  }
                                 }
                               },
                       );

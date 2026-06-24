@@ -23,3 +23,12 @@ final messagesStreamProvider =
   final dataSource = ref.watch(chatRemoteDataSourceProvider);
   return dataSource.streamMessages(chatId);
 });
+
+/// Chats for a specific business (used by business owners in Inquiries screen)
+final businessChatsProvider =
+    FutureProvider.family<List<Chat>, String>((ref, businessId) async {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return [];
+  final dataSource = ref.watch(chatRemoteDataSourceProvider);
+  return dataSource.getChatsForBusiness(businessId: businessId, ownerId: user.id);
+});

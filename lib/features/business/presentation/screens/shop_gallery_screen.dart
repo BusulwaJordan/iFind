@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
+import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:ifind/features/portfolio/presentation/providers/portfolio_provider.dart';
@@ -52,23 +55,17 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
 
       result.fold((failure) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Delete failed: ${failure.message}')),
-          );
+          AppToast.show(context, 'Delete failed: ${failure.message}', type: ToastType.error);
         }
       }, (_) {
         ref.invalidate(portfolioProvider(widget.business.id));
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Removed successfully')),
-          );
+          AppToast.show(context, 'Removed successfully', type: ToastType.success);
         }
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
       }
     }
   }
@@ -102,27 +99,17 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
 
       uploadResult.fold((failure) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Upload failed: ${failure.message}'),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 5),
-            ),
-          );
+          AppToast.show(context, 'Upload failed: ${failure.message}', type: ToastType.error);
         }
       }, (item) {
         ref.invalidate(portfolioProvider(widget.business.id));
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Success! Item uploaded to gallery.')),
-          );
+          AppToast.show(context, 'Success! Item uploaded to gallery.', type: ToastType.success);
         }
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('System Error: $e')),
-        );
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
       }
     } finally {
       if (mounted) setState(() => _isUploading = false);
@@ -449,7 +436,7 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')),
+        error: (e, s) => ErrorRetryWidget(message: friendlyError(e), onRetry: () => ref.invalidate(portfolioProvider(widget.business.id))),
       ),
       floatingActionButton: _buildUploadFAB(),
     );

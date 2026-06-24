@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
+import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
@@ -109,11 +112,11 @@ class _ProductManagementScreenState
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, s) => Center(child: Text('Error: $e')),
+            error: (e, s) => ErrorRetryWidget(message: friendlyError(e), slim: true),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')),
+        error: (e, s) => ErrorRetryWidget(message: friendlyError(e)),
       ),
       floatingActionButton: myBusinessesAsync.maybeWhen(
         data: (businesses) => businesses.isNotEmpty
@@ -285,14 +288,10 @@ class _ProductListTile extends ConsumerWidget {
     if (!context.mounted) return;
 
     result.fold(
-      (failure) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(failure.message)),
-      ),
+      (failure) => AppToast.show(context, friendlyError(Exception(failure.message)), type: ToastType.error),
       (_) {
         ref.invalidate(businessProductsProvider(businessId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Product deleted')),
-        );
+        AppToast.show(context, 'Product deleted', type: ToastType.success);
       },
     );
   }

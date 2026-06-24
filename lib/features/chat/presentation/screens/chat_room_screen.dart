@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
+import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
@@ -133,8 +136,7 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Failed to send: $e')));
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
         setState(() {
           _optimisticMessages.remove(tempMsg);
         });
@@ -185,7 +187,7 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, s) => Center(child: Text('Error: $e')),
+            error: (e, s) => ErrorRetryWidget(message: friendlyError(e), onRetry: () => ref.invalidate(messagesStreamProvider(widget.chat.id))),
           ),
         ),
         _buildInputArea(),
@@ -496,15 +498,11 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
       ref.invalidate(messagesStreamProvider(widget.chat.id));
       ref.invalidate(myChatsProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Message deleted')),
-        );
+        AppToast.show(context, 'Message deleted', type: ToastType.success);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
       }
     }
   }

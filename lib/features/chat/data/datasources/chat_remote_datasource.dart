@@ -116,6 +116,25 @@ class ChatRemoteDataSource {
     }
   }
 
+  /// Fetch all chats for a specific business (business owner view)
+  Future<List<Chat>> getChatsForBusiness({
+    required String businessId,
+    required String ownerId,
+  }) async {
+    try {
+      final response = await supabaseClient
+          .from('chats')
+          .select('*, profiles:customer_id(full_name, avatar_url)')
+          .eq('business_id', businessId)
+          .order('last_message_at', ascending: false)
+          .limit(50);
+
+      return (response as List)
+          .map((json) =>
+              ChatModel.fromSupabase(json, myId: ownerId).toEntity())
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to fetch business chats: $e');
   Future<List<Map<String, dynamic>>> _getBusinessesOwnedBy(
       String userId) async {
     try {

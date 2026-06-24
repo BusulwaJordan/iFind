@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
+import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/core/widgets/empty_state_widget.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:ifind/features/products/presentation/providers/product_provider.dart';
@@ -33,10 +36,10 @@ class ProductManagementScreen extends ConsumerWidget {
       final repository = ref.read(productRepositoryProvider);
       final result = await repository.deleteProduct(product.id);
       result.fold(
-        (failure) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${failure.message}'))),
+        (failure) => AppToast.show(context, friendlyError(Exception(failure.message)), type: ToastType.error),
         (_) {
           ref.invalidate(businessProductsProvider(businessId));
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Product deleted')));
+          AppToast.show(context, 'Product deleted', type: ToastType.success);
         },
       );
     }
@@ -80,8 +83,7 @@ class ProductManagementScreen extends ConsumerWidget {
                           product: products[index],
                           onDelete: () => _deleteProduct(context, ref, products[index]),
                           onEdit: () {
-                            // Edit logic coming soon
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Edit coming soon!')));
+                            AppToast.show(context, 'Edit coming soon!', type: ToastType.info);
                           },
                         )
                             .animate()
@@ -93,7 +95,7 @@ class ProductManagementScreen extends ConsumerWidget {
           ],
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')),
+        error: (e, s) => ErrorRetryWidget(message: friendlyError(e), onRetry: () => ref.invalidate(businessProductsProvider(businessId))),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => showDialog(
