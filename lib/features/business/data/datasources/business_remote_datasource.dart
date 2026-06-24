@@ -86,6 +86,15 @@ class BusinessRemoteDataSource {
   /// Create a new business
   Future<Business> createBusiness(Map<String, dynamic> businessData) async {
     try {
+      // Get all existing business IDs to count them
+      final allBusinesses = await supabaseClient
+          .from(ApiConstants.businessesTable)
+          .select('business_id');
+      
+      final count = (allBusinesses as List).length;
+      final nextId = 'BIZ${(count + 1).toString().padLeft(4, '0')}';
+      businessData['business_id'] = nextId;
+
       final response = await supabaseClient
           .from(ApiConstants.businessesTable)
           .insert(businessData)
