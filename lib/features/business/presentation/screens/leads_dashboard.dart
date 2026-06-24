@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
+import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/core/widgets/empty_state_widget.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
@@ -14,7 +17,7 @@ import 'package:ifind/features/needs/presentation/providers/need_provider.dart';
 import 'package:ifind/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:ifind/features/notifications/presentation/widgets/notification_badge.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import 'dart:ui';
+import 'package:go_router/go_router.dart';
 
 class LeadsDashboardScreen extends ConsumerWidget {
   const LeadsDashboardScreen({super.key});
@@ -133,11 +136,7 @@ class LeadsDashboardScreen extends ConsumerWidget {
                                   ref
                                       .read(needsRepositoryProvider)
                                       .deleteNeed(need.id);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content: Text(
-                                            'Lead "${need.title}" dismissed')),
-                                  );
+                                  AppToast.show(context, 'Lead "${need.title}" dismissed', type: ToastType.info);
                                 },
                                 child: _LeadCard(
                                   need: need,
@@ -156,7 +155,7 @@ class LeadsDashboardScreen extends ConsumerWidget {
                     loading: () => const SliverFillRemaining(
                         child: Center(child: CircularProgressIndicator())),
                     error: (e, s) => SliverFillRemaining(
-                        child: Center(child: Text('Error: $e'))),
+                        child: ErrorRetryWidget(message: friendlyError(e))),
                   ),
                 const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
@@ -169,26 +168,19 @@ class LeadsDashboardScreen extends ConsumerWidget {
 
   Widget _buildSliverAppBar(BuildContext context, String? businessId) {
     return SliverAppBar(
-      expandedHeight: 120,
+      expandedHeight: 190,
       pinned: true,
-      backgroundColor: Colors.white.withValues(alpha: 0.8),
-      elevation: 0,
-      flexibleSpace: FlexibleSpaceBar(
-        centerTitle: false,
-        titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
-        title: Text(
-          'Customer Inquiries',
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            color: AppColors.darkText,
-            fontSize: 20,
+      backgroundColor: AppColors.deepGreen,
+      leading: IconButton(
+        onPressed: () => context.pop(),
+        icon: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
           ),
-        ),
-        background: ClipRRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(color: Colors.white.withValues(alpha: 0.1)),
-          ),
+          child: const Icon(Icons.arrow_back_ios_new_rounded,
+              color: Colors.white, size: 16),
         ),
       ),
       actions: [
@@ -196,8 +188,15 @@ class LeadsDashboardScreen extends ConsumerWidget {
           NotificationBadge(
             businessId: businessId,
             child: IconButton(
-              icon: const Icon(Icons.notifications_none_rounded,
-                  color: AppColors.darkText),
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.notifications_rounded,
+                    color: Colors.white, size: 20),
+              ),
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -208,6 +207,60 @@ class LeadsDashboardScreen extends ConsumerWidget {
           ),
         const SizedBox(width: 8),
       ],
+      flexibleSpace: FlexibleSpaceBar(
+        collapseMode: CollapseMode.pin,
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.deepGreen, AppColors.primaryGreen],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.trending_up_rounded,
+                            color: Colors.white, size: 24),
+                      ),
+                      const SizedBox(width: 14),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Leads Dashboard',
+                            style: GoogleFonts.outfit(
+                                color: Colors.white,
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            'Customer needs near your business',
+                            style: GoogleFonts.outfit(
+                                color: Colors.white70, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -326,14 +379,9 @@ class _LeadCard extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(16),
                   child: InkWell(
                     onTap: () async {
-                      final messenger = ScaffoldMessenger.of(context);
                       final customer = customerProfileAsync.value;
                       if (customer == null) {
-                        messenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Customer profile is still loading.'),
-                          ),
-                        );
+                        AppToast.show(context, 'Customer profile is still loading.', type: ToastType.warning);
                         return;
                       }
 
@@ -357,11 +405,9 @@ class _LeadCard extends ConsumerWidget {
                           );
                         }
                       } catch (e) {
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text('Could not open chat: $e'),
-                          ),
-                        );
+                        if (context.mounted) {
+                          AppToast.show(context, friendlyError(e), type: ToastType.error);
+                        }
                       }
                     },
                     borderRadius: BorderRadius.circular(16),

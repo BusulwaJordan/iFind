@@ -90,212 +90,402 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
     }
   }
 
+  InputDecoration _fieldDecoration({String? label, String? hint}) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      filled: true,
+      fillColor: Colors.grey[50],
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.primaryGreen, width: 1.5),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(postNeedProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text('Post a Need',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'What do you need?',
-              style:
-                  GoogleFonts.outfit(fontSize: 24, fontWeight: FontWeight.bold),
-            ).animate().fadeIn().slideY(begin: 0.2),
-            const SizedBox(height: 8),
-            Text(
-              'Describe it, and our AI will find the best match nearby.',
-              style: GoogleFonts.outfit(color: Colors.grey[600]),
-            ).animate().fadeIn().slideY(begin: 0.2, delay: 100.ms),
-            const SizedBox(height: 32),
-
-            // Input Area
-            TextField(
-              controller: _textController,
-              maxLines: 3,
-              style: GoogleFonts.outfit(fontSize: 18),
-              decoration: InputDecoration(
-                hintText:
-                    'e.g. "I need a chocolate birthday cake for tomorrow"',
-                filled: true,
-                fillColor: Colors.grey[100],
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 200,
+            pinned: true,
+            backgroundColor: AppColors.deepGreen,
+            leading: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: CircleAvatar(
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                  onPressed: () => Navigator.pop(context),
                 ),
-                contentPadding: const EdgeInsets.all(20),
               ),
-            ).animate().fadeIn().scale(delay: 200.ms),
-
-            const SizedBox(height: 24),
-
-            // Analyze Button
-            if (!_hasAnalyzed)
-              SizedBox(
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: state.isAnalyzing ? null : _analyze,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16)),
+            ),
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.deepGreen, AppColors.primaryGreen],
                   ),
-                  child: state.isAnalyzing
-                      ? const LoadingWidget(size: 24)
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.auto_awesome, color: Colors.amber),
-                            const SizedBox(width: 8),
-                            Text('Find Best Match',
-                                style: GoogleFonts.outfit(
-                                    fontSize: 16, fontWeight: FontWeight.bold)),
-                          ],
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 40),
+                    const Icon(Icons.campaign_rounded,
+                        size: 48, color: Colors.amber),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Post a Need',
+                      style: GoogleFonts.outfit(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        'Tell us what you need — AI finds you the best match nearby.',
+                        style: GoogleFonts.outfit(
+                          fontSize: 13,
+                          color: Colors.white70,
                         ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
                 ),
-              ).animate().fadeIn(delay: 300.ms),
-
-            // AI Result Area
-            if (_hasAnalyzed && _analysisResult != null) ...[
-              _buildAnalysisResult(context, state.isSubmitting),
-              if (state.matchingBusinesses.isNotEmpty) ...[
-                const SizedBox(height: 32),
-                Text(
-                  'Matching Businesses Nearby',
-                  style: GoogleFonts.outfit(
-                      fontSize: 18, fontWeight: FontWeight.bold),
-                ).animate().fadeIn(delay: 500.ms),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 200,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: state.matchingBusinesses.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 16),
-                    itemBuilder: (context, index) {
-                      final business = state.matchingBusinesses[index];
-                      return _MatchingBusinessCard(business: business)
-                          .animate()
-                          .fadeIn(delay: (500 + index * 100).ms)
-                          .slideX();
-                    },
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Main input card
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'What do you need?',
+                          style: GoogleFonts.outfit(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.darkText,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _textController,
+                          maxLines: 4,
+                          style: GoogleFonts.outfit(fontSize: 16),
+                          decoration: _fieldDecoration(
+                            hint:
+                                'e.g. "I need a chocolate birthday cake for tomorrow"',
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        if (!_hasAnalyzed)
+                          SizedBox(
+                            height: 56,
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: state.isAnalyzing ? null : _analyze,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.black,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16)),
+                              ),
+                              child: state.isAnalyzing
+                                  ? const LoadingWidget(size: 24)
+                                  : Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.auto_awesome,
+                                            color: Colors.amber),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Find Best Match',
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ).animate().fadeIn(delay: 300.ms),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ],
-          ],
-        ),
+
+                  const SizedBox(height: 24),
+
+                  // AI result area
+                  if (_hasAnalyzed && _analysisResult != null)
+                    _buildAnalysisResult(context, state.isSubmitting),
+
+                  // Matching businesses
+                  if (_hasAnalyzed && state.matchingBusinesses.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    Text(
+                      'Matching Businesses Nearby',
+                      style: GoogleFonts.outfit(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkText,
+                      ),
+                    ).animate().fadeIn(delay: 500.ms),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 200,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: state.matchingBusinesses.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 16),
+                        itemBuilder: (context, index) {
+                          final business = state.matchingBusinesses[index];
+                          return _MatchingBusinessCard(business: business)
+                              .animate()
+                              .fadeIn(delay: (500 + index * 100).ms)
+                              .slideX();
+                        },
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildAnalysisResult(BuildContext context, bool isSubmitting) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AppColors.primaryGreen.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-                color: AppColors.primaryGreen.withValues(alpha: 0.3)),
+    final category = _analysisResult!['category'] as String? ?? '';
+    final urgency = _analysisResult!['urgency'] as String? ?? '';
+    final tags = _analysisResult!['tags'] as List? ?? [];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row
+          Row(
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.check_circle, color: AppColors.primaryGreen),
-                  const SizedBox(width: 8),
-                  Text(
-                    'AI Analysis Complete',
-                    style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryGreen),
-                  ),
-                ],
+              const Icon(Icons.auto_awesome_rounded,
+                  color: AppColors.primaryGreen, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'AI Analysis',
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkText,
+                ),
               ),
-              const Divider(height: 24),
-              _ResultRow(
-                  label: 'Category', value: _analysisResult!['category']),
-              const SizedBox(height: 8),
-              _ResultRow(label: 'Urgency', value: _analysisResult!['urgency']),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                children: (_analysisResult!['tags'] as List).map<Widget>((tag) {
-                  return Chip(
-                    label: Text(tag),
-                    backgroundColor: Colors.white,
-                    labelStyle: GoogleFonts.outfit(fontSize: 12),
-                    padding: EdgeInsets.zero,
-                  );
-                }).toList(),
+              const Spacer(),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryGreen,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Complete',
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ],
           ),
-        ).animate().fadeIn().slideY(begin: 0.2),
-        const SizedBox(height: 24),
-        TextField(
-          controller: _descController,
-          decoration: InputDecoration(
-            labelText: 'Add more details (Optional)',
-            filled: true,
-            fillColor: Colors.grey[50],
-            border: OutlineInputBorder(
+
+          const Divider(height: 24),
+
+          // Info chips row
+          Row(
+            children: [
+              Expanded(
+                child: _InfoChip(
+                  icon: Icons.category_rounded,
+                  color: Colors.blue,
+                  value: category,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _InfoChip(
+                  icon: Icons.bolt_rounded,
+                  color: Colors.amber,
+                  value: urgency,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Tags
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: tags.map<Widget>((tag) {
+              return Chip(
+                label: Text(tag.toString()),
+                backgroundColor: Colors.white,
+                labelStyle: GoogleFonts.outfit(fontSize: 12),
+                padding: EdgeInsets.zero,
+                side: BorderSide(color: Colors.grey.shade200),
+              );
+            }).toList(),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Additional details field
+          TextField(
+            controller: _descController,
+            decoration: InputDecoration(
+              labelText: 'Add more details (Optional)',
+              filled: true,
+              fillColor: Colors.grey[50],
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none),
-          ),
-        ).animate().fadeIn(delay: 200.ms),
-        const SizedBox(height: 24),
-        SizedBox(
-          height: 56,
-          child: ElevatedButton(
-            onPressed: isSubmitting ? null : _submit,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryGreen,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade200),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                    color: AppColors.primaryGreen, width: 1.5),
+              ),
             ),
-            child: isSubmitting
-                ? const LoadingWidget(size: 24)
-                : Text(
-                    'Broadcast Need',
-                    style: GoogleFonts.outfit(
-                        fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-          ),
-        ).animate().fadeIn(delay: 400.ms),
-      ],
-    );
+          ).animate().fadeIn(delay: 200.ms),
+
+          const SizedBox(height: 20),
+
+          // Broadcast button
+          SizedBox(
+            height: 56,
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: isSubmitting ? null : _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryGreen,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
+              ),
+              child: isSubmitting
+                  ? const LoadingWidget(size: 24)
+                  : Text(
+                      'Broadcast Need',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
+          ).animate().fadeIn(delay: 400.ms),
+        ],
+      ),
+    ).animate().fadeIn().slideY(begin: 0.2);
   }
 }
 
-class _ResultRow extends StatelessWidget {
-  final String label;
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final Color color;
   final String value;
-  const _ResultRow({required this.label, required this.value});
+
+  const _InfoChip({
+    required this.icon,
+    required this.color,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: GoogleFonts.outfit(color: Colors.grey[600])),
-        Text(value, style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: AppColors.darkText,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

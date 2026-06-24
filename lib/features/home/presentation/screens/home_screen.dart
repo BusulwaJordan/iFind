@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/core/tutorial/app_tutorial.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
@@ -309,7 +311,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
             ),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            error: (e, _) => ErrorRetryWidget(message: friendlyError(e), slim: true),
           ),
         ),
       ],
@@ -646,7 +648,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            error: (e, _) => ErrorRetryWidget(message: friendlyError(e), slim: true),
           ),
         ],
       ),

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/constants/app_strings.dart';
 import 'package:ifind/core/utils/validators.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
@@ -43,12 +44,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> _handleRegister() async {
     if (_formKey.currentState!.validate()) {
       if (_passwordController.text != _confirmPasswordController.text) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(AppStrings.passwordsDontMatch),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        AppToast.show(context, AppStrings.passwordsDontMatch, type: ToastType.error);
         return;
       }
 
@@ -73,12 +69,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         final authState = ref.read(authProvider);
         authState.whenOrNull(
           error: (error, _) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(error.toString()),
-                backgroundColor: AppColors.error,
-              ),
-            );
+            AppToast.show(context, error.toString(), type: ToastType.error);
           },
         );
         return;
@@ -91,6 +82,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       ref.read(pendingRegistrationProvider.notifier).state =
           PendingRegistration(email: email, password: password);
+      AppToast.show(context,
+          'Account created! Check your email to confirm.', type: ToastType.success);
       context.go('/confirmation?email=${Uri.encodeComponent(email)}');
     }
   }
@@ -102,12 +95,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       final authState = ref.read(authProvider);
       authState.whenOrNull(
         error: (error, _) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Google Sign-Up failed: ${error.toString()}'),
-              backgroundColor: AppColors.error,
-            ),
-          );
+          AppToast.show(context, 'Google Sign-Up failed: ${error.toString()}', type: ToastType.error);
         },
       );
     }

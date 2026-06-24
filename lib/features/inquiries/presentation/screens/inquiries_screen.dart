@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
@@ -153,7 +155,7 @@ class InquiriesScreen extends ConsumerWidget {
               loading: () => const SliverFillRemaining(
                   child: Center(child: CircularProgressIndicator())),
               error: (e, _) => SliverFillRemaining(
-                child: Center(child: Text('Error: $e')),
+                child: ErrorRetryWidget(message: friendlyError(e)),
               ),
             ),
         ],
@@ -217,7 +219,7 @@ class _InquiryList extends ConsumerWidget {
       loading: () => const SliverFillRemaining(
           child: Center(child: CircularProgressIndicator())),
       error: (e, _) =>
-          SliverFillRemaining(child: Center(child: Text('Error: $e'))),
+          SliverFillRemaining(child: ErrorRetryWidget(message: friendlyError(e))),
     );
   }
 }

@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
+import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/core/utils/distance_calculator.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/favourites/presentation/providers/favourites_provider.dart';
@@ -155,7 +158,7 @@ class FavouritesScreen extends ConsumerWidget {
               loading: () => const SliverFillRemaining(
                   child: Center(child: CircularProgressIndicator())),
               error: (e, _) => SliverFillRemaining(
-                child: Center(child: Text('Error: $e')),
+                child: ErrorRetryWidget(message: friendlyError(e)),
               ),
             ),
 
@@ -286,15 +289,7 @@ class _SavedBusinessCard extends StatelessWidget {
               IconButton(
                 onPressed: () {
                   onRemove();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${business.name} removed from favourites'),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
+                  AppToast.show(context, '${business.name} removed from favourites', type: ToastType.info);
                 },
                 icon: const Icon(Icons.bookmark_remove_rounded,
                     color: Colors.redAccent),

@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
+import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/core/widgets/empty_state_widget.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -88,10 +91,7 @@ class ChatListScreen extends ConsumerWidget {
                         .deleteChat(chat.id);
                     ref.invalidate(myChatsProvider);
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text('Chat with $businessName deleted')),
-                      );
+                      AppToast.show(context, 'Chat with $businessName deleted', type: ToastType.info);
                     }
                   },
                   child: ListTile(
@@ -130,7 +130,7 @@ class ChatListScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')),
+        error: (e, s) => ErrorRetryWidget(message: friendlyError(e), onRetry: () => ref.invalidate(myChatsProvider)),
       ),
     );
   }

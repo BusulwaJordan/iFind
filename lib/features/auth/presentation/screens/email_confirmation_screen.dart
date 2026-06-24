@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/auth/presentation/providers/pending_registration_provider.dart';
@@ -104,18 +105,11 @@ class _EmailConfirmationScreenState
     setState(() => _isResending = false);
 
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error), backgroundColor: AppColors.error),
-      );
+      AppToast.show(context, error, type: ToastType.error);
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Verification email resent! Check your inbox.'),
-        backgroundColor: AppColors.primaryGreen,
-      ),
-    );
+    AppToast.show(context, 'Verification email resent! Check your inbox.', type: ToastType.success);
 
     setState(() => _resendCooldown = 60);
     _cooldownTimer?.cancel();

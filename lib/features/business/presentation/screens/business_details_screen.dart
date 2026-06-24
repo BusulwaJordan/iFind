@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:ifind/features/business/presentation/providers/b2b_provider.dart';
@@ -34,8 +37,7 @@ class BusinessDetailScreen extends ConsumerWidget {
       BuildContext context, WidgetRef ref, PortfolioItem item) async {
     final user = ref.read(currentUserProvider);
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please login to inquire')));
+      AppToast.show(context, 'Please login to inquire', type: ToastType.info);
       return;
     }
 
@@ -70,8 +72,7 @@ class BusinessDetailScreen extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
       }
     }
   }
@@ -167,16 +168,10 @@ class BusinessDetailScreen extends ConsumerWidget {
                                     type: InteractionType.savedBusiness,
                                   );
                             }
-                            ScaffoldMessenger.of(ctx).showSnackBar(
-                              SnackBar(
-                                content: Text(isSaved
-                                    ? 'Removed from favourites'
-                                    : 'Saved to favourites'),
-                                behavior: SnackBarBehavior.floating,
-                                duration: const Duration(seconds: 2),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                              ),
+                            AppToast.show(
+                              ctx,
+                              isSaved ? 'Removed from favourites' : 'Saved to favourites',
+                              type: isSaved ? ToastType.info : ToastType.success,
                             );
                           },
                         );
@@ -754,7 +749,7 @@ class _PortfolioTab extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, s) => Center(child: Text('Error: $e')),
+      error: (e, s) => ErrorRetryWidget(message: friendlyError(e), slim: true),
     );
   }
 }
@@ -901,7 +896,7 @@ class _ReviewsTab extends ConsumerWidget {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, s) => Center(child: Text('Error: $e')),
+            error: (e, s) => ErrorRetryWidget(message: friendlyError(e), slim: true),
           ),
         ),
       ],

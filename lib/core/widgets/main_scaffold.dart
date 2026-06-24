@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/notifications/presentation/providers/notification_provider.dart';
 import 'package:ifind/features/notifications/domain/entities/notification.dart';
@@ -50,6 +51,14 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
     if (user == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+
+    // Show welcome toast after login/register
+    ref.listen(loginWelcomeProvider, (_, next) {
+      if (next != null && mounted) {
+        AppToast.show(context, next, type: ToastType.success);
+        ref.read(loginWelcomeProvider.notifier).state = null;
+      }
+    });
 
     // Listen to real-time notification stream for custom toasts
     ref.listen(userNotificationsProvider, (previous, next) {
@@ -218,77 +227,14 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
         };
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: InkWell(
-          onTap: () {
-            onTapAction();
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          },
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(iconData, color: iconColor, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      notification.title,
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      previewBody,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  onTapAction();
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                },
-                child: Text(
-                  actionLabel,
-                  style: GoogleFonts.outfit(
-                    color: AppColors.primaryGreen,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        backgroundColor: Colors.grey.shade900.withValues(alpha: 0.95),
-        behavior: SnackBarBehavior.floating,
-        margin:
-            const EdgeInsets.fromLTRB(20, 0, 20, 100), // Position above navbar
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side:
-              BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1),
-        ),
-        duration: const Duration(seconds: 4),
-      ),
+    AppToast.showNotification(
+      context,
+      title: notification.title,
+      body: previewBody,
+      icon: iconData,
+      color: iconColor,
+      actionLabel: actionLabel,
+      onAction: onTapAction,
     );
   }
 }
