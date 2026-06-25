@@ -1,28 +1,38 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/error_retry_widget.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/core/tutorial/app_tutorial.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/notifications/presentation/widgets/notification_badge.dart';
-import 'package:google_fonts/google_fonts.dart';
+
+// ── Hero gradient colours ─────────────────────────────────────────────────────
+const _kGradTop    = Color(0xFF003D2B);
+const _kGradMid    = Color(0xFF006241);
+const _kGradBottom = Color(0xFF0B7A5A);
 
 class HomeScreen extends ConsumerStatefulWidget {
   final User user;
-
   const HomeScreen({super.key, required this.user});
 
   @override
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with SingleTickerProviderStateMixin {
   User get user => widget.user;
+
+  // Used to key child animations so they replay on pull-to-refresh
+  int _refreshKey = 0;
 
   @override
   void initState() {
@@ -36,7 +46,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (!mounted) return;
     final tutorial = ref.read(tutorialProvider);
     if (!tutorial.shouldShow(AppTutorialService.customerHomeKey)) return;
-
     await showAppTutorial(
       context: context,
       ref: ref,
@@ -74,111 +83,122 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  Future<void> _onRefresh() async {
+    ref.invalidate(featuredBusinessesProvider);
+    ref.invalidate(nearbyBusinessesProvider);
+    setState(() => _refreshKey++);
+    await ref.read(featuredBusinessesProvider.future);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(featuredBusinessesProvider);
-          ref.invalidate(nearbyBusinessesProvider);
-          return await ref.read(featuredBusinessesProvider.future);
-        },
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            _buildSliverAppBar(context, ref),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildBroadcastBanner(context)
-                        .animate()
-                        .fadeIn(duration: 600.ms)
-                        .slideY(begin: 0.2),
-                    const SizedBox(height: 32),
-                    _buildGettingStarted(context)
-                        .animate()
-                        .fadeIn(delay: 200.ms)
-                        .slideY(begin: 0.1),
-                    const SizedBox(height: 32),
-                    _buildCategoriesSection(context)
-                        .animate()
-                        .fadeIn(delay: 400.ms)
-                        .slideY(begin: 0.1),
-                    const SizedBox(height: 32),
-                    _buildQuickActions(context)
-                        .animate()
-                        .fadeIn(delay: 400.ms)
-                        .slideY(begin: 0.1),
-                    const SizedBox(height: 32),
-                    _buildFeaturedSection(context, ref)
-                        .animate()
-                        .fadeIn(delay: 600.ms)
-                        .slideY(begin: 0.1),
-                    const SizedBox(height: 32),
-                    _buildNearbySection(context, ref)
-                        .animate()
-                        .fadeIn(delay: 800.ms)
-                        .slideY(begin: 0.1),
-                  ],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: RefreshIndicator(
+          color: AppColors.primaryGreen,
+          onRefresh: _onRefresh,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics()),
+            slivers: [
+              // ── Hero ───────────────────────────────────────────────────
+              SliverToBoxAdapter(
+                child: _HeroSection(
+                  key: ValueKey(_refreshKey),
+                  user: user,
                 ),
               ),
-            ),
-          ],
+
+              // ── White content area ─────────────────────────────────────
+              SliverToBoxAdapter(
+                child: _ContentArea(
+                  key: ValueKey('content_$_refreshKey'),
+                  user: user,
+                  onPostNeed: () => context.push('/post-need'),
+                ),
+              ),
+
+              // ── Bottom clearance (avoid nav bar overlap) ───────────────
+              SliverToBoxAdapter(
+                child: SizedBox(
+                    height: MediaQuery.of(context).padding.bottom + 96),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildSliverAppBar(BuildContext context, WidgetRef ref) {
-    return SliverAppBar(
-      expandedHeight: 100,
-      floating: true,
-      pinned: true,
-      elevation: 0,
-      backgroundColor: AppColors.deepGreen,
-      flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        title: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
+// ─────────────────────────────────────────────────────────────────────────────
+// HERO SECTION
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _HeroSection extends ConsumerWidget {
+  final User user;
+  const _HeroSection({super.key, required this.user});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final firstName = user.fullName.split(' ').first;
+    final role = user.role == UserRole.businessOwner
+        ? 'Business Owner'
+        : 'Customer';
+
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(40)),
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_kGradTop, _kGradMid, _kGradBottom],
+            stops: [0.0, 0.55, 1.0],
+          ),
+        ),
+        child: Stack(
           children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Welcome back,',
-                  style: GoogleFonts.outfit(
-                    fontSize: 10,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                Text(
-                  user.fullName.split(' ').first,
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const Spacer(),
-            NotificationBadge(
-              child: IconButton(
-                onPressed: () => context.push('/notifications'),
-                icon: const Icon(Icons.notifications_none_rounded,
-                    color: Colors.white, size: 24),
+            // ── Decorative floating circles ───────────────────────────
+            ..._decorations(),
+
+            // ── Content ───────────────────────────────────────────────
+            SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top nav row
+                  _TopNav(
+                    firstName: firstName,
+                    role: role,
+                  ).animate().fadeIn(duration: 500.ms),
+
+                  const SizedBox(height: 28),
+
+                  // Greeting
+                  _GreetingBlock(firstName: firstName)
+                      .animate()
+                      .fadeIn(delay: 150.ms, duration: 500.ms)
+                      .slideY(begin: 0.25, curve: Curves.easeOutCubic),
+
+                  const SizedBox(height: 28),
+
+                  // Post a Need CTA card
+                  const _PostNeedCard()
+                      .animate()
+                      .fadeIn(delay: 300.ms, duration: 600.ms)
+                      .slideY(
+                        begin: 0.2,
+                        delay: 300.ms,
+                        curve: Curves.easeOutCubic,
+                      ),
+
+                  const SizedBox(height: 36),
+                ],
               ),
-            ),
-            IconButton(
-              onPressed: () => context.push('/settings'),
-              icon: const Icon(Icons.settings_outlined,
-                  color: Colors.white70, size: 24),
             ),
           ],
         ),
@@ -186,22 +206,222 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildBroadcastBanner(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.black, Colors.grey.shade900],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  static List<Widget> _decorations() {
+    const circles = [
+      (x: -0.15, y: -0.05, s: 180.0, o: 0.06),
+      (x: 0.80,  y: -0.02, s: 140.0, o: 0.05),
+      (x: 0.70,  y: 0.50,  s: 200.0, o: 0.04),
+      (x: -0.10, y: 0.55,  s: 160.0, o: 0.05),
+      (x: 0.40,  y: 0.10,  s: 80.0,  o: 0.04),
+    ];
+    return circles.map((c) {
+      return Positioned(
+        left: c.x * 400,
+        top: c.y * 400,
+        child: Container(
+          width: c.s,
+          height: c.s,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: c.o),
+            shape: BoxShape.circle,
+          ),
         ),
-        borderRadius: BorderRadius.circular(24),
+      );
+    }).toList();
+  }
+}
+
+// ── Top navigation row ────────────────────────────────────────────────────────
+
+class _TopNav extends ConsumerWidget {
+  final String firstName;
+  final String role;
+  const _TopNav({required this.firstName, required this.role});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 8, 0),
+      child: Row(
+        children: [
+          // iFind wordmark
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.search_rounded,
+                    color: Colors.white, size: 18),
+              ),
+              const SizedBox(width: 9),
+              Text(
+                'iFind',
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 21,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ],
+          )
+              .animate()
+              .scale(
+                  delay: 50.ms,
+                  duration: 600.ms,
+                  curve: Curves.elasticOut,
+                  begin: const Offset(0.7, 0.7)),
+
+          const Spacer(),
+
+          // Notifications
+          NotificationBadge(
+            child: IconButton(
+              onPressed: () => context.push('/notifications'),
+              icon: const Icon(Icons.notifications_outlined,
+                  color: Colors.white, size: 22),
+            ),
+          ).animate().fadeIn(delay: 80.ms).slideX(begin: 0.2),
+
+          // Settings
+          IconButton(
+            onPressed: () => context.push('/settings'),
+            icon: Icon(Icons.settings_outlined,
+                color: Colors.white.withValues(alpha: 0.8), size: 22),
+          ).animate().fadeIn(delay: 110.ms).slideX(begin: 0.2),
+
+          // Profile chip
+          GestureDetector(
+            onTap: () => context.push('/profile'),
+            child: Container(
+              margin: const EdgeInsets.only(right: 4),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.13),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.22), width: 1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    radius: 13,
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                    child: const Icon(Icons.person_rounded,
+                        color: Colors.white, size: 14),
+                  ),
+                  const SizedBox(width: 7),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        firstName,
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          height: 1.2,
+                        ),
+                      ),
+                      Text(
+                        role,
+                        style: GoogleFonts.outfit(
+                          color: Colors.white.withValues(alpha: 0.65),
+                          fontSize: 9.5,
+                          height: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ).animate().fadeIn(delay: 140.ms).slideX(begin: 0.2),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Greeting ──────────────────────────────────────────────────────────────────
+
+class _GreetingBlock extends StatelessWidget {
+  final String firstName;
+  const _GreetingBlock({required this.firstName});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Welcome back,',
+            style: GoogleFonts.outfit(
+              color: Colors.white.withValues(alpha: 0.72),
+              fontSize: 15,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 4),
+          RichText(
+            text: TextSpan(children: [
+              TextSpan(
+                text: '$firstName ',
+                style: GoogleFonts.outfit(
+                  color: Colors.white,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w900,
+                  height: 1.1,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const TextSpan(
+                text: '👋',
+                style: TextStyle(fontSize: 30),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Find trusted businesses, products\nand services near you.',
+            style: GoogleFonts.outfit(
+              color: Colors.white.withValues(alpha: 0.68),
+              fontSize: 13.5,
+              height: 1.55,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Post a Need card ──────────────────────────────────────────────────────────
+
+class _PostNeedCard extends StatelessWidget {
+  const _PostNeedCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 28,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -213,212 +433,262 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: AppColors.primaryGreen.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.auto_awesome,
-                    color: Colors.amber, size: 24),
+                child: const Icon(Icons.auto_awesome_rounded,
+                    color: AppColors.primaryGreen, size: 20),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Text(
                 'POST A NEED',
                 style: GoogleFonts.outfit(
-                  color: Colors.amber,
+                  color: AppColors.primaryGreen,
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  letterSpacing: 1,
+                  fontSize: 11,
+                  letterSpacing: 1.2,
                 ),
               ),
+              const Spacer(),
+              Icon(Icons.arrow_forward_ios_rounded,
+                  size: 13, color: Colors.grey[400]),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Text(
-            'Need something? Post it here.',
+            'Need something?\nPost it here.',
             style: GoogleFonts.outfit(
-              color: Colors.white,
-              fontSize: 22,
+              color: AppColors.deepGreen,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
-              height: 1.1,
+              height: 1.25,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Tell nearby shops what you want and let them message you in iFind.',
-            style: GoogleFonts.outfit(color: Colors.white70, fontSize: 13),
+            'Tell nearby shops what you want and let them message you.',
+            style: GoogleFonts.outfit(
+                color: AppColors.lightText, fontSize: 13, height: 1.4),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
           SizedBox(
-            width: double.infinity, // Full width button
-            child: ElevatedButton(
-              onPressed: () => context.push('/post-need'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amber,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
-                elevation: 0,
+            width: double.infinity,
+            height: 48,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.primaryGreen, AppColors.deepGreen],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryGreen.withValues(alpha: 0.35),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ),
-              child: const Text('Post a Need Now',
-                  style: TextStyle(fontWeight: FontWeight.w900)),
+              child: ElevatedButton(
+                onPressed: () => context.push('/post-need'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                ),
+                child: Text(
+                  'Post a Need Now',
+                  style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w800, fontSize: 14),
+                ),
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildFeaturedSection(BuildContext context, WidgetRef ref) {
-    final businessesAsync = ref.watch(featuredBusinessesProvider);
+// ─────────────────────────────────────────────────────────────────────────────
+// WHITE CONTENT AREA
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ContentArea extends ConsumerWidget {
+  final User user;
+  final VoidCallback onPostNeed;
+  const _ContentArea(
+      {super.key, required this.user, required this.onPostNeed});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      color: const Color(0xFFF8FAFC),
+      padding: const EdgeInsets.only(top: 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Getting Started
+          _buildGettingStarted(context)
+              .animate()
+              .fadeIn(delay: 480.ms, duration: 500.ms)
+              .slideY(begin: 0.12),
+          const SizedBox(height: 32),
+
+          // Popular Categories
+          _buildCategoriesSection(context)
+              .animate()
+              .fadeIn(delay: 600.ms, duration: 500.ms)
+              .slideY(begin: 0.12),
+          const SizedBox(height: 32),
+
+          // Quick Actions
+          _buildQuickActions(context)
+              .animate()
+              .fadeIn(delay: 720.ms, duration: 500.ms)
+              .slideY(begin: 0.12),
+          const SizedBox(height: 32),
+
+          // Featured Businesses
+          _buildFeaturedSection(context, ref)
+              .animate()
+              .fadeIn(delay: 840.ms, duration: 500.ms)
+              .slideY(begin: 0.12),
+          const SizedBox(height: 32),
+
+          // Nearby Top Rated
+          _buildNearbySection(context, ref)
+              .animate()
+              .fadeIn(delay: 960.ms, duration: 500.ms)
+              .slideY(begin: 0.12),
+        ],
+      ),
+    );
+  }
+
+  // ── Getting Started ─────────────────────────────────────────────────────
+
+  Widget _buildGettingStarted(BuildContext context) {
+    final steps = [
+      {
+        'title': 'Post a Need',
+        'desc': 'Tell us what you need and let shops find you.',
+        'icon': Icons.edit_note_rounded,
+        'color': Colors.blue,
+        'onTap': () => context.push('/post-need'),
+      },
+      {
+        'title': 'Explore Shops',
+        'desc': 'Discover the best local businesses nearby.',
+        'icon': Icons.explore_rounded,
+        'color': Colors.orange,
+        'onTap': () => context.go('/discover'),
+      },
+      {
+        'title': 'Launch Shop',
+        'desc': 'Start your own digital shop and grow.',
+        'icon': Icons.rocket_launch_rounded,
+        'color': Colors.purple,
+        'onTap': () => context.push('/create-business'),
+      },
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24),
-          child: _SectionHeader(title: 'Featured Businesses'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            children: [
+              const _SectionHeader(title: 'Getting Started'),
+              const Spacer(),
+              Text(
+                'Step 1 of 3',
+                style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    color: AppColors.lightText,
+                    fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
         SizedBox(
-          height: 200,
-          child: businessesAsync.when(
-            data: (businesses) {
-              if (businesses.isEmpty) {
-                return const Center(child: Text('No featured businesses yet'));
-              }
-              return ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: businesses.length,
-                itemBuilder: (context, index) {
-                  return _FeaturedBusinessCard(business: businesses[index])
-                      .animate()
-                      .fadeIn(delay: (index * 100).ms)
-                      .scale(begin: const Offset(0.9, 0.9));
-                },
-              );
-            },
-            loading: () => ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: 3,
-              itemBuilder: (_, __) => Container(
-                width: 280,
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(24),
+          height: 132,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: steps.length,
+            itemBuilder: (context, index) {
+              final step = steps[index];
+              final color = step['color'] as Color;
+              return GestureDetector(
+                onTap: step['onTap'] as VoidCallback,
+                child: Container(
+                  width: 200,
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                        color: color.withValues(alpha: 0.12), width: 1),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(step['icon'] as IconData,
+                          color: color, size: 28),
+                      const Spacer(),
+                      Text(step['title'] as String,
+                          style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold, fontSize: 14)),
+                      const SizedBox(height: 4),
+                      Text(step['desc'] as String,
+                          style: const TextStyle(
+                              fontSize: 10, color: AppColors.lightText),
+                          maxLines: 2),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-            error: (e, _) => ErrorRetryWidget(message: friendlyError(e), slim: true),
+              )
+                  .animate()
+                  .fadeIn(delay: (index * 80 + 500).ms, duration: 400.ms)
+                  .scale(
+                      begin: const Offset(0.92, 0.92),
+                      delay: (index * 80 + 500).ms);
+            },
           ),
         ),
       ],
     );
   }
 
+  // ── Categories ──────────────────────────────────────────────────────────
+
   Widget _buildCategoriesSection(BuildContext context) {
     final categories = [
-      {
-        'name': 'Food',
-        'image': 'assets/images/Screenshot 2026-02-11 112931.png',
-        'icon': Icons.restaurant_rounded,
-        'cat': BusinessCategory.food
-      },
-      {
-        'name': 'Fashion',
-        'image': 'assets/images/Color Gradient T-shirts Display.png',
-        'icon': Icons.checkroom_rounded,
-        'cat': BusinessCategory.fashion
-      },
-      {
-        'name': 'Electronics',
-        'image': 'assets/images/Contemporary VR Headsets Display.png',
-        'icon': Icons.devices_rounded,
-        'cat': BusinessCategory.electronics
-      },
-      {
-        'name': 'Home',
-        'image': 'assets/images/Modern Workspace Setup.png',
-        'icon': Icons.home_rounded,
-        'cat': BusinessCategory.home
-      },
-      {
-        'name': 'Beauty',
-        'image': null,
-        'icon': Icons.spa_rounded,
-        'cat': BusinessCategory.beauty
-      },
-      {
-        'name': 'Services',
-        'image': null,
-        'icon': Icons.handyman_rounded,
-        'cat': BusinessCategory.service
-      },
-      {
-        'name': 'Automotive',
-        'image': null,
-        'icon': Icons.directions_car_rounded,
-        'cat': BusinessCategory.automotive
-      },
-      {
-        'name': 'Health',
-        'image': null,
-        'icon': Icons.local_hospital_rounded,
-        'cat': BusinessCategory.health
-      },
-      {
-        'name': 'Sports',
-        'image': 'assets/images/Screenshot 2026-02-11 112211.png',
-        'icon': Icons.sports_basketball_rounded,
-        'cat': BusinessCategory.sports
-      },
-      {
-        'name': 'Kids',
-        'image': 'assets/images/Screenshot 2026-02-11 113140.png',
-        'icon': Icons.child_care_rounded,
-        'cat': BusinessCategory.kids
-      },
-      {
-        'name': 'Education',
-        'image': null,
-        'icon': Icons.school_rounded,
-        'cat': BusinessCategory.education
-      },
-      {
-        'name': 'Events',
-        'image': 'assets/images/Screenshot 2026-02-11 113011.png',
-        'icon': Icons.event_rounded,
-        'cat': BusinessCategory.entertainment
-      },
-      {
-        'name': 'Travel',
-        'image': null,
-        'icon': Icons.flight_takeoff_rounded,
-        'cat': BusinessCategory.travel
-      },
-      {
-        'name': 'Properties',
-        'image': null,
-        'icon': Icons.apartment_rounded,
-        'cat': BusinessCategory.realEstate
-      },
-      {
-        'name': 'Pets',
-        'image': 'assets/images/Screenshot 2026-02-11 112656.png',
-        'icon': Icons.pets_rounded,
-        'cat': BusinessCategory.pets
-      },
-      {
-        'name': 'Finance',
-        'image': null,
-        'icon': Icons.account_balance_wallet_rounded,
-        'cat': BusinessCategory.finance
-      },
+      {'name': 'Food', 'image': 'assets/images/Screenshot 2026-02-11 112931.png', 'icon': Icons.restaurant_rounded, 'cat': BusinessCategory.food},
+      {'name': 'Fashion', 'image': 'assets/images/Color Gradient T-shirts Display.png', 'icon': Icons.checkroom_rounded, 'cat': BusinessCategory.fashion},
+      {'name': 'Electronics', 'image': 'assets/images/Contemporary VR Headsets Display.png', 'icon': Icons.devices_rounded, 'cat': BusinessCategory.electronics},
+      {'name': 'Home', 'image': 'assets/images/Modern Workspace Setup.png', 'icon': Icons.home_rounded, 'cat': BusinessCategory.home},
+      {'name': 'Beauty', 'image': null, 'icon': Icons.spa_rounded, 'cat': BusinessCategory.beauty},
+      {'name': 'Services', 'image': null, 'icon': Icons.handyman_rounded, 'cat': BusinessCategory.service},
+      {'name': 'Automotive', 'image': null, 'icon': Icons.directions_car_rounded, 'cat': BusinessCategory.automotive},
+      {'name': 'Health', 'image': null, 'icon': Icons.local_hospital_rounded, 'cat': BusinessCategory.health},
+      {'name': 'Sports', 'image': 'assets/images/Screenshot 2026-02-11 112211.png', 'icon': Icons.sports_basketball_rounded, 'cat': BusinessCategory.sports},
+      {'name': 'Kids', 'image': 'assets/images/Screenshot 2026-02-11 113140.png', 'icon': Icons.child_care_rounded, 'cat': BusinessCategory.kids},
+      {'name': 'Education', 'image': null, 'icon': Icons.school_rounded, 'cat': BusinessCategory.education},
+      {'name': 'Events', 'image': 'assets/images/Screenshot 2026-02-11 113011.png', 'icon': Icons.event_rounded, 'cat': BusinessCategory.entertainment},
+      {'name': 'Travel', 'image': null, 'icon': Icons.flight_takeoff_rounded, 'cat': BusinessCategory.travel},
+      {'name': 'Properties', 'image': null, 'icon': Icons.apartment_rounded, 'cat': BusinessCategory.realEstate},
+      {'name': 'Pets', 'image': 'assets/images/Screenshot 2026-02-11 112656.png', 'icon': Icons.pets_rounded, 'cat': BusinessCategory.pets},
+      {'name': 'Finance', 'image': null, 'icon': Icons.account_balance_wallet_rounded, 'cat': BusinessCategory.finance},
     ];
 
-    // Split into 2 rows
     final row1 = categories.sublist(0, (categories.length / 2).ceil());
     final row2 = categories.sublist((categories.length / 2).ceil());
 
@@ -431,13 +701,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const _SectionHeader(title: 'Popular Categories'),
-              Text(
-                'Swipe for more',
-                style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    color: AppColors.primaryGreen,
-                    fontWeight: FontWeight.bold),
-              ),
+              Text('Swipe for more',
+                  style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: AppColors.primaryGreen,
+                      fontWeight: FontWeight.bold)),
             ],
           ),
         ),
@@ -475,6 +743,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  // ── Quick Actions ───────────────────────────────────────────────────────
+
   Widget _buildQuickActions(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -501,7 +771,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   subtitle: 'AI recommendations',
                   icon: Icons.auto_awesome_rounded,
                   color: Colors.deepPurple,
-                  onTap: () => context.push('/ai-search'),
+                  onTap: () => context.go('/for-you'),
                 ),
               ),
             ],
@@ -535,97 +805,63 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildGettingStarted(BuildContext context) {
-    final steps = [
-      {
-        'title': 'Post a Need',
-        'desc': 'Tell us what you need and let shops find you.',
-        'icon': Icons.edit_note_rounded,
-        'color': Colors.blue,
-        'onTap': () => context.push('/post-need'),
-      },
-      {
-        'title': 'Explore Shops',
-        'desc': 'Discover the best local businesses nearby.',
-        'icon': Icons.explore_rounded,
-        'color': Colors.orange,
-        'onTap': () => context.go('/discover'),
-      },
-      {
-        'title': 'Launch Shop',
-        'desc': 'Start your own digital shop and grow.',
-        'icon': Icons.rocket_launch_rounded,
-        'color': Colors.purple,
-        'onTap': () => context.push('/create-business'),
-      },
-    ];
+  // ── Featured Businesses ─────────────────────────────────────────────────
 
+  Widget _buildFeaturedSection(BuildContext context, WidgetRef ref) {
+    final businessesAsync = ref.watch(featuredBusinessesProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            children: [
-              const _SectionHeader(title: 'Getting Started'),
-              const Spacer(),
-              Text('Step 1 of 3',
-                  style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: AppColors.lightText,
-                      fontWeight: FontWeight.bold)),
-            ],
-          ),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24),
+          child: _SectionHeader(title: 'Featured Businesses'),
         ),
         const SizedBox(height: 16),
         SizedBox(
-          height: 130,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: steps.length,
-            itemBuilder: (context, index) {
-              final step = steps[index];
-              return Container(
-                width: 200,
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: (step['color'] as Color).withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                      color: (step['color'] as Color).withValues(alpha: 0.1)),
-                ),
-                child: InkWell(
-                  onTap: step['onTap'] as VoidCallback,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(step['icon'] as IconData,
-                          color: step['color'] as Color, size: 28),
-                      const Spacer(),
-                      Text(step['title'] as String,
-                          style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.bold, fontSize: 14)),
-                      const SizedBox(height: 4),
-                      Text(step['desc'] as String,
-                          style: const TextStyle(
-                              fontSize: 10, color: AppColors.lightText),
-                          maxLines: 2),
-                    ],
-                  ),
-                ),
+          height: 200,
+          child: businessesAsync.when(
+            data: (businesses) {
+              if (businesses.isEmpty) {
+                return const Center(
+                    child: Text('No featured businesses yet'));
+              }
+              return ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: businesses.length,
+                itemBuilder: (context, index) {
+                  return _FeaturedBusinessCard(business: businesses[index])
+                      .animate()
+                      .fadeIn(delay: (index * 100).ms)
+                      .scale(begin: const Offset(0.9, 0.9));
+                },
               );
             },
+            loading: () => ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: 3,
+              itemBuilder: (_, __) => Container(
+                width: 280,
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+            ),
+            error: (e, _) =>
+                ErrorRetryWidget(message: friendlyError(e), slim: true),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildNearbySection(BuildContext context, WidgetRef ref) {
-    final nearbyBusinessesAsync = ref.watch(nearbyBusinessesProvider);
+  // ── Nearby ──────────────────────────────────────────────────────────────
 
+  Widget _buildNearbySection(BuildContext context, WidgetRef ref) {
+    final nearbyAsync = ref.watch(nearbyBusinessesProvider);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -633,28 +869,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         children: [
           const _SectionHeader(title: 'Nearby Top Rated'),
           const SizedBox(height: 16),
-          nearbyBusinessesAsync.when(
+          nearbyAsync.when(
             data: (businesses) {
-              if (businesses.isEmpty) {
-                return const _NearbyPlaceholder();
-              }
+              if (businesses.isEmpty) return const _NearbyPlaceholder();
               return Column(
-                children: businesses.map((business) {
-                  return _NearbyBusinessCard(business: business)
+                children: businesses.asMap().entries.map((e) {
+                  return _NearbyBusinessCard(business: e.value)
                       .animate()
-                      .fadeIn(duration: 400.ms)
+                      .fadeIn(delay: (e.key * 80).ms, duration: 400.ms)
                       .slideX(begin: 0.1);
                 }).toList(),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => ErrorRetryWidget(message: friendlyError(e), slim: true),
+            loading: () =>
+                const Center(child: IFindLoaderInline(size: 60)),
+            error: (e, _) =>
+                ErrorRetryWidget(message: friendlyError(e), slim: true),
           ),
         ],
       ),
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARED SECTION HEADER
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   final String title;
@@ -673,6 +913,10 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FEATURED BUSINESS CARD
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _FeaturedBusinessCard extends ConsumerWidget {
   final Business business;
   const _FeaturedBusinessCard({required this.business});
@@ -680,10 +924,12 @@ class _FeaturedBusinessCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final liveBusiness =
-        ref.watch(businessStreamProvider(business.id)).valueOrNull ?? business;
+        ref.watch(businessStreamProvider(business.id)).valueOrNull ??
+            business;
 
     return GestureDetector(
-      onTap: () => context.push('/business-details', extra: liveBusiness),
+      onTap: () =>
+          context.push('/business-details', extra: liveBusiness),
       child: Container(
         width: 280,
         margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -691,7 +937,8 @@ class _FeaturedBusinessCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(24),
           image: DecorationImage(
             image: NetworkImage(
-              liveBusiness.coverImageUrl ?? 'https://via.placeholder.com/300',
+              liveBusiness.coverImageUrl ??
+                  'https://via.placeholder.com/300',
             ),
             fit: BoxFit.cover,
             onError: (_, __) {},
@@ -703,7 +950,10 @@ class _FeaturedBusinessCard extends ConsumerWidget {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
+              colors: [
+                Colors.transparent,
+                Colors.black.withValues(alpha: 0.8)
+              ],
             ),
           ),
           padding: const EdgeInsets.all(20),
@@ -724,9 +974,10 @@ class _FeaturedBusinessCard extends ConsumerWidget {
                   const Icon(Icons.star, color: Colors.amber, size: 16),
                   const SizedBox(width: 4),
                   Text(
-                      '${liveBusiness.rating.toStringAsFixed(1)} (${liveBusiness.reviewCount} reviews)',
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 12)),
+                    '${liveBusiness.rating.toStringAsFixed(1)} (${liveBusiness.reviewCount} reviews)',
+                    style: const TextStyle(
+                        color: Colors.white70, fontSize: 12),
+                  ),
                 ],
               ),
             ],
@@ -736,6 +987,10 @@ class _FeaturedBusinessCard extends ConsumerWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3-D CATEGORY CARD (unchanged)
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _ThreeDCategoryCard extends StatelessWidget {
   final String name;
@@ -760,11 +1015,8 @@ class _ThreeDCategoryCard extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 8),
         child: Stack(
           children: [
-            // Outer Depth Shadow
             Positioned(
-              bottom: 12,
-              left: 15,
-              right: 15,
+              bottom: 12, left: 15, right: 15,
               child: Container(
                 height: 20,
                 decoration: BoxDecoration(
@@ -778,16 +1030,11 @@ class _ThreeDCategoryCard extends StatelessWidget {
                 ),
               ),
             ),
-
-            // Main Card Body
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28),
                 gradient: LinearGradient(
-                  colors: [
-                    Colors.white,
-                    Colors.grey.shade50,
-                  ],
+                  colors: [Colors.white, Colors.grey.shade50],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -803,10 +1050,8 @@ class _ThreeDCategoryCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(28),
                 child: Stack(
                   children: [
-                    // Glassmorphism Highlight
                     Positioned(
-                      top: -40,
-                      left: -40,
+                      top: -40, left: -40,
                       child: Container(
                         width: 120,
                         height: 120,
@@ -816,11 +1061,9 @@ class _ThreeDCategoryCard extends StatelessWidget {
                         ),
                       ),
                     ),
-
                     Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Image with 3D Float animation
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -839,27 +1082,23 @@ class _ThreeDCategoryCard extends StatelessWidget {
                                       : Image.asset(
                                           image!,
                                           fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  _CategoryIconPanel(
-                                            icon: icon,
-                                          ),
+                                          errorBuilder: (_, __, ___) =>
+                                              _CategoryIconPanel(icon: icon),
                                         ),
                                 ),
                               ),
                             ),
                           )
                               .animate(
-                                  onPlay: (controller) =>
-                                      controller.repeat(reverse: true))
+                                  onPlay: (c) =>
+                                      c.repeat(reverse: true))
                               .moveY(
-                                  begin: -4,
-                                  end: 4,
-                                  duration: 2.seconds,
-                                  curve: Curves.easeInOut),
+                                begin: -4,
+                                end: 4,
+                                duration: 2.seconds,
+                                curve: Curves.easeInOut,
+                              ),
                         ),
-
-                        // Label
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
@@ -889,7 +1128,6 @@ class _ThreeDCategoryCard extends StatelessWidget {
 
 class _CategoryIconPanel extends StatelessWidget {
   final IconData icon;
-
   const _CategoryIconPanel({required this.icon});
 
   @override
@@ -907,14 +1145,14 @@ class _CategoryIconPanel extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
       ),
-      child: Icon(
-        icon,
-        color: AppColors.deepGreen,
-        size: 42,
-      ),
+      child: Icon(icon, color: AppColors.deepGreen, size: 42),
     );
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// QUICK ACTION BUTTON
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _QuickActionButton extends StatelessWidget {
   final String title;
@@ -938,9 +1176,9 @@ class _QuickActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.05),
+          color: color.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: color.withValues(alpha: 0.1)),
+          border: Border.all(color: color.withValues(alpha: 0.12)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -949,11 +1187,13 @@ class _QuickActionButton extends StatelessWidget {
             const SizedBox(height: 16),
             Text(title,
                 style: GoogleFonts.outfit(
-                    fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: color)),
             const SizedBox(height: 4),
             Text(subtitle,
-                style:
-                    const TextStyle(fontSize: 12, color: AppColors.lightText)),
+                style: const TextStyle(
+                    fontSize: 12, color: AppColors.lightText)),
           ],
         ),
       ),
@@ -961,21 +1201,25 @@ class _QuickActionButton extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// NEARBY BUSINESS CARD
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _NearbyBusinessCard extends ConsumerWidget {
   final Business business;
   const _NearbyBusinessCard({required this.business});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final streamedBusiness =
+    final streamed =
         ref.watch(businessStreamProvider(business.id)).valueOrNull;
-    final liveBusiness = streamedBusiness == null
+    final live = streamed == null
         ? business
-        : streamedBusiness.copyWith(
-            distance: streamedBusiness.distance ?? business.distance);
+        : streamed.copyWith(
+            distance: streamed.distance ?? business.distance);
 
     return GestureDetector(
-      onTap: () => context.push('/business-details', extra: liveBusiness),
+      onTap: () => context.push('/business-details', extra: live),
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
@@ -984,9 +1228,10 @@ class _NearbyBusinessCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 20,
-                offset: const Offset(0, 10)),
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
           ],
         ),
         child: Row(
@@ -998,7 +1243,7 @@ class _NearbyBusinessCard extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(16),
                 image: DecorationImage(
                   image: NetworkImage(
-                    liveBusiness.logoUrl ?? 'https://via.placeholder.com/150',
+                    live.logoUrl ?? 'https://via.placeholder.com/150',
                   ),
                   fit: BoxFit.cover,
                 ),
@@ -1009,26 +1254,25 @@ class _NearbyBusinessCard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    liveBusiness.name,
-                    style: GoogleFonts.outfit(
-                        fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+                  Text(live.name,
+                      style: GoogleFonts.outfit(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       const Icon(Icons.star, color: Colors.amber, size: 14),
                       const SizedBox(width: 4),
                       Text(
-                        '${liveBusiness.rating.toStringAsFixed(1)} (${liveBusiness.reviewCount})',
+                        '${live.rating.toStringAsFixed(1)} (${live.reviewCount})',
                         style: const TextStyle(
                             color: AppColors.lightText, fontSize: 12),
                       ),
                       const SizedBox(width: 8),
-                      const Icon(Icons.circle, size: 4, color: Colors.grey),
+                      const Icon(Icons.circle,
+                          size: 4, color: Colors.grey),
                       const SizedBox(width: 8),
                       Text(
-                        liveBusiness.category.name.toUpperCase(),
+                        live.category.name.toUpperCase(),
                         style: const TextStyle(
                             color: AppColors.primaryGreen,
                             fontSize: 10,
@@ -1059,9 +1303,10 @@ class _NearbyPlaceholder extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 20,
-              offset: const Offset(0, 10)),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
       child: Row(
@@ -1085,8 +1330,10 @@ class _NearbyPlaceholder extends StatelessWidget {
                     style: GoogleFonts.outfit(
                         fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
-                const Text('Scan for shops in your local arcade or street.',
-                    style: TextStyle(color: AppColors.lightText, fontSize: 13)),
+                const Text(
+                    'Scan for shops in your local arcade or street.',
+                    style: TextStyle(
+                        color: AppColors.lightText, fontSize: 13)),
               ],
             ),
           ),

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/app_toast.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/core/services/b2b_service.dart';
 import 'package:ifind/core/utils/distance_calculator.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
@@ -390,7 +391,7 @@ class MyShopScreen extends ConsumerWidget {
             ],
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: IFindLoaderInline(size: 60)),
         error: (e, s) => _buildShopLoadError(context, ref, user.id),
       ),
     );
@@ -827,9 +828,9 @@ class MyShopScreen extends ConsumerWidget {
               ),
             );
           },
-          loading: () => Container(
-            padding: const EdgeInsets.symmetric(vertical: 40),
-            child: const Center(child: CircularProgressIndicator()),
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 40),
+            child: Center(child: IFindLoaderInline(size: 60)),
           ),
           error: (e, s) => Container(
             padding: const EdgeInsets.all(20),
@@ -1251,7 +1252,7 @@ class MyShopScreen extends ConsumerWidget {
                 },
                 loading: () => const Padding(
                   padding: EdgeInsets.symmetric(vertical: 18),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(child: IFindLoaderInline(size: 50)),
                 ),
                 error: (e, s) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 18),

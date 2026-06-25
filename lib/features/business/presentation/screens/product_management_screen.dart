@@ -6,6 +6,7 @@ import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/core/widgets/empty_state_widget.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:ifind/features/products/presentation/providers/product_provider.dart';
 import 'package:ifind/features/products/domain/entities/product.dart';
@@ -94,7 +95,7 @@ class ProductManagementScreen extends ConsumerWidget {
             ),
           ],
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: IFindLoaderInline(size: 60)),
         error: (e, s) => ErrorRetryWidget(message: friendlyError(e), onRetry: () => ref.invalidate(businessProductsProvider(businessId))),
       ),
       floatingActionButton: FloatingActionButton.extended(

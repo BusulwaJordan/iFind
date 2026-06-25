@@ -7,6 +7,7 @@ import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/core/widgets/empty_state_widget.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
@@ -122,9 +123,7 @@ class LeadsDashboardScreen extends ConsumerWidget {
                   ),
                 ),
                 if (myBusinessesAsync.isLoading)
-                  const SliverFillRemaining(
-                    child: Center(child: CircularProgressIndicator()),
-                  )
+                  const SliverFillRemaining(child: IFindLoaderInline())
                 else if (business == null)
                   const SliverFillRemaining(
                     child: EmptyStateWidget(
@@ -206,7 +205,7 @@ class LeadsDashboardScreen extends ConsumerWidget {
                       );
                     },
                     loading: () => const SliverFillRemaining(
-                        child: Center(child: CircularProgressIndicator())),
+                        child: IFindLoaderInline()),
                     error: (e, s) => SliverFillRemaining(
                         child: ErrorRetryWidget(message: friendlyError(e))),
                   ),

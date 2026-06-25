@@ -6,6 +6,7 @@ import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/features/portfolio/presentation/providers/comment_provider.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class CommentsBottomSheet extends ConsumerStatefulWidget {
@@ -225,7 +226,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                   },
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: IFindLoaderInline(size: 60)),
               error: (e, s) => Center(
                 child: Text('Error loading comments: $e'),
               ),

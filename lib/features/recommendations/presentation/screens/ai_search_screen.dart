@@ -9,6 +9,7 @@ import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:ifind/features/recommendations/presentation/providers/recommendation_providers.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 
 class AiSearchScreen extends ConsumerWidget {
   const AiSearchScreen({super.key});
@@ -25,25 +26,14 @@ class AiSearchScreen extends ConsumerWidget {
             expandedHeight: 180,
             pinned: true,
             stretch: true,
-            backgroundColor: AppColors.deepGreen,
-            leading: IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.arrow_back_ios_new_rounded,
-                    color: Colors.white, size: 16),
-              ),
-              onPressed: () => context.pop(),
-            ),
+            automaticallyImplyLeading: false,
+            backgroundColor: const Color(0xFF003D2B),
             flexibleSpace: FlexibleSpaceBar(
               stretchModes: const [StretchMode.zoomBackground],
               background: Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [AppColors.deepGreen, AppColors.primaryGreen],
+                    colors: [Color(0xFF003D2B), Color(0xFF006241), Color(0xFF0B7A5A)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -302,11 +292,11 @@ class AiSearchScreen extends ConsumerWidget {
             },
             loading: () => const SizedBox(
               height: 200,
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(child: IFindLoaderInline(size: 70)),
             ),
             error: (e, _) => const SizedBox.shrink(),
           ),
-          const SizedBox(height: 40),
+          SizedBox(height: MediaQuery.of(context).padding.bottom + 96),
         ],
       ),
     );
@@ -370,7 +360,7 @@ class AiSearchScreen extends ConsumerWidget {
                   .toList(),
             );
           },
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Center(child: IFindLoaderInline(size: 60)),
           error: (_, __) => const SizedBox.shrink(),
         ),
       ],
@@ -421,18 +411,7 @@ class AiSearchScreen extends ConsumerWidget {
           icon: Icons.auto_awesome,
         ),
         const SizedBox(height: 24),
-        const Center(
-          child: Column(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 12),
-              Text(
-                'Loading your personalized picks...',
-                style: TextStyle(color: Colors.grey, fontSize: 13),
-              ),
-            ],
-          ),
-        ),
+        const IFindLoaderInline(size: 80, label: 'Personalising picks…'),
         const SizedBox(height: 24),
       ],
     );

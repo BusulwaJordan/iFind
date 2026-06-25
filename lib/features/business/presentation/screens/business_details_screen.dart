@@ -6,6 +6,7 @@ import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/error_retry_widget.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:ifind/features/business/presentation/providers/b2b_provider.dart';
@@ -304,8 +305,7 @@ class BusinessDetailScreen extends ConsumerWidget {
           bottomNavigationBar: _buildBottomBar(context, ref, displayBusiness),
         );
       },
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () => const IFindLoadingPage(),
       error: (e, s) => Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.white,
@@ -748,7 +748,7 @@ class _PortfolioTab extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: IFindLoaderInline(size: 60)),
       error: (e, s) => ErrorRetryWidget(message: friendlyError(e), slim: true),
     );
   }
@@ -895,7 +895,7 @@ class _ReviewsTab extends ConsumerWidget {
                 ),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(child: IFindLoaderInline(size: 60)),
             error: (e, s) => ErrorRetryWidget(message: friendlyError(e), slim: true),
           ),
         ),

@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/app_toast.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
@@ -564,7 +565,7 @@ class _ProductItemViewState extends ConsumerState<_ProductItemView> {
                 ),
               )
             else
-              const Center(child: CircularProgressIndicator()),
+              const Center(child: IFindLoaderInline(size: 60)),
             if (_videoController != null && !_videoController!.value.isPlaying)
               Center(
                 child: Container(

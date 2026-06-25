@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/theme/app_theme.dart';
 import 'package:ifind/core/router/app_router.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/core/widgets/startup_location_prompt.dart';
 import 'package:ifind/core/widgets/startup_update_prompt.dart';
 
@@ -56,10 +57,7 @@ class LoadingScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation(AppColors.primaryGreen),
-                  ),
+                  const IFindLoader(size: 60, showLabel: false),
                 ],
               ),
             );

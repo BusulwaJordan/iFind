@@ -119,55 +119,83 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       body: CustomScrollView(
         slivers: [
-          SliverAppBar(
-            expandedHeight: 200,
-            pinned: true,
-            backgroundColor: AppColors.deepGreen,
-            leading: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: CircleAvatar(
-                backgroundColor: Colors.white.withValues(alpha: 0.2),
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
+          SliverToBoxAdapter(
+            child: ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(bottom: Radius.circular(36)),
+              child: Container(
+                padding: EdgeInsets.fromLTRB(
+                    20, MediaQuery.of(context).padding.top + 14, 20, 36),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
+                    colors: [
+                      Color(0xFF003D2B),
+                      Color(0xFF006241),
+                      Color(0xFF0B7A5A)
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [AppColors.deepGreen, AppColors.primaryGreen],
                   ),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: Stack(
                   children: [
-                    const SizedBox(height: 40),
-                    const Icon(Icons.campaign_rounded,
-                        size: 48, color: Colors.amber),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Post a Need',
-                      style: GoogleFonts.outfit(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                    Positioned(
+                      top: -20,
+                      right: -20,
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          shape: BoxShape.circle,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32),
-                      child: Text(
-                        'Tell us what you need — AI finds you the best match nearby.',
-                        style: GoogleFonts.outfit(
-                          fontSize: 13,
-                          color: Colors.white70,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () => Navigator.pop(context),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                    Icons.arrow_back_ios_new_rounded,
+                                    color: Colors.white,
+                                    size: 16),
+                              ),
+                            ),
+                          ],
+                        ).animate().fadeIn(duration: 300.ms),
+                        const SizedBox(height: 20),
+                        const Icon(Icons.campaign_rounded,
+                            size: 44, color: Colors.amber)
+                            .animate()
+                            .scale(delay: 100.ms, duration: 500.ms, curve: Curves.elasticOut,
+                                begin: const Offset(0.6, 0.6)),
+                        const SizedBox(height: 12),
+                        Text('Post a Need',
+                            style: GoogleFonts.outfit(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w900))
+                            .animate()
+                            .fadeIn(delay: 150.ms)
+                            .slideY(begin: 0.2),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Tell us what you need — AI finds the best match nearby.',
+                          style: GoogleFonts.outfit(
+                              color: Colors.white.withValues(alpha: 0.75),
+                              fontSize: 13,
+                              height: 1.5),
+                        ).animate().fadeIn(delay: 220.ms),
+                      ],
                     ),
                   ],
                 ),

@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/utils/error_utils.dart';
@@ -11,7 +12,6 @@ import 'package:ifind/core/services/interaction_service.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
-import 'package:ifind/features/business/presentation/screens/business_details_screen.dart';
 import 'package:ifind/core/widgets/loading_widget.dart';
 import 'package:ifind/core/widgets/empty_state_widget.dart';
 import 'package:ifind/core/utils/distance_calculator.dart';
@@ -209,7 +209,7 @@ class _BusinessDiscoveryScreenState
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [AppColors.deepGreen, AppColors.primaryGreen],
+              colors: [Color(0xFF003D2B), Color(0xFF006241), Color(0xFF0B7A5A)],
             ),
           ),
           child: Stack(
@@ -542,11 +542,7 @@ class _BusinessGridTile extends ConsumerWidget {
                 type: InteractionType.searchClick,
               );
         }
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => BusinessDetailScreen(business: liveBusiness)),
-        );
+        context.push('/business-details', extra: liveBusiness);
       },
       child: Container(
         decoration: BoxDecoration(

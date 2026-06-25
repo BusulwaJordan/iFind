@@ -6,6 +6,7 @@ import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/widgets/error_retry_widget.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:ifind/features/portfolio/presentation/providers/portfolio_provider.dart';
@@ -421,7 +422,7 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const CircularProgressIndicator(color: Colors.white),
+                          const IFindLoader(size: 60, showLabel: false),
                           const SizedBox(height: 16),
                           Text('Uploading to iFind...',
                               style: GoogleFonts.outfit(
@@ -435,7 +436,7 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: IFindLoaderInline(size: 60)),
         error: (e, s) => ErrorRetryWidget(message: friendlyError(e), onRetry: () => ref.invalidate(portfolioProvider(widget.business.id))),
       ),
       floatingActionButton: _buildUploadFAB(),

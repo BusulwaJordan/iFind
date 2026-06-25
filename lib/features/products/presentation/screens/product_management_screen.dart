@@ -5,6 +5,7 @@ import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/widgets/error_retry_widget.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
@@ -111,11 +112,11 @@ class _ProductManagementScreenState
                 ),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => const Center(child: IFindLoaderInline(size: 60)),
             error: (e, s) => ErrorRetryWidget(message: friendlyError(e), slim: true),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: IFindLoaderInline(size: 60)),
         error: (e, s) => ErrorRetryWidget(message: friendlyError(e)),
       ),
       floatingActionButton: myBusinessesAsync.maybeWhen(

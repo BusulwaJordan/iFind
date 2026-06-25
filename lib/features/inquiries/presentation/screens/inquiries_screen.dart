@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/error_retry_widget.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
@@ -152,8 +153,7 @@ class InquiriesScreen extends ConsumerWidget {
 
                 return _InquiryList(businessId: businesses.first.id);
               },
-              loading: () => const SliverFillRemaining(
-                  child: Center(child: CircularProgressIndicator())),
+              loading: () => const SliverFillRemaining(child: IFindLoaderInline()),
               error: (e, _) => SliverFillRemaining(
                 child: ErrorRetryWidget(message: friendlyError(e)),
               ),
@@ -216,8 +216,7 @@ class _InquiryList extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const SliverFillRemaining(
-          child: Center(child: CircularProgressIndicator())),
+      loading: () => const SliverFillRemaining(child: IFindLoaderInline()),
       error: (e, _) =>
           SliverFillRemaining(child: ErrorRetryWidget(message: friendlyError(e))),
     );

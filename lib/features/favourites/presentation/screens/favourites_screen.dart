@@ -7,6 +7,7 @@ import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/widgets/error_retry_widget.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/core/utils/distance_calculator.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/favourites/presentation/providers/favourites_provider.dart';
@@ -22,71 +23,81 @@ class FavouritesScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
         slivers: [
-          SliverAppBar(
-            expandedHeight: 140,
-            pinned: true,
-            stretch: true,
-            backgroundColor: AppColors.deepGreen,
-            leading: IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.arrow_back_ios_new_rounded,
-                    color: Colors.white, size: 16),
-              ),
-              onPressed: () => context.pop(),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
+          // ── Hero header ────────────────────────────────────────────────
+          SliverToBoxAdapter(
+            child: ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(bottom: Radius.circular(36)),
+              child: Container(
+                padding: EdgeInsets.fromLTRB(
+                    20, MediaQuery.of(context).padding.top + 14, 20, 32),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [AppColors.deepGreen, AppColors.primaryGreen],
+                    colors: [
+                      Color(0xFF003D2B),
+                      Color(0xFF006241),
+                      Color(0xFF0B7A5A)
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.bookmark_rounded,
-                              color: Colors.amber, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            'MY FAVOURITES',
-                            style: GoogleFonts.outfit(
-                              color: Colors.white70,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Saved Businesses',
-                        style: GoogleFonts.outfit(
-                          color: Colors.white,
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
+                child: Stack(
+                  children: [
+                    Positioned(
+                      top: -20,
+                      right: -20,
+                      child: Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          shape: BoxShape.circle,
                         ),
                       ),
-                      Text(
-                        '${savedIds.length} saved',
-                        style: GoogleFonts.outfit(
-                            color: Colors.white70, fontSize: 13),
-                      ),
-                    ],
-                  ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () => context.pop(),
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                    Icons.arrow_back_ios_new_rounded,
+                                    color: Colors.white,
+                                    size: 16),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Icon(Icons.bookmark_rounded,
+                                color: Colors.amber, size: 22),
+                            const SizedBox(width: 8),
+                            Text('Favourites',
+                                style: GoogleFonts.outfit(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w900)),
+                          ],
+                        ).animate().fadeIn(duration: 400.ms),
+                        const SizedBox(height: 16),
+                        Text(
+                          '${savedIds.length} saved business${savedIds.length == 1 ? '' : 'es'}',
+                          style: GoogleFonts.outfit(
+                              color: Colors.white.withValues(alpha: 0.75),
+                              fontSize: 14),
+                        ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.2),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -155,8 +166,7 @@ class FavouritesScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              loading: () => const SliverFillRemaining(
-                  child: Center(child: CircularProgressIndicator())),
+              loading: () => const SliverFillRemaining(child: IFindLoaderInline()),
               error: (e, _) => SliverFillRemaining(
                 child: ErrorRetryWidget(message: friendlyError(e)),
               ),

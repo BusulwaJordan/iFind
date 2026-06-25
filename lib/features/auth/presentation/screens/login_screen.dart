@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
-import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/constants/app_strings.dart';
 import 'package:ifind/core/utils/validators.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/auth/presentation/providers/pending_registration_provider.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
-/// Login Screen with glassmorphism design
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -20,81 +21,71 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
+  final _emailCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  bool _obscurePass = true;
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
-      await ref.read(authProvider.notifier).login(
-            _emailController.text.trim(),
-            _passwordController.text,
-          );
+  // ── Auth logic (unchanged) ─────────────────────────────────────────────────
 
-      if (mounted) {
-        final authState = ref.read(authProvider);
-        authState.whenOrNull(
-          data: (user) {
-            if (user != null) {
-              ref.read(loginWelcomeProvider.notifier).state =
-                  'Welcome back, ${user.fullName.split(' ').first}!';
-            }
-          },
-          error: (error, _) {
-            final errorStr = error.toString().toLowerCase();
-            // Intercept email not confirmed error with a friendly, actionable dialog
-            if (errorStr.contains('email not confirmed') ||
-                errorStr.contains('email_not_confirmed')) {
-              final email = _emailController.text.trim();
-              final password = _passwordController.text;
-              ref.read(pendingRegistrationProvider.notifier).state =
-                  PendingRegistration(email: email, password: password);
-              context.go('/confirmation?email=${Uri.encodeComponent(email)}');
-            } else if (errorStr.contains('invalid login credentials') ||
-                errorStr.contains('invalid credentials') ||
-                errorStr.contains('user not found')) {
-              _showCreateAccountDialog();
-            } else {
-              AppToast.show(context, error.toString(), type: ToastType.error);
-            }
-          },
-          // On success, GoRouter intercepts auth state change and redirects automatically
+  Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+    await ref.read(authProvider.notifier).login(
+          _emailCtrl.text.trim(),
+          _passCtrl.text,
         );
-      }
-    }
+    if (!mounted) return;
+    final authState = ref.read(authProvider);
+    authState.whenOrNull(
+      data: (user) {
+        if (user != null) {
+          ref.read(loginWelcomeProvider.notifier).state =
+              'Welcome back, ${user.fullName.split(' ').first}!';
+        }
+      },
+      error: (error, _) {
+        final msg = error.toString().toLowerCase();
+        if (msg.contains('email not confirmed') ||
+            msg.contains('email_not_confirmed')) {
+          final email = _emailCtrl.text.trim();
+          ref.read(pendingRegistrationProvider.notifier).state =
+              PendingRegistration(email: email, password: _passCtrl.text);
+          context.go('/confirmation?email=${Uri.encodeComponent(email)}');
+        } else if (msg.contains('invalid login credentials') ||
+            msg.contains('invalid credentials') ||
+            msg.contains('user not found')) {
+          _showCreateAccountDialog();
+        } else {
+          AppToast.show(context, error.toString(), type: ToastType.error);
+        }
+      },
+    );
   }
 
   Future<void> _showCreateAccountDialog() async {
-    final email = _emailController.text.trim();
-
+    final email = _emailCtrl.text.trim();
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        icon: const Icon(
-          Icons.person_add_alt_1_rounded,
-          color: AppColors.primaryGreen,
-        ),
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.person_add_alt_1_rounded,
+            color: AppColors.primaryGreen),
         title: const Text('Create your iFind account'),
-        content: Text(
-          email.isEmpty
-              ? 'We could not find an account for those details. Register first so we can set up your customer or business owner profile.'
-              : 'We could not find an account for $email. Register first so we can set up your customer or business owner profile.',
-        ),
+        content: Text(email.isEmpty
+            ? 'No account found. Register first to set up your profile.'
+            : 'No account found for $email. Register to get started.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Try again'),
-          ),
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Try again')),
           FilledButton.icon(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.pop(ctx);
               context.go('/register');
             },
             icon: const Icon(Icons.app_registration_rounded),
@@ -107,289 +98,440 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _handleGoogleLogin() async {
     await ref.read(authProvider.notifier).loginWithGoogle();
-    if (mounted) {
-      final authState = ref.read(authProvider);
-      authState.whenOrNull(
-        error: (error, _) {
-          AppToast.show(context, 'Google Sign-In failed: ${error.toString()}', type: ToastType.error);
-        },
-      );
-    }
+    if (!mounted) return;
+    final authState = ref.read(authProvider);
+    authState.whenOrNull(
+      error: (e, _) =>
+          AppToast.show(context, 'Google Sign-In failed', type: ToastType.error),
+    );
   }
+
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authProvider);
-    final isLoading = authState.isLoading;
+    final size = MediaQuery.of(context).size;
+    final isLoading = ref.watch(authProvider).isLoading;
+    final heroH = size.height * 0.42;
 
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [
-              AppColors.deepGreen,
-              AppColors.primaryGreen,
-              Color(0xFFF8FAFB),
-              Color(0xFFF8FAFB),
-            ],
-            stops: [0, 0.2, 0.5, 1],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Logo/Title
-                    Hero(
-                      tag: 'logo',
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.location_on_rounded,
-                          size: 60,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Welcome Back',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Sign in to continue your discovery',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        resizeToAvoidBottomInset: true,
+        backgroundColor: AppColors.deepGreen,
+        body: Stack(
+          children: [
+            // ── Full-screen background image ──────────────────────────────
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/Modern Workspace Setup.png',
+                fit: BoxFit.cover,
+              ).animate().fadeIn(duration: 700.ms),
+            ),
 
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 30,
-                            offset: const Offset(0, 15),
-                          ),
+            // ── Green gradient overlay ────────────────────────────────────
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      const Color(0xFF064E3B).withValues(alpha: 0.92),
+                      const Color(0xFF10B981).withValues(alpha: 0.50),
+                      const Color(0xFF064E3B).withValues(alpha: 0.96),
+                    ],
+                    stops: const [0.0, 0.42, 1.0],
+                  ),
+                ),
+              ),
+            ),
+
+            // ── Scrollable content ────────────────────────────────────────
+            SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                children: [
+                  // Hero section
+                  SizedBox(
+                    height: heroH,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        top: MediaQuery.of(context).padding.top + 24,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Logo icon
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                  width: 1.5),
+                            ),
+                            child: const Icon(Icons.search_rounded,
+                                size: 36, color: Colors.white),
+                          )
+                              .animate()
+                              .scale(
+                                  delay: 200.ms,
+                                  duration: 700.ms,
+                                  curve: Curves.elasticOut),
+                          const SizedBox(height: 14),
+                          Text(
+                            'iFind',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 34,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -1,
+                            ),
+                          )
+                              .animate()
+                              .fadeIn(delay: 300.ms, duration: 500.ms)
+                              .slideY(begin: -0.25),
+                          const SizedBox(height: 10),
+                          Text(
+                            'Welcome Back',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.3,
+                            ),
+                          )
+                              .animate()
+                              .fadeIn(delay: 420.ms, duration: 500.ms)
+                              .slideY(begin: 0.2),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Sign in to continue your discovery',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white.withValues(alpha: 0.72),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                            ),
+                          )
+                              .animate()
+                              .fadeIn(delay: 520.ms, duration: 500.ms),
                         ],
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
+                    ),
+                  ),
+
+                  // ── White form card ───────────────────────────────────
+                  Container(
+                    constraints:
+                        BoxConstraints(minHeight: size.height * 0.65),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(36)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(28, 36, 28, 48),
+                      child: Form(
+                        key: _formKey,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            // Card heading
                             Text(
-                              'Login',
+                              'Sign In',
                               style: GoogleFonts.outfit(
-                                fontSize: 24,
+                                fontSize: 26,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.deepGreen,
+                                letterSpacing: -0.4,
                               ),
-                            ),
+                            ).animate().fadeIn(delay: 350.ms, duration: 500.ms),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Enter your credentials to access your account',
+                              style: GoogleFonts.outfit(
+                                  fontSize: 13, color: Colors.grey[500]),
+                            ).animate().fadeIn(delay: 400.ms, duration: 500.ms),
                             const SizedBox(height: 32),
 
-                            // Email Field
+                            // Email
                             TextFormField(
-                              controller: _emailController,
+                              controller: _emailCtrl,
                               keyboardType: TextInputType.emailAddress,
-                              decoration: InputDecoration(
-                                labelText: 'Email Address',
-                                labelStyle:
-                                    GoogleFonts.outfit(color: Colors.grey[600]),
-                                prefixIcon: const Icon(
-                                    Icons.alternate_email_rounded,
-                                    size: 20),
-                              ),
+                              textInputAction: TextInputAction.next,
+                              decoration: _field(
+                                  label: 'Email Address',
+                                  icon: Icons.alternate_email_rounded),
                               validator: Validators.validateEmail,
                               enabled: !isLoading,
-                            ),
-                            const SizedBox(height: 20),
+                            )
+                                .animate()
+                                .fadeIn(delay: 460.ms, duration: 450.ms)
+                                .slideX(begin: -0.06),
+                            const SizedBox(height: 16),
 
-                            // Password Field
+                            // Password
                             TextFormField(
-                              controller: _passwordController,
-                              obscureText: _obscurePassword,
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                labelStyle:
-                                    GoogleFonts.outfit(color: Colors.grey[600]),
-                                prefixIcon: const Icon(
-                                    Icons.lock_outline_rounded,
-                                    size: 20),
-                                suffixIcon: IconButton(
+                              controller: _passCtrl,
+                              obscureText: _obscurePass,
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) =>
+                                  isLoading ? null : _handleLogin(),
+                              decoration: _field(
+                                label: 'Password',
+                                icon: Icons.lock_outline_rounded,
+                                suffix: IconButton(
                                   icon: Icon(
-                                    _obscurePassword
+                                    _obscurePass
                                         ? Icons.visibility_rounded
                                         : Icons.visibility_off_rounded,
+                                    color: Colors.grey[400],
                                     size: 20,
                                   ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscurePassword = !_obscurePassword;
-                                    });
-                                  },
+                                  onPressed: () => setState(
+                                      () => _obscurePass = !_obscurePass),
                                 ),
                               ),
                               validator: Validators.validatePassword,
                               enabled: !isLoading,
-                            ),
+                            )
+                                .animate()
+                                .fadeIn(delay: 540.ms, duration: 450.ms)
+                                .slideX(begin: -0.06),
                             const SizedBox(height: 32),
 
-                            // Login Button
-                            SizedBox(
-                              height: 56,
-                              child: ElevatedButton(
-                                onPressed: isLoading ? null : _handleLogin,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primaryGreen,
-                                  foregroundColor: Colors.white,
-                                  elevation: 8,
-                                  shadowColor: AppColors.primaryGreen
-                                      .withValues(alpha: 0.4),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                child: isLoading
-                                    ? const SizedBox(
-                                        height: 24,
-                                        width: 24,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                  Colors.white),
-                                        ),
-                                      )
-                                    : Text(
-                                        'SIGN IN',
-                                        style: GoogleFonts.outfit(
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: 1.2,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Divider with OR
-                            Row(
-                              children: [
-                                const Expanded(child: Divider()),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16),
-                                  child: Text(
-                                    'OR',
-                                    style: GoogleFonts.outfit(
-                                      color: Colors.grey[500],
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                                const Expanded(child: Divider()),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Google Sign-In Button
-                            SizedBox(
-                              height: 56,
-                              child: OutlinedButton(
-                                onPressed:
-                                    isLoading ? null : _handleGoogleLogin,
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(
-                                      color: Colors.grey[300]!, width: 1.5),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  backgroundColor: Colors.white,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    SvgPicture.network(
-                                      'https://www.svgrepo.com/show/475656/google-color.svg',
-                                      height: 22,
-                                      width: 22,
-                                      placeholderBuilder: (_) => const Icon(
-                                          Icons.g_mobiledata,
-                                          size: 22),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'Continue with Google',
-                                      style: GoogleFonts.outfit(
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.grey[800],
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                            // Sign In button
+                            _SignInButton(
+                              isLoading: isLoading,
+                              onPressed: _handleLogin,
+                            )
+                                .animate()
+                                .fadeIn(delay: 620.ms, duration: 450.ms)
+                                .slideY(begin: 0.12),
                             const SizedBox(height: 24),
 
-                            // Register Link
+                            // OR divider
+                            Row(
+                              children: [
+                                const Expanded(
+                                    child: Divider(thickness: 1)),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14),
+                                  child: Text('OR',
+                                      style: GoogleFonts.outfit(
+                                          color: Colors.grey[400],
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12)),
+                                ),
+                                const Expanded(
+                                    child: Divider(thickness: 1)),
+                              ],
+                            )
+                                .animate()
+                                .fadeIn(delay: 680.ms, duration: 400.ms),
+                            const SizedBox(height: 20),
+
+                            // Google button
+                            _GoogleButton(
+                              label: 'Continue with Google',
+                              onPressed:
+                                  isLoading ? null : _handleGoogleLogin,
+                            )
+                                .animate()
+                                .fadeIn(delay: 720.ms, duration: 400.ms),
+                            const SizedBox(height: 28),
+
+                            // Register link
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
                                   AppStrings.dontHaveAccount,
                                   style: GoogleFonts.outfit(
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 14),
                                 ),
-                                TextButton(
-                                  onPressed: isLoading
+                                GestureDetector(
+                                  onTap: isLoading
                                       ? null
                                       : () => context.go('/register'),
                                   child: Text(
-                                    AppStrings.register,
+                                    '  Create one',
                                     style: GoogleFonts.outfit(
                                       color: AppColors.primaryGreen,
                                       fontWeight: FontWeight.bold,
+                                      fontSize: 14,
                                     ),
                                   ),
                                 ),
                               ],
-                            ),
+                            )
+                                .animate()
+                                .fadeIn(delay: 780.ms, duration: 400.ms),
                           ],
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  )
+                      .animate()
+                      .slideY(
+                          begin: 0.12,
+                          delay: 280.ms,
+                          duration: 650.ms,
+                          curve: Curves.easeOutCubic)
+                      .fadeIn(delay: 280.ms, duration: 500.ms),
+                ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _field({
+    required String label,
+    required IconData icon,
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.outfit(color: Colors.grey[500], fontSize: 14),
+      prefixIcon: Icon(icon, color: AppColors.primaryGreen, size: 20),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: const Color(0xFFF0FDF4),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide:
+            const BorderSide(color: AppColors.primaryGreen, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide:
+            const BorderSide(color: AppColors.error, width: 1.5),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: AppColors.error, width: 2),
+      ),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+    );
+  }
+}
+
+// ── Sign In button ────────────────────────────────────────────────────────────
+
+class _SignInButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback onPressed;
+  const _SignInButton({required this.isLoading, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 58,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.primaryGreen, AppColors.deepGreen],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primaryGreen.withValues(alpha: 0.4),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: ElevatedButton(
+          onPressed: isLoading ? null : onPressed,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.transparent,
+            shadowColor: Colors.transparent,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18)),
+          ),
+          child: isLoading
+              ? const SizedBox(
+                  height: 22,
+                  width: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : Text(
+                  'Sign In',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Google button ─────────────────────────────────────────────────────────────
+
+class _GoogleButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+  const _GoogleButton({required this.label, this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 56,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: Colors.grey.shade200, width: 1.5),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SvgPicture.network(
+              'https://www.svgrepo.com/show/475656/google-color.svg',
+              height: 20,
+              width: 20,
+              placeholderBuilder: (_) =>
+                  const Icon(Icons.g_mobiledata, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
+                fontSize: 15,
+              ),
+            ),
+          ],
         ),
       ),
     );
