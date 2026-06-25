@@ -28,6 +28,7 @@ import 'package:ifind/features/recommendations/presentation/screens/ai_search_sc
 import 'package:ifind/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:ifind/app.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
+import 'package:ifind/features/business/presentation/screens/b2b_matches_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -112,6 +113,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             requiresConfirmation: requiresConfirmation,
           );
         },
+      ),
+      GoRoute(
+        path: '/b2b-matches',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const B2bMatchesScreen(),
       ),
       GoRoute(
         path: '/email-verified',

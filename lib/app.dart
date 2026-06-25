@@ -5,6 +5,7 @@ import 'package:ifind/core/theme/app_theme.dart';
 import 'package:ifind/core/router/app_router.dart';
 import 'package:ifind/core/widgets/startup_location_prompt.dart';
 import 'package:ifind/core/widgets/startup_update_prompt.dart';
+import 'package:ifind/core/providers/theme_provider.dart'; // <-- ADD THIS
 
 /// Main App Entry Point
 class MyApp extends ConsumerWidget {
@@ -13,10 +14,13 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final goRouter = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeProvider); // <-- ADD THIS
 
     return MaterialApp.router(
       title: 'iFind',
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme, // <-- ADD THIS
+      themeMode: themeMode, // <-- ADD THIS
       debugShowCheckedModeBanner: false,
       routerConfig: goRouter,
       builder: (context, child) => StartupUpdatePrompt(
