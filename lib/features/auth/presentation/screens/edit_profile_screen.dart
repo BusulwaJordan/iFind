@@ -1,9 +1,10 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:ifind/features/auth/domain/entities/user.dart';
@@ -19,7 +20,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
-  File? _imageFile;
+  Uint8List? _imageBytes;
+  String? _imageExt;
   String? _imageUrl;
   bool _isLoading = false;
 
@@ -41,67 +43,68 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() {
-        _imageFile = File(picked.path);
-      });
-    }
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    setState(() {
+      _imageBytes = bytes;
+      _imageExt = picked.mimeType?.split('/').last.toLowerCase()
+          ?? (picked.name.contains('.')
+              ? picked.name.split('.').last.toLowerCase()
+              : 'jpg');
+    });
   }
 
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
-
     try {
       final user = ref.read(currentUserProvider);
       if (user == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You are not logged in')),
-        );
-        setState(() => _isLoading = false);
+        AppToast.show(context, 'You are not signed in', type: ToastType.error);
         return;
       }
 
-      // Upload image if selected
       String? uploadedUrl = _imageUrl;
-      if (_imageFile != null) {
-        final supabase = Supabase.instance.client;
-        final fileExt = _imageFile!.path.split('.').last;
-        final path = 'avatars/${user.id}.$fileExt';
-        await supabase.storage.from('profile_images').upload(
-          path,
-          _imageFile!,
-          fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
-        );
-        uploadedUrl = supabase.storage.from('profile_images').getPublicUrl(path);
+      if (_imageBytes != null) {
+        try {
+          final supabase = Supabase.instance.client;
+          final ext = _imageExt ?? 'jpg';
+          final path = 'avatars/${user.id}.$ext';
+          await supabase.storage.from('profile_images').uploadBinary(
+            path,
+            _imageBytes!,
+            fileOptions: FileOptions(contentType: 'image/$ext', upsert: true),
+          );
+          uploadedUrl = supabase.storage.from('profile_images').getPublicUrl(path);
+        } catch (storageErr) {
+          if (mounted) {
+            AppToast.show(context, 'Photo upload failed: $storageErr', type: ToastType.error);
+          }
+        }
       }
 
-      // Update user metadata
       final supabase = Supabase.instance.client;
+      final phone = _phoneController.text.trim();
+      await supabase.from('users').update({
+        'full_name': _nameController.text.trim(),
+        'phone': phone.isEmpty ? null : phone,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', user.id).select().single();
+
       await supabase.auth.updateUser(
-        UserAttributes(
-          data: {
-            'full_name': _nameController.text.trim(),
-            'phone': _phoneController.text.trim(),
-            'avatar_url': uploadedUrl,
-          },
-        ),
+        UserAttributes(data: {
+          'full_name': _nameController.text.trim(),
+          if (uploadedUrl != null) 'avatar_url': uploadedUrl,
+        }),
       );
 
-      // Refresh user state
       await ref.read(authProvider.notifier).refreshCurrentUser();
-
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully')),
-      );
+      AppToast.show(context, 'Profile updated', type: ToastType.success);
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      if (mounted) AppToast.show(context, 'Error: $e', type: ToastType.error);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -132,23 +135,23 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           key: _formKey,
           child: Column(
             children: [
-              // ---- Avatar (web-compatible) ----
               GestureDetector(
                 onTap: _pickImage,
-                child: _buildAvatar(user),
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: _buildAvatar(user),
+                ),
               ),
               const SizedBox(height: 24),
-              // Name
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(
                   labelText: 'Full Name',
                   prefixIcon: Icon(Icons.person_outline),
                 ),
-                validator: (value) => value == null || value.isEmpty ? 'Please enter your name' : null,
+                validator: (v) => v == null || v.isEmpty ? 'Please enter your name' : null,
               ),
               const SizedBox(height: 16),
-              // Phone
               TextFormField(
                 controller: _phoneController,
                 decoration: const InputDecoration(
@@ -157,15 +160,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Email (read-only)
               TextFormField(
                 initialValue: user?.email ?? '',
                 enabled: false,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Email',
-                  prefixIcon: Icon(Icons.email_outlined),
+                  prefixIcon: const Icon(Icons.email_outlined),
                   filled: true,
-                  fillColor: Colors.grey,
+                  fillColor: Colors.grey.shade100,
                 ),
               ),
             ],
@@ -175,86 +177,39 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
   }
 
-  // ---- Web-compatible avatar builder ----
   Widget _buildAvatar(User? user) {
-    if (_imageFile != null) {
-      return Stack(
-        children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: Colors.grey[200],
-            child: ClipOval(
-              child: Image.file(
-                _imageFile!,
-                width: 100,
-                height: 100,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 50),
-              ),
+    final ImageProvider? image = _imageBytes != null
+        ? MemoryImage(_imageBytes!) as ImageProvider
+        : (_imageUrl != null && _imageUrl!.isNotEmpty)
+            ? NetworkImage(_imageUrl!) as ImageProvider
+            : null;
+
+    return Stack(
+      children: [
+        CircleAvatar(
+          radius: 50,
+          backgroundColor: Colors.grey.shade200,
+          backgroundImage: image,
+          child: image == null
+              ? Text(
+                  user?.fullName.isNotEmpty == true ? user!.fullName[0].toUpperCase() : 'U',
+                  style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+                )
+              : null,
+        ),
+        Positioned(
+          bottom: 0,
+          right: 0,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: AppColors.primaryGreen,
+              shape: BoxShape.circle,
             ),
+            child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
           ),
-          Positioned(
-            bottom: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: AppColors.primaryGreen,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-            ),
-          ),
-        ],
-      );
-    } else if (_imageUrl != null && _imageUrl!.isNotEmpty) {
-      return Stack(
-        children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: Colors.grey[200],
-            backgroundImage: NetworkImage(_imageUrl!),
-            onBackgroundImageError: (_, __) {},
-          ),
-          Positioned(
-            bottom: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: AppColors.primaryGreen,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-            ),
-          ),
-        ],
-      );
-    } else {
-      return Stack(
-        children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: Colors.grey[200],
-            child: Text(
-              user?.fullName[0] ?? 'U',
-              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: AppColors.primaryGreen,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
-            ),
-          ),
-        ],
-      );
-    }
+        ),
+      ],
+    );
   }
 }

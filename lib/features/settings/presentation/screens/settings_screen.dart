@@ -5,11 +5,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/providers/theme_provider.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
-import 'package:ifind/features/auth/presentation/screens/edit_profile_screen.dart';
+import 'package:ifind/features/profile/presentation/screens/profile_screen.dart';
 import 'package:ifind/features/notifications/presentation/providers/notification_provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
+import 'package:ifind/features/business/presentation/providers/business_provider.dart';
+import 'package:ifind/features/needs/presentation/providers/need_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -32,10 +34,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           'Settings',
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20),
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color(0xFF003D2B),
         elevation: 0,
         centerTitle: true,
-        foregroundColor: AppColors.darkText,
+        foregroundColor: Colors.white,
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -44,15 +46,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.primaryGreen, AppColors.primaryGreen.withValues(alpha: 0.8)],
+              gradient: const LinearGradient(
+                colors: [Color(0xFF003D2B), Color(0xFF006241), Color(0xFF0B7A5A)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primaryGreen.withValues(alpha: 0.2),
+                  color: const Color(0xFF003D2B).withValues(alpha: 0.35),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -65,7 +67,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const ProfileScreen(initialEditing: true),
+                      ),
                     );
                   },
                   child: Stack(
@@ -98,7 +102,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           child: const Icon(
                             Icons.camera_alt,
                             size: 16,
-                            color: AppColors.primaryGreen,
+                            color: Color(0xFF003D2B),
                           ),
                         ),
                       ),
@@ -136,7 +140,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const ProfileScreen(initialEditing: true),
+                      ),
                     );
                   },
                 ),
@@ -146,29 +152,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 32),
 
-          // --- Business Center (if business owner) ---
+          // --- Business Center (business owners / managers) ---
           if (user?.role == UserRole.businessOwner || user?.role == UserRole.manager) ...[
             const _SectionHeader(title: 'Business Center'),
+            _LeadsDashboardTile(userId: user!.id),
             _SettingsTile(
-              icon: Icons.dashboard_outlined,
-              title: 'Leads Dashboard',
-              subtitle: 'View customer inquiries',
-              onTap: () => context.push('/leads-dashboard'),
-              trailing: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
-                ),
-                child: const Text(
-                  '3',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+              icon: Icons.store_outlined,
+              title: 'My Shop',
+              subtitle: 'Edit your business profile',
+              onTap: () => context.push('/my-shop'),
+            ),
+            _SettingsTile(
+              icon: Icons.handshake_outlined,
+              title: 'B2B Matches',
+              subtitle: 'Find partner businesses',
+              onTap: () => context.push('/b2b-matches'),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // --- Create a Shop (customers only) ---
+          if (user?.role == UserRole.customer) ...[
+            const _SectionHeader(title: 'Business'),
+            _SettingsTile(
+              icon: Icons.add_business_outlined,
+              title: 'Create a Shop',
+              subtitle: 'Register your business on iFind',
+              onTap: () => context.push('/create-business'),
             ),
             const SizedBox(height: 16),
           ],
@@ -271,6 +281,46 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 20),
         ],
       ),
+    );
+  }
+}
+
+// --- Live leads badge tile ---
+class _LeadsDashboardTile extends ConsumerWidget {
+  final String userId;
+  const _LeadsDashboardTile({required this.userId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final myBusinessesAsync = ref.watch(myBusinessesProvider(userId));
+    final business = myBusinessesAsync.value?.firstOrNull;
+    final leadsAsync = business != null
+        ? ref.watch(businessLeadsProvider(business))
+        : const AsyncValue<List>.data([]);
+    final count = leadsAsync.value?.length ?? 0;
+
+    return _SettingsTile(
+      icon: Icons.dashboard_outlined,
+      title: 'Leads Dashboard',
+      subtitle: 'View customer inquiries',
+      onTap: () => context.push('/leads-dashboard'),
+      trailing: count > 0
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$count',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            )
+          : null,
     );
   }
 }

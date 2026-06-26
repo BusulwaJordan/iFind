@@ -143,6 +143,10 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
       _selectedCategory = widget.business!.category;
       _latitude = widget.business!.latitude;
       _longitude = widget.business!.longitude;
+    } else {
+      // Pre-fill with the signed-in user's email when creating a new shop
+      final user = ref.read(currentUserProvider);
+      if (user?.email != null) _emailController.text = user!.email;
     }
   }
 

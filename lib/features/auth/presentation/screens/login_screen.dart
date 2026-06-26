@@ -9,6 +9,7 @@ import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/constants/app_strings.dart';
 import 'package:ifind/core/utils/validators.dart';
 import 'package:ifind/core/widgets/app_toast.dart';
+import 'package:ifind/features/auth/domain/entities/user.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/auth/presentation/providers/pending_registration_provider.dart';
 
@@ -32,7 +33,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  // ── Auth logic (unchanged) ─────────────────────────────────────────────────
+  // ── Auth logic ────────────────────────────────────────────────────────────
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
@@ -40,60 +41,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _emailCtrl.text.trim(),
           _passCtrl.text,
         );
-    if (!mounted) return;
-    final authState = ref.read(authProvider);
-    authState.whenOrNull(
-      data: (user) {
-        if (user != null) {
-          ref.read(loginWelcomeProvider.notifier).state =
-              'Welcome back, ${user.fullName.split(' ').first}!';
-        }
-      },
-      error: (error, _) {
-        final msg = error.toString().toLowerCase();
-        if (msg.contains('email not confirmed') ||
-            msg.contains('email_not_confirmed')) {
-          final email = _emailCtrl.text.trim();
-          ref.read(pendingRegistrationProvider.notifier).state =
-              PendingRegistration(email: email, password: _passCtrl.text);
-          context.go('/confirmation?email=${Uri.encodeComponent(email)}');
-        } else if (msg.contains('invalid login credentials') ||
-            msg.contains('invalid credentials') ||
-            msg.contains('user not found')) {
-          _showCreateAccountDialog();
-        } else {
-          AppToast.show(context, error.toString(), type: ToastType.error);
-        }
-      },
-    );
-  }
-
-  Future<void> _showCreateAccountDialog() async {
-    final email = _emailCtrl.text.trim();
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.person_add_alt_1_rounded,
-            color: AppColors.primaryGreen),
-        title: const Text('Create your iFind account'),
-        content: Text(email.isEmpty
-            ? 'No account found. Register first to set up your profile.'
-            : 'No account found for $email. Register to get started.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Try again')),
-          FilledButton.icon(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.go('/register');
-            },
-            icon: const Icon(Icons.app_registration_rounded),
-            label: const Text('Register'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _handleGoogleLogin() async {
@@ -110,6 +57,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen for auth state transitions out of loading — show feedback immediately.
+    ref.listen<AsyncValue<User?>>(authProvider, (previous, current) {
+      if (previous?.isLoading != true) return;
+      current.whenOrNull(
+        data: (user) {
+          if (user != null) {
+            AppToast.show(
+              context,
+              'Welcome back, ${user.fullName.split(' ').first}! 👋',
+              type: ToastType.success,
+            );
+          }
+        },
+        error: (error, _) {
+          final msg = error.toString().toLowerCase();
+          if (msg.contains('email not confirmed') ||
+              msg.contains('email_not_confirmed')) {
+            final email = _emailCtrl.text.trim();
+            ref.read(pendingRegistrationProvider.notifier).state =
+                PendingRegistration(email: email, password: _passCtrl.text);
+            context.go('/confirmation?email=${Uri.encodeComponent(email)}');
+          } else {
+            AppToast.show(
+              context,
+              'Incorrect email or password. Please try again.',
+              type: ToastType.error,
+            );
+          }
+        },
+      );
+    });
+
     final size = MediaQuery.of(context).size;
     final isLoading = ref.watch(authProvider).isLoading;
     final heroH = size.height * 0.42;

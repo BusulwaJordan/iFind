@@ -91,4 +91,20 @@ class ReviewRepositoryImpl implements ReviewRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, void>> addReply({
+    required String reviewId,
+    required String reply,
+  }) async {
+    try {
+      await _client.from('reviews').update({
+        'owner_reply': reply,
+        'replied_at': DateTime.now().toIso8601String(),
+      }).eq('id', reviewId);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }

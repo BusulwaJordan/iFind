@@ -3,7 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/widgets/empty_state_widget.dart';
+import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
+import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:ifind/features/reviews/presentation/providers/review_provider.dart';
 import 'package:ifind/features/reviews/presentation/widgets/add_review_dialog.dart';
 import 'package:ifind/features/reviews/domain/entities/review.dart';
@@ -18,6 +22,10 @@ class ReviewsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reviewsAsync = ref.watch(businessReviewsProvider(businessId));
+    final currentUser = ref.watch(currentUserProvider);
+    // Determine if the viewer owns this business
+    final myBusinesses = ref.watch(myBusinessesProvider(currentUser?.id ?? '')).value ?? [];
+    final isOwner = myBusinesses.any((b) => b.id == businessId);
 
     return Scaffold(
       backgroundColor: const Color(0xFFEAF5EA),
@@ -39,11 +47,12 @@ class ReviewsScreen extends ConsumerWidget {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.rate_review_rounded, color: Colors.white),
-            onPressed: () => _showAddReviewDialog(context),
-            tooltip: 'Write a review',
-          ),
+          if (!isOwner)
+            IconButton(
+              icon: const Icon(Icons.rate_review_rounded, color: Colors.white),
+              onPressed: () => _showAddReviewDialog(context),
+              tooltip: 'Write a review',
+            ),
         ],
       ),
       body: reviewsAsync.when(
@@ -74,7 +83,11 @@ class ReviewsScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                ...reviews.map((review) => _ReviewCard(review: review)).toList(),
+                ...reviews.map((review) => _ReviewCard(
+                      review: review,
+                      isOwner: isOwner,
+                      businessId: businessId,
+                    )),
               ],
             ),
           );
@@ -263,13 +276,56 @@ class ReviewsScreen extends ConsumerWidget {
 }
 
 // ─── Individual Review Card ──────────────────────────────────────
-class _ReviewCard extends StatelessWidget {
+class _ReviewCard extends ConsumerStatefulWidget {
   final Review review;
+  final bool isOwner;
+  final String businessId;
 
-  const _ReviewCard({required this.review});
+  const _ReviewCard({
+    required this.review,
+    required this.isOwner,
+    required this.businessId,
+  });
+
+  @override
+  ConsumerState<_ReviewCard> createState() => _ReviewCardState();
+}
+
+class _ReviewCardState extends ConsumerState<_ReviewCard> {
+  bool _showReplyField = false;
+  bool _submitting = false;
+  final _replyCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _replyCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitReply() async {
+    final text = _replyCtrl.text.trim();
+    if (text.isEmpty) return;
+    setState(() => _submitting = true);
+    final result = await ref.read(reviewRepositoryProvider).addReply(
+          reviewId: widget.review.id,
+          reply: text,
+        );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    result.fold(
+      (failure) => AppToast.show(context, friendlyError(Exception(failure.message)), type: ToastType.error),
+      (_) {
+        ref.invalidate(businessReviewsProvider(widget.businessId));
+        setState(() => _showReplyField = false);
+        _replyCtrl.clear();
+        AppToast.show(context, 'Reply posted', type: ToastType.success);
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final review = widget.review;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -287,9 +343,9 @@ class _ReviewCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Reviewer row ──
           Row(
             children: [
-              // Avatar using authorAvatarUrl from your entity
               CircleAvatar(
                 radius: 20,
                 backgroundColor: Colors.grey.shade300,
@@ -322,43 +378,124 @@ class _ReviewCard extends StatelessWidget {
                     ),
                     Row(
                       children: [
-                        ...List.generate(5, (index) {
-                          return Icon(
-                            index < review.rating
-                                ? Icons.star_rounded
-                                : Icons.star_outline_rounded,
-                            color: Colors.amber,
-                            size: 16,
-                          );
-                        }),
+                        ...List.generate(5, (i) => Icon(
+                              i < review.rating
+                                  ? Icons.star_rounded
+                                  : Icons.star_outline_rounded,
+                              color: Colors.amber,
+                              size: 16,
+                            )),
                         const SizedBox(width: 6),
                         Text(
                           DateFormat('MMM d, y').format(review.createdAt),
-                          style: GoogleFonts.outfit(
-                            fontSize: 11,
-                            color: Colors.grey[500],
-                          ),
+                          style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey[500]),
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
+              // Reply button for owner (only if not already replied)
+              if (widget.isOwner && review.ownerReply == null)
+                TextButton.icon(
+                  onPressed: () => setState(() => _showReplyField = !_showReplyField),
+                  icon: const Icon(Icons.reply_rounded, size: 16),
+                  label: Text(_showReplyField ? 'Cancel' : 'Reply',
+                      style: GoogleFonts.outfit(fontSize: 12)),
+                  style: TextButton.styleFrom(foregroundColor: _darkGreen),
+                ),
             ],
           ),
-          const SizedBox(height: 8),
-          // Comment (nullable in your entity)
-          if (review.comment != null && review.comment!.isNotEmpty)
+
+          // ── Comment ──
+          if (review.comment != null && review.comment!.isNotEmpty) ...[
+            const SizedBox(height: 8),
             Text(
               review.comment!,
-              style: GoogleFonts.outfit(
-                fontSize: 14,
-                color: Colors.grey[800],
-                height: 1.5,
+              style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey[800], height: 1.5),
+            ),
+          ],
+
+          // ── Existing owner reply ──
+          if (review.ownerReply != null && review.ownerReply!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8F5E9),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _darkGreen.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.store_rounded, size: 14, color: _darkGreen),
+                      const SizedBox(width: 6),
+                      Text('Owner response',
+                          style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: _darkGreen)),
+                      if (review.repliedAt != null) ...[
+                        const Spacer(),
+                        Text(
+                          DateFormat('MMM d, y').format(review.repliedAt!),
+                          style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey[500]),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(review.ownerReply!,
+                      style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey[800], height: 1.4)),
+                ],
               ),
             ),
-          // Note: Your Review entity doesn't have a "reply" field,
-          // so that section has been removed.
+          ],
+
+          // ── Reply input field (owner only, when toggled) ──
+          if (_showReplyField) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _replyCtrl,
+              maxLines: 3,
+              style: GoogleFonts.outfit(fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Write your response...',
+                hintStyle: GoogleFonts.outfit(color: Colors.grey[400]),
+                filled: true,
+                fillColor: Colors.grey[50],
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200)),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: _darkGreen, width: 1.5)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton(
+                onPressed: _submitting ? null : _submitReply,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _darkGreen,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                ),
+                child: _submitting
+                    ? const SizedBox(width: 16, height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text('Post Reply', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
         ],
       ),
     );

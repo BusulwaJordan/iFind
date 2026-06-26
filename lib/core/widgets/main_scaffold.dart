@@ -9,6 +9,7 @@ import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/notifications/presentation/providers/notification_provider.dart';
+import 'package:ifind/features/notifications/presentation/providers/proximity_notification_provider.dart';
 import 'package:ifind/features/notifications/domain/entities/notification.dart';
 import 'package:ifind/features/notifications/utils/notification_preview_formatter.dart';
 
@@ -51,6 +52,9 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
 
     final isBusinessOwner = user.role == UserRole.businessOwner;
     final currentIndex = widget.navigationShell.currentIndex;
+
+    // Start proximity notification checks for business owners.
+    if (isBusinessOwner) ref.watch(proximityNotificationWatcherProvider);
 
     ref.listen(loginWelcomeProvider, (_, next) {
       if (next != null && mounted) {

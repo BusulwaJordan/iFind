@@ -9,6 +9,7 @@ import 'package:ifind/features/business/presentation/providers/business_provider
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
 import 'package:ifind/features/chat/presentation/screens/chat_room_screen.dart';
+import 'package:ifind/features/chat/domain/entities/chat.dart';
 import 'package:ifind/features/needs/domain/entities/need.dart';
 import 'package:ifind/features/needs/presentation/providers/need_provider.dart';
 import 'package:ifind/features/notifications/presentation/screens/notifications_screen.dart';
@@ -26,28 +27,37 @@ import 'package:ifind/features/reviews/presentation/screens/reviews_screen.dart'
 final dashboardStatsProvider = FutureProvider.family<Map<String, int>, String>((ref, businessId) async {
   final supabase = ref.watch(supabaseClientProvider);
 
-  final viewsResponse = await supabase
-      .from('interactions')
-      .select('id')
-      .eq('business_id', businessId)
-      .eq('interaction_type', 'profile_view');
+  // Each query is wrapped independently — a missing table or RLS block
+  // returns 0 instead of crashing the whole provider.
+  int views = 0, inquiries = 0, matches = 0;
 
-  final inquiriesResponse = await supabase
-      .from('interactions')
-      .select('id')
-      .eq('business_id', businessId)
-      .eq('interaction_type', 'inquiry_sent');
+  try {
+    final r = await supabase
+        .from('interactions')
+        .select('id')
+        .eq('business_id', businessId)
+        .eq('interaction_type', 'profile_view');
+    views = (r as List).length;
+  } catch (_) {}
 
-  final matchesResponse = await supabase
-      .from('b2b_matches')
-      .select('id')
-      .or('business_a_id.eq.$businessId,business_b_id.eq.$businessId');
+  try {
+    final r = await supabase
+        .from('interactions')
+        .select('id')
+        .eq('business_id', businessId)
+        .eq('interaction_type', 'inquiry_sent');
+    inquiries = (r as List).length;
+  } catch (_) {}
 
-  return {
-    'views': viewsResponse.length,
-    'inquiries': inquiriesResponse.length,
-    'matches': matchesResponse.length,
-  };
+  try {
+    final r = await supabase
+        .from('b2b_matches')
+        .select('id')
+        .or('business_a_id.eq.$businessId,business_b_id.eq.$businessId');
+    matches = (r as List).length;
+  } catch (_) {}
+
+  return {'views': views, 'inquiries': inquiries, 'matches': matches};
 });
 
 // ---------- The Screen ----------
@@ -74,6 +84,9 @@ class _LeadsDashboardScreenState extends ConsumerState<LeadsDashboardScreen> {
     final statsAsync = businessId != null
         ? ref.watch(dashboardStatsProvider(businessId))
         : const AsyncValue<Map<String, int>>.data({});
+    final chatsAsync = businessId != null
+        ? ref.watch(businessChatsProvider(businessId))
+        : const AsyncValue<List>.data([]);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -200,6 +213,35 @@ class _LeadsDashboardScreenState extends ConsumerState<LeadsDashboardScreen> {
                     ),
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                  // Contacts section (people/businesses that have messaged this business)
+                  chatsAsync.when(
+                    data: (chats) {
+                      if (chats.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+                      return SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Contacts',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.darkText,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ...chats.map((chat) => _ContactTile(chat: chat)),
+                              const SizedBox(height: 16),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                    loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+                    error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+                  ),
                   // Leads List Title
                   SliverToBoxAdapter(
                     child: Padding(
@@ -742,6 +784,102 @@ class _LeadCard extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Contact tile — one chat conversation shown in the Contacts section
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ContactTile extends StatelessWidget {
+  final Chat chat;
+  const _ContactTile({required this.chat});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = chat.isB2B
+        ? (chat.businessName ?? 'Business')
+        : (chat.customerName ?? 'Customer');
+    final subtitle = chat.lastMessage?.isNotEmpty == true
+        ? chat.lastMessage!
+        : 'No messages yet';
+    final timeLabel = chat.lastMessageAt != null
+        ? timeago.format(chat.lastMessageAt!)
+        : '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        leading: CircleAvatar(
+          radius: 24,
+          backgroundColor: const Color(0xFF0A5C36).withValues(alpha: 0.12),
+          child: Text(
+            name.isNotEmpty ? name[0].toUpperCase() : '?',
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFF0A5C36),
+              fontSize: 18,
+            ),
+          ),
+        ),
+        title: Text(
+          name,
+          style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 15),
+        ),
+        subtitle: Text(
+          subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey[500]),
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            if (timeLabel.isNotEmpty)
+              Text(
+                timeLabel,
+                style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey[400]),
+              ),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0A5C36),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Message',
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatRoomScreen(chat: chat, otherPartyName: name),
+          ),
+        ),
       ),
     );
   }

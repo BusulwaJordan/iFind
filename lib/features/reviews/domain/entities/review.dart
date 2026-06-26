@@ -10,6 +10,8 @@ class Review extends Equatable {
   // Optional: Author name/avatar if joined
   final String? authorName;
   final String? authorAvatarUrl;
+  final String? ownerReply;
+  final DateTime? repliedAt;
 
   const Review({
     required this.id,
@@ -20,6 +22,8 @@ class Review extends Equatable {
     required this.createdAt,
     this.authorName,
     this.authorAvatarUrl,
+    this.ownerReply,
+    this.repliedAt,
   });
 
   @override
@@ -32,5 +36,7 @@ class Review extends Equatable {
         createdAt,
         authorName,
         authorAvatarUrl,
+        ownerReply,
+        repliedAt,
       ];
 }

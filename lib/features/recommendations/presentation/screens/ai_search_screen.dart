@@ -8,6 +8,7 @@ import 'package:ifind/core/utils/distance_calculator.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
+import 'package:ifind/features/needs/presentation/providers/need_provider.dart';
 import 'package:ifind/features/recommendations/presentation/providers/recommendation_providers.dart';
 import 'package:ifind/core/widgets/ifind_loader.dart';
 
@@ -156,12 +157,73 @@ class AiSearchScreen extends ConsumerWidget {
     );
     final featuredAsync = ref.watch(featuredBusinessesProvider);
     final nearbyAsync = ref.watch(nearbyBusinessesProvider);
+    final needsMatchAsync = ref.watch(needsBasedBusinessesProvider(userId));
 
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Needs-based matches ────────────────────────────────────────
+          needsMatchAsync.when(
+            data: (groups) {
+              if (groups.isEmpty) return const SizedBox.shrink();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionHeader(
+                    'Matching Your Needs',
+                    subtitle: 'Businesses that match what you\'re looking for',
+                    icon: Icons.search_rounded,
+                  ),
+                  const SizedBox(height: 16),
+                  ...groups.map((group) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primaryGreen
+                                    .withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                group.need.title,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primaryGreen,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(
+                        height: 200,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: group.businesses.length,
+                          itemBuilder: (ctx, i) =>
+                              _NearbyCard(business: group.businesses[i]),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  )),
+                  const Divider(height: 32),
+                ],
+              );
+            },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+          ),
+
           // ── AI Personalized Recommendations ───────────────────────────
           recsAsync.when(
             data: (recs) {

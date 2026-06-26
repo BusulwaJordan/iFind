@@ -201,7 +201,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const ProfileScreen(),
+        builder: (context, state) => ProfileScreen(
+          initialEditing: state.extra == true,
+        ),
       ),
       GoRoute(
         path: '/help',
@@ -273,7 +275,9 @@ List<StatefulShellBranch> _buildBranches(
         routes: [
           GoRoute(
             path: '/profile',
-            builder: (context, state) => const ProfileScreen(),
+            builder: (context, state) => ProfileScreen(
+              initialEditing: state.extra == true,
+            ),
           ),
         ],
       ),

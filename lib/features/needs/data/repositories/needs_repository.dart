@@ -13,6 +13,16 @@ class NeedsRepository {
     return response['id'] as String;
   }
 
+  Future<List<Need>> getMyNeeds(String userId) async {
+    final response = await _client
+        .from('needs')
+        .select()
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .order('created_at', ascending: false);
+    return (response as List).map((json) => Need.fromJson(json)).toList();
+  }
+
   Stream<List<Need>> watchMyNeeds(String userId) {
     return _client
         .from('needs')

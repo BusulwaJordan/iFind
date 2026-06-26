@@ -10,12 +10,12 @@ class ReviewModel extends Review {
     required super.createdAt,
     super.authorName,
     super.authorAvatarUrl,
+    super.ownerReply,
+    super.repliedAt,
   });
 
   factory ReviewModel.fromJson(Map<String, dynamic> json) {
-    // Check if 'users' relation is included for author details
     final authorData = json['users'] as Map<String, dynamic>?;
-
     return ReviewModel(
       id: json['id'] as String,
       businessId: json['business_id'] as String,
@@ -24,7 +24,11 @@ class ReviewModel extends Review {
       comment: json['comment'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       authorName: authorData?['full_name'] as String?,
-      authorAvatarUrl: authorData?['avatar_url'] as String?, // Note: Schema might need check if avatar_url is in public.users or metadata
+      authorAvatarUrl: authorData?['avatar_url'] as String?,
+      ownerReply: json['owner_reply'] as String?,
+      repliedAt: json['replied_at'] != null
+          ? DateTime.parse(json['replied_at'] as String)
+          : null,
     );
   }
 

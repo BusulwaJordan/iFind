@@ -12,6 +12,7 @@ import 'package:ifind/core/tutorial/app_tutorial.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
+import 'package:ifind/core/widgets/owner_avatar.dart';
 import 'package:ifind/features/notifications/presentation/widgets/notification_badge.dart';
 
 // ── Hero gradient colours ─────────────────────────────────────────────────────
@@ -961,23 +962,36 @@ class _FeaturedBusinessCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.end,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                liveBusiness.name,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  const Icon(Icons.star, color: Colors.amber, size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${liveBusiness.rating.toStringAsFixed(1)} (${liveBusiness.reviewCount} reviews)',
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          liveBusiness.name,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.star, color: Colors.amber, size: 16),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${liveBusiness.rating.toStringAsFixed(1)} (${liveBusiness.reviewCount} reviews)',
+                              style: const TextStyle(
+                                  color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
+                  OwnerAvatar(ownerId: liveBusiness.ownerId, radius: 18),
                 ],
               ),
             ],
@@ -1236,20 +1250,47 @@ class _NearbyBusinessCard extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            Container(
+            SizedBox(
               width: 70,
               height: 70,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                image: DecorationImage(
-                  image: NetworkImage(
-                    live.logoUrl ?? 'https://via.placeholder.com/150',
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 70,
+                    height: 70,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                      image: live.logoUrl != null
+                          ? DecorationImage(
+                              image: NetworkImage(live.logoUrl!),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: live.logoUrl == null
+                        ? Center(
+                            child: Text(
+                              live.name.substring(0, 1).toUpperCase(),
+                              style: GoogleFonts.outfit(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryGreen,
+                              ),
+                            ),
+                          )
+                        : null,
                   ),
-                  fit: BoxFit.cover,
-                ),
+                  Positioned(
+                    bottom: -6,
+                    right: -6,
+                    child: OwnerAvatar(ownerId: live.ownerId, radius: 14),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 20),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1342,3 +1383,4 @@ class _NearbyPlaceholder extends StatelessWidget {
     );
   }
 }
+

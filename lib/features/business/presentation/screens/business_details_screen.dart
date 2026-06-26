@@ -28,6 +28,8 @@ import 'package:ifind/features/portfolio/presentation/screens/gallery_media_view
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:ifind/features/favourites/presentation/providers/favourites_provider.dart';
+import 'package:ifind/features/products/presentation/providers/product_provider.dart';
+import 'package:ifind/features/products/domain/entities/product.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -630,6 +632,7 @@ class _AboutTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final portfolioAsync = ref.watch(portfolioProvider(business.id));
+    final productsAsync = ref.watch(businessProductsProvider(business.id));
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
@@ -745,11 +748,124 @@ class _AboutTab extends ConsumerWidget {
 
         const SizedBox(height: 16),
 
+        // Real products section
+        productsAsync.when(
+          data: (products) {
+            final available = products.where((p) => p.isAvailable).toList();
+            if (available.isEmpty) return const SizedBox.shrink();
+            return _SectionCard(
+              delay: 120,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _SectionTitle(
+                      icon: Icons.shopping_bag_outlined, label: 'Products'),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    height: 160,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: available.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      itemBuilder: (context, i) =>
+                          _ProductCard(product: available[i]),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (_, __) => const SizedBox.shrink(),
+        ),
+
+        const SizedBox(height: 16),
+
         // B2B compatibility card (business owners only)
         _B2bCompatibilityCard(targetBusiness: business),
       ],
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Product card (horizontal scroll on About tab)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ProductCard extends StatelessWidget {
+  final Product product;
+  const _ProductCard({required this.product});
+
+  @override
+  Widget build(BuildContext context) {
+    final price = 'UGX ${product.price.toInt().toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+
+    return Container(
+      width: 130,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            child: product.images.isNotEmpty
+                ? CachedNetworkImage(
+                    imageUrl: product.images.first,
+                    width: 130,
+                    height: 90,
+                    fit: BoxFit.cover,
+                    errorWidget: (_, __, ___) => _placeholder(),
+                  )
+                : _placeholder(),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
+            child: Text(
+              product.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.darkText,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text(
+              price,
+              style: GoogleFonts.outfit(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryGreen,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _placeholder() => Container(
+    width: 130,
+    height: 90,
+    color: Colors.grey.shade100,
+    child: const Icon(Icons.shopping_bag_outlined,
+        color: Colors.grey, size: 32),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

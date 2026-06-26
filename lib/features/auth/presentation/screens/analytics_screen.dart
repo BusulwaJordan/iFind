@@ -2,6 +2,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
+
+// ─── Real analytics data provider ──────────────────────────────────
+final analyticsDataProvider =
+    FutureProvider.family<Map<String, int>, String>((ref, businessId) async {
+  final supabase = ref.watch(supabaseClientProvider);
+
+  final viewsRes = await supabase
+      .from('interactions')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('interaction_type', 'profile_view');
+
+  final inquiriesRes = await supabase
+      .from('interactions')
+      .select('id')
+      .eq('business_id', businessId)
+      .eq('interaction_type', 'inquiry_sent');
+
+  final matchesRes = await supabase
+      .from('b2b_matches')
+      .select('id')
+      .or('business_a_id.eq.$businessId,business_b_id.eq.$businessId');
+
+  final reviewsRes = await supabase
+      .from('reviews')
+      .select('id')
+      .eq('business_id', businessId);
+
+  return {
+    'views': (viewsRes as List).length,
+    'inquiries': (inquiriesRes as List).length,
+    'matches': (matchesRes as List).length,
+    'reviews': (reviewsRes as List).length,
+  };
+});
 
 // ─── Analytics Screen ──────────────────────────────────────────────
 class AnalyticsScreen extends ConsumerStatefulWidget {
@@ -159,75 +195,87 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   // ─── KPI Row ──────────────────────────────────────────────────────
   Widget _buildKpiRow(BuildContext context) {
     const darkGreen = Color(0xFF0A5C36);
+    final analyticsAsync = ref.watch(analyticsDataProvider(widget.businessId));
 
-    final kpis = [
-      {'label': 'Views', 'value': '1,284', 'change': '+12%', 'icon': Icons.visibility_rounded},
-      {'label': 'Inquiries', 'value': '47', 'change': '+8%', 'icon': Icons.chat_bubble_outline_rounded},
-      {'label': 'Matches', 'value': '18', 'change': '+23%', 'icon': Icons.handshake_rounded},
-      {'label': 'Conversion', 'value': '3.7%', 'change': '+0.4%', 'icon': Icons.trending_up_rounded},
-    ];
+    return analyticsAsync.when(
+      loading: () => const SizedBox(
+        height: 90,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (stats) {
+        final views = stats['views'] ?? 0;
+        final inquiries = stats['inquiries'] ?? 0;
+        final matches = stats['matches'] ?? 0;
+        final reviews = stats['reviews'] ?? 0;
+        final conversion = views > 0
+            ? '${(inquiries / views * 100).toStringAsFixed(1)}%'
+            : '0%';
 
-    return Row(
-      children: kpis.map((kpi) {
-        return Expanded(
-          child: Container(
-            margin: const EdgeInsets.only(right: 10),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.grey.shade200, width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      kpi['icon'] as IconData,
-                      size: 16,
-                      color: darkGreen,
+        final kpis = [
+          {'label': 'Views', 'value': '$views', 'icon': Icons.visibility_rounded},
+          {'label': 'Inquiries', 'value': '$inquiries', 'icon': Icons.chat_bubble_outline_rounded},
+          {'label': 'Matches', 'value': '$matches', 'icon': Icons.handshake_rounded},
+          {'label': 'Reviews', 'value': '$reviews', 'icon': Icons.star_outline_rounded},
+          {'label': 'Conversion', 'value': conversion, 'icon': Icons.trending_up_rounded},
+        ];
+
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: kpis.map((kpi) {
+            return SizedBox(
+              width: (MediaQuery.of(context).size.width - 60) / 3,
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.grey.shade200, width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
                     ),
-                    const SizedBox(width: 4),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(kpi['icon'] as IconData, size: 16, color: darkGreen),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            kpi['label'] as String,
+                            style: GoogleFonts.outfit(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[600],
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
                     Text(
-                      kpi['label'] as String,
+                      kpi['value'] as String,
                       style: GoogleFonts.outfit(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[600],
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.darkText,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  kpi['value'] as String,
-                  style: GoogleFonts.outfit(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkText,
-                  ),
-                ),
-                Text(
-                  kpi['change'] as String,
-                  style: GoogleFonts.outfit(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.green[700],
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
     );
   }
 
