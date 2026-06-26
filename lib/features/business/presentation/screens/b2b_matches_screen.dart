@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/widgets/empty_state_widget.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/b2b_provider.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
+import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
+import 'package:ifind/features/chat/presentation/screens/chat_room_screen.dart';
 
 // Dark green constant matching your dashboard
 const _darkGreen = Color(0xFF0A5C36);
@@ -187,12 +191,49 @@ class _B2bMatchCard extends ConsumerWidget {
               ],
             ),
           ),
-          // Connect button – dark green
+          // Connect button – now opens chat
           ElevatedButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Connect feature coming soon!')),
-              );
+            onPressed: () async {
+              final currentUser = ref.read(currentUserProvider);
+              if (currentUser == null) {
+                AppToast.show(
+                  context,
+                  'Please log in to connect.',
+                  type: ToastType.warning,
+                );
+                return;
+              }
+
+              try {
+                // Get or create a chat between the two businesses
+                final chat = await ref
+                    .read(chatRemoteDataSourceProvider)
+                    .getOrCreateB2BChat(
+                      businessId: business.id,
+                      partnerBusinessId: partner.id,
+                    );
+
+                if (context.mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ChatRoomScreen(
+                        chat: chat,
+                        otherPartyName: partner.name,
+                        // You can optionally pass partner.id to distinguish B2B chats
+                      ),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  AppToast.show(
+                    context,
+                    friendlyError(e),
+                    type: ToastType.error,
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: _darkGreen,

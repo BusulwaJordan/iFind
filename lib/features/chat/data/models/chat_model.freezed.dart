@@ -22,20 +22,39 @@ ChatModel _$ChatModelFromJson(Map<String, dynamic> json) {
 mixin _$ChatModel {
   String get id => throw _privateConstructorUsedError;
   @JsonKey(name: 'customer_id')
-  String get customerId => throw _privateConstructorUsedError;
+  String? get customerId =>
+      throw _privateConstructorUsedError; // Now nullable for B2B
   @JsonKey(name: 'business_id')
-  String get businessId => throw _privateConstructorUsedError;
+  String? get businessId =>
+      throw _privateConstructorUsedError; // Now nullable for B2B
+  @JsonKey(name: 'business_a_id')
+  String? get businessAId => throw _privateConstructorUsedError; // NEW: for B2B
+  @JsonKey(name: 'business_b_id')
+  String? get businessBId => throw _privateConstructorUsedError; // NEW: for B2B
+  @JsonKey(name: 'is_b2b')
+  bool get isB2B => throw _privateConstructorUsedError; // NEW: flag
   @JsonKey(name: 'last_message')
   String? get lastMessage => throw _privateConstructorUsedError;
   @JsonKey(name: 'last_message_at')
   DateTime? get lastMessageAt => throw _privateConstructorUsedError;
   @JsonKey(name: 'created_at')
-  DateTime get createdAt =>
-      throw _privateConstructorUsedError; // Add transient fields from join
+  DateTime get createdAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'updated_at')
+  DateTime get updatedAt =>
+      throw _privateConstructorUsedError; // Transient fields for joined data
   @JsonKey(includeToJson: false, includeFromJson: false)
   String? get businessName => throw _privateConstructorUsedError;
   @JsonKey(includeToJson: false, includeFromJson: false)
   String? get businessLogoUrl => throw _privateConstructorUsedError;
+  @JsonKey(includeToJson: false, includeFromJson: false)
+  String? get customerName => throw _privateConstructorUsedError;
+  @JsonKey(includeToJson: false, includeFromJson: false)
+  String? get customerAvatarUrl =>
+      throw _privateConstructorUsedError; // For B2B partner business name/logo
+  @JsonKey(includeToJson: false, includeFromJson: false)
+  String? get partnerBusinessName => throw _privateConstructorUsedError;
+  @JsonKey(includeToJson: false, includeFromJson: false)
+  String? get partnerBusinessLogo => throw _privateConstructorUsedError;
 
   /// Serializes this ChatModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -54,15 +73,27 @@ abstract class $ChatModelCopyWith<$Res> {
   @useResult
   $Res call(
       {String id,
-      @JsonKey(name: 'customer_id') String customerId,
-      @JsonKey(name: 'business_id') String businessId,
+      @JsonKey(name: 'customer_id') String? customerId,
+      @JsonKey(name: 'business_id') String? businessId,
+      @JsonKey(name: 'business_a_id') String? businessAId,
+      @JsonKey(name: 'business_b_id') String? businessBId,
+      @JsonKey(name: 'is_b2b') bool isB2B,
       @JsonKey(name: 'last_message') String? lastMessage,
       @JsonKey(name: 'last_message_at') DateTime? lastMessageAt,
       @JsonKey(name: 'created_at') DateTime createdAt,
+      @JsonKey(name: 'updated_at') DateTime updatedAt,
       @JsonKey(includeToJson: false, includeFromJson: false)
       String? businessName,
       @JsonKey(includeToJson: false, includeFromJson: false)
-      String? businessLogoUrl});
+      String? businessLogoUrl,
+      @JsonKey(includeToJson: false, includeFromJson: false)
+      String? customerName,
+      @JsonKey(includeToJson: false, includeFromJson: false)
+      String? customerAvatarUrl,
+      @JsonKey(includeToJson: false, includeFromJson: false)
+      String? partnerBusinessName,
+      @JsonKey(includeToJson: false, includeFromJson: false)
+      String? partnerBusinessLogo});
 }
 
 /// @nodoc
@@ -81,27 +112,47 @@ class _$ChatModelCopyWithImpl<$Res, $Val extends ChatModel>
   @override
   $Res call({
     Object? id = null,
-    Object? customerId = null,
-    Object? businessId = null,
+    Object? customerId = freezed,
+    Object? businessId = freezed,
+    Object? businessAId = freezed,
+    Object? businessBId = freezed,
+    Object? isB2B = null,
     Object? lastMessage = freezed,
     Object? lastMessageAt = freezed,
     Object? createdAt = null,
+    Object? updatedAt = null,
     Object? businessName = freezed,
     Object? businessLogoUrl = freezed,
+    Object? customerName = freezed,
+    Object? customerAvatarUrl = freezed,
+    Object? partnerBusinessName = freezed,
+    Object? partnerBusinessLogo = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
           ? _value.id
           : id // ignore: cast_nullable_to_non_nullable
               as String,
-      customerId: null == customerId
+      customerId: freezed == customerId
           ? _value.customerId
           : customerId // ignore: cast_nullable_to_non_nullable
-              as String,
-      businessId: null == businessId
+              as String?,
+      businessId: freezed == businessId
           ? _value.businessId
           : businessId // ignore: cast_nullable_to_non_nullable
-              as String,
+              as String?,
+      businessAId: freezed == businessAId
+          ? _value.businessAId
+          : businessAId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      businessBId: freezed == businessBId
+          ? _value.businessBId
+          : businessBId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      isB2B: null == isB2B
+          ? _value.isB2B
+          : isB2B // ignore: cast_nullable_to_non_nullable
+              as bool,
       lastMessage: freezed == lastMessage
           ? _value.lastMessage
           : lastMessage // ignore: cast_nullable_to_non_nullable
@@ -114,6 +165,10 @@ class _$ChatModelCopyWithImpl<$Res, $Val extends ChatModel>
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
+      updatedAt: null == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
       businessName: freezed == businessName
           ? _value.businessName
           : businessName // ignore: cast_nullable_to_non_nullable
@@ -121,6 +176,22 @@ class _$ChatModelCopyWithImpl<$Res, $Val extends ChatModel>
       businessLogoUrl: freezed == businessLogoUrl
           ? _value.businessLogoUrl
           : businessLogoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      customerName: freezed == customerName
+          ? _value.customerName
+          : customerName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      customerAvatarUrl: freezed == customerAvatarUrl
+          ? _value.customerAvatarUrl
+          : customerAvatarUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      partnerBusinessName: freezed == partnerBusinessName
+          ? _value.partnerBusinessName
+          : partnerBusinessName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      partnerBusinessLogo: freezed == partnerBusinessLogo
+          ? _value.partnerBusinessLogo
+          : partnerBusinessLogo // ignore: cast_nullable_to_non_nullable
               as String?,
     ) as $Val);
   }
@@ -136,15 +207,27 @@ abstract class _$$ChatModelImplCopyWith<$Res>
   @useResult
   $Res call(
       {String id,
-      @JsonKey(name: 'customer_id') String customerId,
-      @JsonKey(name: 'business_id') String businessId,
+      @JsonKey(name: 'customer_id') String? customerId,
+      @JsonKey(name: 'business_id') String? businessId,
+      @JsonKey(name: 'business_a_id') String? businessAId,
+      @JsonKey(name: 'business_b_id') String? businessBId,
+      @JsonKey(name: 'is_b2b') bool isB2B,
       @JsonKey(name: 'last_message') String? lastMessage,
       @JsonKey(name: 'last_message_at') DateTime? lastMessageAt,
       @JsonKey(name: 'created_at') DateTime createdAt,
+      @JsonKey(name: 'updated_at') DateTime updatedAt,
       @JsonKey(includeToJson: false, includeFromJson: false)
       String? businessName,
       @JsonKey(includeToJson: false, includeFromJson: false)
-      String? businessLogoUrl});
+      String? businessLogoUrl,
+      @JsonKey(includeToJson: false, includeFromJson: false)
+      String? customerName,
+      @JsonKey(includeToJson: false, includeFromJson: false)
+      String? customerAvatarUrl,
+      @JsonKey(includeToJson: false, includeFromJson: false)
+      String? partnerBusinessName,
+      @JsonKey(includeToJson: false, includeFromJson: false)
+      String? partnerBusinessLogo});
 }
 
 /// @nodoc
@@ -161,27 +244,47 @@ class __$$ChatModelImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? id = null,
-    Object? customerId = null,
-    Object? businessId = null,
+    Object? customerId = freezed,
+    Object? businessId = freezed,
+    Object? businessAId = freezed,
+    Object? businessBId = freezed,
+    Object? isB2B = null,
     Object? lastMessage = freezed,
     Object? lastMessageAt = freezed,
     Object? createdAt = null,
+    Object? updatedAt = null,
     Object? businessName = freezed,
     Object? businessLogoUrl = freezed,
+    Object? customerName = freezed,
+    Object? customerAvatarUrl = freezed,
+    Object? partnerBusinessName = freezed,
+    Object? partnerBusinessLogo = freezed,
   }) {
     return _then(_$ChatModelImpl(
       id: null == id
           ? _value.id
           : id // ignore: cast_nullable_to_non_nullable
               as String,
-      customerId: null == customerId
+      customerId: freezed == customerId
           ? _value.customerId
           : customerId // ignore: cast_nullable_to_non_nullable
-              as String,
-      businessId: null == businessId
+              as String?,
+      businessId: freezed == businessId
           ? _value.businessId
           : businessId // ignore: cast_nullable_to_non_nullable
-              as String,
+              as String?,
+      businessAId: freezed == businessAId
+          ? _value.businessAId
+          : businessAId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      businessBId: freezed == businessBId
+          ? _value.businessBId
+          : businessBId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      isB2B: null == isB2B
+          ? _value.isB2B
+          : isB2B // ignore: cast_nullable_to_non_nullable
+              as bool,
       lastMessage: freezed == lastMessage
           ? _value.lastMessage
           : lastMessage // ignore: cast_nullable_to_non_nullable
@@ -194,6 +297,10 @@ class __$$ChatModelImplCopyWithImpl<$Res>
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
+      updatedAt: null == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
       businessName: freezed == businessName
           ? _value.businessName
           : businessName // ignore: cast_nullable_to_non_nullable
@@ -201,6 +308,22 @@ class __$$ChatModelImplCopyWithImpl<$Res>
       businessLogoUrl: freezed == businessLogoUrl
           ? _value.businessLogoUrl
           : businessLogoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      customerName: freezed == customerName
+          ? _value.customerName
+          : customerName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      customerAvatarUrl: freezed == customerAvatarUrl
+          ? _value.customerAvatarUrl
+          : customerAvatarUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      partnerBusinessName: freezed == partnerBusinessName
+          ? _value.partnerBusinessName
+          : partnerBusinessName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      partnerBusinessLogo: freezed == partnerBusinessLogo
+          ? _value.partnerBusinessLogo
+          : partnerBusinessLogo // ignore: cast_nullable_to_non_nullable
               as String?,
     ));
   }
@@ -211,14 +334,25 @@ class __$$ChatModelImplCopyWithImpl<$Res>
 class _$ChatModelImpl extends _ChatModel {
   const _$ChatModelImpl(
       {required this.id,
-      @JsonKey(name: 'customer_id') required this.customerId,
-      @JsonKey(name: 'business_id') required this.businessId,
+      @JsonKey(name: 'customer_id') this.customerId,
+      @JsonKey(name: 'business_id') this.businessId,
+      @JsonKey(name: 'business_a_id') this.businessAId,
+      @JsonKey(name: 'business_b_id') this.businessBId,
+      @JsonKey(name: 'is_b2b') this.isB2B = false,
       @JsonKey(name: 'last_message') this.lastMessage,
       @JsonKey(name: 'last_message_at') this.lastMessageAt,
       @JsonKey(name: 'created_at') required this.createdAt,
+      @JsonKey(name: 'updated_at') required this.updatedAt,
       @JsonKey(includeToJson: false, includeFromJson: false) this.businessName,
       @JsonKey(includeToJson: false, includeFromJson: false)
-      this.businessLogoUrl})
+      this.businessLogoUrl,
+      @JsonKey(includeToJson: false, includeFromJson: false) this.customerName,
+      @JsonKey(includeToJson: false, includeFromJson: false)
+      this.customerAvatarUrl,
+      @JsonKey(includeToJson: false, includeFromJson: false)
+      this.partnerBusinessName,
+      @JsonKey(includeToJson: false, includeFromJson: false)
+      this.partnerBusinessLogo})
       : super._();
 
   factory _$ChatModelImpl.fromJson(Map<String, dynamic> json) =>
@@ -228,10 +362,24 @@ class _$ChatModelImpl extends _ChatModel {
   final String id;
   @override
   @JsonKey(name: 'customer_id')
-  final String customerId;
+  final String? customerId;
+// Now nullable for B2B
   @override
   @JsonKey(name: 'business_id')
-  final String businessId;
+  final String? businessId;
+// Now nullable for B2B
+  @override
+  @JsonKey(name: 'business_a_id')
+  final String? businessAId;
+// NEW: for B2B
+  @override
+  @JsonKey(name: 'business_b_id')
+  final String? businessBId;
+// NEW: for B2B
+  @override
+  @JsonKey(name: 'is_b2b')
+  final bool isB2B;
+// NEW: flag
   @override
   @JsonKey(name: 'last_message')
   final String? lastMessage;
@@ -241,17 +389,33 @@ class _$ChatModelImpl extends _ChatModel {
   @override
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
-// Add transient fields from join
+  @override
+  @JsonKey(name: 'updated_at')
+  final DateTime updatedAt;
+// Transient fields for joined data
   @override
   @JsonKey(includeToJson: false, includeFromJson: false)
   final String? businessName;
   @override
   @JsonKey(includeToJson: false, includeFromJson: false)
   final String? businessLogoUrl;
+  @override
+  @JsonKey(includeToJson: false, includeFromJson: false)
+  final String? customerName;
+  @override
+  @JsonKey(includeToJson: false, includeFromJson: false)
+  final String? customerAvatarUrl;
+// For B2B partner business name/logo
+  @override
+  @JsonKey(includeToJson: false, includeFromJson: false)
+  final String? partnerBusinessName;
+  @override
+  @JsonKey(includeToJson: false, includeFromJson: false)
+  final String? partnerBusinessLogo;
 
   @override
   String toString() {
-    return 'ChatModel(id: $id, customerId: $customerId, businessId: $businessId, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, createdAt: $createdAt, businessName: $businessName, businessLogoUrl: $businessLogoUrl)';
+    return 'ChatModel(id: $id, customerId: $customerId, businessId: $businessId, businessAId: $businessAId, businessBId: $businessBId, isB2B: $isB2B, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, createdAt: $createdAt, updatedAt: $updatedAt, businessName: $businessName, businessLogoUrl: $businessLogoUrl, customerName: $customerName, customerAvatarUrl: $customerAvatarUrl, partnerBusinessName: $partnerBusinessName, partnerBusinessLogo: $partnerBusinessLogo)';
   }
 
   @override
@@ -264,22 +428,53 @@ class _$ChatModelImpl extends _ChatModel {
                 other.customerId == customerId) &&
             (identical(other.businessId, businessId) ||
                 other.businessId == businessId) &&
+            (identical(other.businessAId, businessAId) ||
+                other.businessAId == businessAId) &&
+            (identical(other.businessBId, businessBId) ||
+                other.businessBId == businessBId) &&
+            (identical(other.isB2B, isB2B) || other.isB2B == isB2B) &&
             (identical(other.lastMessage, lastMessage) ||
                 other.lastMessage == lastMessage) &&
             (identical(other.lastMessageAt, lastMessageAt) ||
                 other.lastMessageAt == lastMessageAt) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt) &&
             (identical(other.businessName, businessName) ||
                 other.businessName == businessName) &&
             (identical(other.businessLogoUrl, businessLogoUrl) ||
-                other.businessLogoUrl == businessLogoUrl));
+                other.businessLogoUrl == businessLogoUrl) &&
+            (identical(other.customerName, customerName) ||
+                other.customerName == customerName) &&
+            (identical(other.customerAvatarUrl, customerAvatarUrl) ||
+                other.customerAvatarUrl == customerAvatarUrl) &&
+            (identical(other.partnerBusinessName, partnerBusinessName) ||
+                other.partnerBusinessName == partnerBusinessName) &&
+            (identical(other.partnerBusinessLogo, partnerBusinessLogo) ||
+                other.partnerBusinessLogo == partnerBusinessLogo));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, customerId, businessId,
-      lastMessage, lastMessageAt, createdAt, businessName, businessLogoUrl);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      customerId,
+      businessId,
+      businessAId,
+      businessBId,
+      isB2B,
+      lastMessage,
+      lastMessageAt,
+      createdAt,
+      updatedAt,
+      businessName,
+      businessLogoUrl,
+      customerName,
+      customerAvatarUrl,
+      partnerBusinessName,
+      partnerBusinessLogo);
 
   /// Create a copy of ChatModel
   /// with the given fields replaced by the non-null parameter values.
@@ -300,15 +495,27 @@ class _$ChatModelImpl extends _ChatModel {
 abstract class _ChatModel extends ChatModel {
   const factory _ChatModel(
       {required final String id,
-      @JsonKey(name: 'customer_id') required final String customerId,
-      @JsonKey(name: 'business_id') required final String businessId,
+      @JsonKey(name: 'customer_id') final String? customerId,
+      @JsonKey(name: 'business_id') final String? businessId,
+      @JsonKey(name: 'business_a_id') final String? businessAId,
+      @JsonKey(name: 'business_b_id') final String? businessBId,
+      @JsonKey(name: 'is_b2b') final bool isB2B,
       @JsonKey(name: 'last_message') final String? lastMessage,
       @JsonKey(name: 'last_message_at') final DateTime? lastMessageAt,
       @JsonKey(name: 'created_at') required final DateTime createdAt,
+      @JsonKey(name: 'updated_at') required final DateTime updatedAt,
       @JsonKey(includeToJson: false, includeFromJson: false)
       final String? businessName,
       @JsonKey(includeToJson: false, includeFromJson: false)
-      final String? businessLogoUrl}) = _$ChatModelImpl;
+      final String? businessLogoUrl,
+      @JsonKey(includeToJson: false, includeFromJson: false)
+      final String? customerName,
+      @JsonKey(includeToJson: false, includeFromJson: false)
+      final String? customerAvatarUrl,
+      @JsonKey(includeToJson: false, includeFromJson: false)
+      final String? partnerBusinessName,
+      @JsonKey(includeToJson: false, includeFromJson: false)
+      final String? partnerBusinessLogo}) = _$ChatModelImpl;
   const _ChatModel._() : super._();
 
   factory _ChatModel.fromJson(Map<String, dynamic> json) =
@@ -318,10 +525,19 @@ abstract class _ChatModel extends ChatModel {
   String get id;
   @override
   @JsonKey(name: 'customer_id')
-  String get customerId;
+  String? get customerId; // Now nullable for B2B
   @override
   @JsonKey(name: 'business_id')
-  String get businessId;
+  String? get businessId; // Now nullable for B2B
+  @override
+  @JsonKey(name: 'business_a_id')
+  String? get businessAId; // NEW: for B2B
+  @override
+  @JsonKey(name: 'business_b_id')
+  String? get businessBId; // NEW: for B2B
+  @override
+  @JsonKey(name: 'is_b2b')
+  bool get isB2B; // NEW: flag
   @override
   @JsonKey(name: 'last_message')
   String? get lastMessage;
@@ -330,13 +546,28 @@ abstract class _ChatModel extends ChatModel {
   DateTime? get lastMessageAt;
   @override
   @JsonKey(name: 'created_at')
-  DateTime get createdAt; // Add transient fields from join
+  DateTime get createdAt;
+  @override
+  @JsonKey(name: 'updated_at')
+  DateTime get updatedAt; // Transient fields for joined data
   @override
   @JsonKey(includeToJson: false, includeFromJson: false)
   String? get businessName;
   @override
   @JsonKey(includeToJson: false, includeFromJson: false)
   String? get businessLogoUrl;
+  @override
+  @JsonKey(includeToJson: false, includeFromJson: false)
+  String? get customerName;
+  @override
+  @JsonKey(includeToJson: false, includeFromJson: false)
+  String? get customerAvatarUrl; // For B2B partner business name/logo
+  @override
+  @JsonKey(includeToJson: false, includeFromJson: false)
+  String? get partnerBusinessName;
+  @override
+  @JsonKey(includeToJson: false, includeFromJson: false)
+  String? get partnerBusinessLogo;
 
   /// Create a copy of ChatModel
   /// with the given fields replaced by the non-null parameter values.

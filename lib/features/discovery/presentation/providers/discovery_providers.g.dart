@@ -7,7 +7,7 @@ part of 'discovery_providers.dart';
 // **************************************************************************
 
 String _$discoveryRemoteDataSourceHash() =>
-    r'641b9710c4f8226d598edc9fa8f4c5a2b3de1323';
+    r'bf03979d21a581e466d7752d1efb217cea908dfa';
 
 /// See also [discoveryRemoteDataSource].
 @ProviderFor(discoveryRemoteDataSource)
@@ -27,7 +27,7 @@ final discoveryRemoteDataSourceProvider =
 typedef DiscoveryRemoteDataSourceRef
     = AutoDisposeProviderRef<DiscoveryRemoteDataSource>;
 String _$discoveryRepositoryHash() =>
-    r'cff42187dc8b1bc12cd1b0f5fbb8bf917879b802';
+    r'48ef6b24d600831a72b85ff007e0fcd9e376e38b';
 
 /// See also [discoveryRepository].
 @ProviderFor(discoveryRepository)
@@ -45,7 +45,7 @@ final discoveryRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef DiscoveryRepositoryRef = AutoDisposeProviderRef<DiscoveryRepository>;
-String _$nearbyBusinessesHash() => r'89a1ec9148bcd0f93f4967564e1033e16cf43c27';
+String _$nearbyBusinessesHash() => r'c855d6fcd985b9b249286f4b8ce7922458d460d0';
 
 /// Copied from Dart SDK
 class _SystemHash {
