@@ -263,6 +263,10 @@ final currentUserProvider = Provider<User?>((ref) {
   return ref.watch(authProvider).valueOrNull;
 });
 
+/// One-shot welcome message shown after successful login.
+/// Set by login/register screens, consumed + cleared by main_scaffold.
+final loginWelcomeProvider = StateProvider<String?>((ref) => null);
+
 /// Fetch user profile by ID
 final userProfileProvider =
     FutureProvider.family<User, String>((ref, userId) async {

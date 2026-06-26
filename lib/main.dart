@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,13 +27,26 @@ void main() async {
 
   await DeepLinkService().initialize();
 
-  runApp(
-    ProviderScope(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-      ],
-      child: const MyApp(),
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    if (kReleaseMode) debugPrint('[FlutterError] ${details.exception}');
+  };
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('[PlatformError] $error\n$stack');
+    return true;
+  };
+
+  runZonedGuarded(
+    () => runApp(
+      ProviderScope(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+        ],
+        child: const MyApp(),
+      ),
     ),
+    (error, stack) => debugPrint('[ZoneError] $error\n$stack'),
   );
 }
 

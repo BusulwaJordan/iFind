@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/error_retry_widget.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:ifind/features/business/presentation/providers/b2b_provider.dart';
@@ -20,6 +24,7 @@ import 'package:ifind/features/reviews/presentation/widgets/add_review_dialog.da
 import 'package:ifind/features/portfolio/presentation/screens/gallery_media_view_screen.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:ifind/features/favourites/presentation/providers/favourites_provider.dart';
 
 final _hasLoggedProfileViewProvider =
     StateProvider.family<bool, String>((ref, businessId) => false);
@@ -33,8 +38,7 @@ class BusinessDetailScreen extends ConsumerWidget {
       BuildContext context, WidgetRef ref, PortfolioItem item) async {
     final user = ref.read(currentUserProvider);
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please login to inquire')));
+      AppToast.show(context, 'Please login to inquire', type: ToastType.info);
       return;
     }
 
@@ -69,8 +73,7 @@ class BusinessDetailScreen extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
       }
     }
   }
@@ -123,6 +126,58 @@ class BusinessDetailScreen extends ConsumerWidget {
                       ),
                       onPressed: () => context.pop(),
                     ),
+                    actions: [
+                      // Bookmark / Save button
+                      Consumer(builder: (ctx, bookmarkRef, _) {
+                        final savedIds =
+                            bookmarkRef.watch(favouritesProvider);
+                        final isSaved =
+                            savedIds.contains(displayBusiness.id);
+                        return IconButton(
+                          tooltip: isSaved
+                              ? 'Remove from favourites'
+                              : 'Save to favourites',
+                          icon: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isSaved
+                                  ? Icons.bookmark_rounded
+                                  : Icons.bookmark_border_rounded,
+                              color: isSaved
+                                  ? Colors.amber
+                                  : Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                          onPressed: () {
+                            bookmarkRef
+                                .read(favouritesProvider.notifier)
+                                .toggle(displayBusiness.id);
+                            // Log saved_business interaction for AI model
+                            final user =
+                                bookmarkRef.read(currentUserProvider);
+                            if (user != null && !isSaved) {
+                              bookmarkRef
+                                  .read(interactionServiceProvider)
+                                  .logInteraction(
+                                    userId: user.id,
+                                    businessId: displayBusiness.id,
+                                    type: InteractionType.savedBusiness,
+                                  );
+                            }
+                            AppToast.show(
+                              ctx,
+                              isSaved ? 'Removed from favourites' : 'Saved to favourites',
+                              type: isSaved ? ToastType.info : ToastType.success,
+                            );
+                          },
+                        );
+                      }),
+                    ],
                     flexibleSpace: FlexibleSpaceBar(
                       stretchModes: const [StretchMode.zoomBackground],
                       background: Stack(
@@ -250,8 +305,7 @@ class BusinessDetailScreen extends ConsumerWidget {
           bottomNavigationBar: _buildBottomBar(context, ref, displayBusiness),
         );
       },
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () => const IFindLoadingPage(),
       error: (e, s) => Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.white,
@@ -694,8 +748,8 @@ class _PortfolioTab extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, s) => Center(child: Text('Error: $e')),
+      loading: () => const Center(child: IFindLoaderInline(size: 60)),
+      error: (e, s) => ErrorRetryWidget(message: friendlyError(e), slim: true),
     );
   }
 }
@@ -841,8 +895,8 @@ class _ReviewsTab extends ConsumerWidget {
                 ),
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, s) => Center(child: Text('Error: $e')),
+            loading: () => const Center(child: IFindLoaderInline(size: 60)),
+            error: (e, s) => ErrorRetryWidget(message: friendlyError(e), slim: true),
           ),
         ),
       ],

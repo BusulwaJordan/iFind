@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/features/portfolio/presentation/providers/comment_provider.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class CommentsBottomSheet extends ConsumerStatefulWidget {
@@ -30,9 +33,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
 
     final user = ref.read(currentUserProvider);
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please login to comment')),
-      );
+      AppToast.show(context, 'Please login to comment', type: ToastType.info);
       return;
     }
 
@@ -48,9 +49,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
       result.fold(
         (failure) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to post comment: ${failure.toString()}')),
-            );
+            AppToast.show(context, friendlyError(Exception(failure.toString())), type: ToastType.error);
           }
         },
         (_) {
@@ -91,16 +90,12 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
     result.fold(
       (failure) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete: ${failure.toString()}')),
-          );
+          AppToast.show(context, friendlyError(Exception(failure.toString())), type: ToastType.error);
         }
       },
       (_) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Comment deleted')),
-          );
+          AppToast.show(context, 'Comment deleted', type: ToastType.success);
         }
       },
     );
@@ -231,7 +226,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                   },
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: IFindLoaderInline(size: 60)),
               error: (e, s) => Center(
                 child: Text('Error loading comments: $e'),
               ),

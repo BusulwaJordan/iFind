@@ -26,8 +26,12 @@ import 'package:ifind/features/business/presentation/screens/business_details_sc
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/recommendations/presentation/screens/ai_search_screen.dart';
 import 'package:ifind/features/notifications/presentation/screens/notifications_screen.dart';
-import 'package:ifind/app.dart';
+import 'package:ifind/features/favourites/presentation/screens/favourites_screen.dart';
+import 'package:ifind/features/profile/presentation/screens/profile_screen.dart';
+import 'package:ifind/features/help/presentation/screens/help_support_screen.dart';
+import 'package:ifind/features/inquiries/presentation/screens/inquiries_screen.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/features/business/presentation/screens/b2b_matches_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -189,22 +193,51 @@ final routerProvider = Provider<GoRouter>((ref) {
           );
         },
       ),
+      GoRoute(
+        path: '/favourites',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const FavouritesScreen(),
+      ),
+      GoRoute(
+        path: '/profile',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: '/help',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const HelpSupportScreen(),
+      ),
+      GoRoute(
+        path: '/inquiries',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const InquiriesScreen(),
+      ),
     ],
   );
 });
 
 // Helper function to build role-based branches
 List<StatefulShellBranch> _buildBranches(
-  ProviderRef<GoRouter> ref,
+  Ref<GoRouter> ref,
   AsyncValue<User?> authState,
 ) {
   final user = authState.valueOrNull;
   final isBusinessOwner = user?.role == UserRole.businessOwner;
 
-  // Customer Branches: Home | Discover | Chats | Profile
+  // AI / For You branch — shared, always at index 2
+  final forYouBranch = StatefulShellBranch(
+    routes: [
+      GoRoute(
+        path: '/for-you',
+        builder: (context, state) => const AiSearchScreen(),
+      ),
+    ],
+  );
+
+  // Customer Branches: Home(0) | Discover(1) | ForYou(2) | Chats(3) | Profile(4)
   if (!isBusinessOwner) {
     return [
-      // Home
       StatefulShellBranch(
         routes: [
           GoRoute(
@@ -216,7 +249,6 @@ List<StatefulShellBranch> _buildBranches(
           ),
         ],
       ),
-      // Discover
       StatefulShellBranch(
         routes: [
           GoRoute(
@@ -228,7 +260,7 @@ List<StatefulShellBranch> _buildBranches(
           ),
         ],
       ),
-      // Chats
+      forYouBranch,
       StatefulShellBranch(
         routes: [
           GoRoute(
@@ -237,21 +269,19 @@ List<StatefulShellBranch> _buildBranches(
           ),
         ],
       ),
-      // Profile (Settings for customers)
       StatefulShellBranch(
         routes: [
           GoRoute(
             path: '/profile',
-            builder: (context, state) => const SettingsScreen(),
+            builder: (context, state) => const ProfileScreen(),
           ),
         ],
       ),
     ];
   }
 
-  // Business Owner Branches: Dashboard | Discover | Chats | My Shop
+  // Business Owner Branches: Dashboard(0) | Discover(1) | ForYou(2) | Chats(3) | MyShop(4)
   return [
-    // Dashboard (Leads)
     StatefulShellBranch(
       routes: [
         GoRoute(
@@ -260,7 +290,6 @@ List<StatefulShellBranch> _buildBranches(
         ),
       ],
     ),
-    // Discover
     StatefulShellBranch(
       routes: [
         GoRoute(
@@ -272,7 +301,7 @@ List<StatefulShellBranch> _buildBranches(
         ),
       ],
     ),
-    // Chats
+    forYouBranch,
     StatefulShellBranch(
       routes: [
         GoRoute(
@@ -281,7 +310,6 @@ List<StatefulShellBranch> _buildBranches(
         ),
       ],
     ),
-    // My Shop
     StatefulShellBranch(
       routes: [
         GoRoute(
@@ -339,18 +367,7 @@ class _AuthCallbackScreenState extends ConsumerState<AuthCallbackScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Confirming your email...'),
-          ],
-        ),
-      ),
-    );
+    return const IFindLoadingPage(label: 'Confirming email…');
   }
 }
 
@@ -358,11 +375,5 @@ class LoadingScreen extends StatelessWidget {
   const LoadingScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const IFindLoadingPage();
 }

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/features/products/presentation/providers/product_provider.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -50,12 +52,12 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
 
     result.fold(
       (failure) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${failure.message}')));
+        AppToast.show(context, friendlyError(Exception(failure.message)), type: ToastType.error);
       },
       (product) {
         ref.invalidate(businessProductsProvider(widget.businessId));
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Product added successfully!')));
+        AppToast.show(context, 'Product added successfully!', type: ToastType.success);
       },
     );
   }

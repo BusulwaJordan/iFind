@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/features/products/presentation/providers/product_provider.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -39,9 +41,7 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
         double.tryParse(_priceController.text.trim().replaceAll(',', ''));
     final stock = int.tryParse(_stockController.text.trim());
     if (price == null || stock == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid price and stock count.')),
-      );
+      AppToast.show(context, 'Enter a valid price and stock count.', type: ToastType.error);
       return;
     }
 
@@ -61,25 +61,20 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
       result.fold(
         (failure) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(_friendlyProductError(failure.message))),
-            );
+            AppToast.show(context, friendlyError(Exception(failure.message)), type: ToastType.error);
           }
         },
         (_) {
           ref.invalidate(businessProductsProvider(widget.businessId));
           if (mounted) {
             Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Product added successfully')));
+            AppToast.show(context, 'Product added successfully', type: ToastType.success);
           }
         },
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_friendlyProductError(e.toString()))),
-        );
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -215,16 +210,3 @@ class _AddProductDialogState extends ConsumerState<AddProductDialog> {
   }
 }
 
-String _friendlyProductError(String error) {
-  final lower = error.toLowerCase();
-  if (lower.contains('row-level security') || lower.contains('rls')) {
-    return 'You do not have permission to add products to this shop.';
-  }
-  if (lower.contains('product_images') || lower.contains('storage')) {
-    return 'The product was not saved because image upload is not configured.';
-  }
-  if (lower.contains('network') || lower.contains('socketexception')) {
-    return 'Check your internet connection and try again.';
-  }
-  return 'Could not add product. Please try again.';
-}

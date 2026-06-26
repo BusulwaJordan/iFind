@@ -4,6 +4,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 
 class LocationPickerScreen extends StatefulWidget {
   final LatLng? initialLocation;
@@ -63,9 +65,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     } catch (e) {
       setState(() => _isLocating = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error getting location: $e')),
-        );
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
       }
     }
   }

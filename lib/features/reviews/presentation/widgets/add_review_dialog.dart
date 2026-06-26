@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/reviews/presentation/providers/review_provider.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
@@ -24,9 +26,7 @@ class _AddReviewDialogState extends ConsumerState<AddReviewDialog> {
   Future<void> _submit() async {
     final user = ref.read(currentUserProvider);
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please login to submit a review'))
-      );
+      AppToast.show(context, 'Please login to submit a review', type: ToastType.info);
       return;
     }
 
@@ -41,9 +41,7 @@ class _AddReviewDialogState extends ConsumerState<AddReviewDialog> {
     if (mounted) {
       setState(() => _isLoading = false);
       result.fold(
-        (failure) => ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${failure.message}'))
-        ),
+        (failure) => AppToast.show(context, friendlyError(Exception(failure.message)), type: ToastType.error),
         (_) {
           // Refresh business data and reviews immediately
           ref.invalidate(businessProvider(widget.businessId));
@@ -57,11 +55,9 @@ class _AddReviewDialogState extends ConsumerState<AddReviewDialog> {
             businessId: widget.businessId,
             type: InteractionType.reviewPosted,
           );
-          
+
           Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Review submitted! Thank you.'))
-          );
+          AppToast.show(context, 'Review submitted! Thank you.', type: ToastType.success);
         },
       );
     }

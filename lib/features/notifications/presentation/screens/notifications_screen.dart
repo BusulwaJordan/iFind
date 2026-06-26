@@ -5,7 +5,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/widgets/loading_widget.dart';
+import 'package:ifind/core/widgets/error_retry_widget.dart';
+import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/features/notifications/presentation/providers/notification_provider.dart';
 import 'package:ifind/features/notifications/domain/entities/notification.dart';
 import 'package:ifind/features/notifications/utils/notification_preview_formatter.dart';
@@ -21,117 +24,192 @@ class NotificationsScreen extends ConsumerWidget {
         ? ref.watch(businessNotificationsProvider(businessId!))
         : ref.watch(userNotificationsProvider);
 
+    final unreadCount = notificationsAsync.value
+            ?.where((n) => !n.isRead)
+            .length ??
+        0;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text(
-          'Notifications',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 22),
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-        centerTitle: false,
-      ),
-      body: notificationsAsync.when(
-        loading: () => const LoadingWidget(),
-        error: (err, stack) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(22),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    shape: BoxShape.circle,
+      body: CustomScrollView(
+        slivers: [
+          // ── Header ──────────────────────────────────────────────────────
+          SliverAppBar(
+            expandedHeight: 160,
+            pinned: true,
+            backgroundColor: AppColors.deepGreen,
+            leading: IconButton(
+              onPressed: () => context.pop(),
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.arrow_back_ios_new_rounded,
+                    color: Colors.white, size: 16),
+              ),
+            ),
+            actions: [
+              if (unreadCount > 0)
+                TextButton.icon(
+                  onPressed: () async {
+                    final notifications = notificationsAsync.value ?? [];
+                    final repo = ref.read(notificationRepositoryProvider);
+                    for (final n in notifications.where((n) => !n.isRead)) {
+                      await repo.markAsRead(n.id);
+                    }
+                    _refreshNotifications(ref, businessId: businessId);
+                    if (context.mounted) {
+                      AppToast.show(context, 'All marked as read',
+                          type: ToastType.success);
+                    }
+                  },
+                  icon: const Icon(Icons.done_all_rounded,
+                      color: Colors.white70, size: 18),
+                  label: Text('Mark all read',
+                      style: GoogleFonts.outfit(
+                          color: Colors.white70, fontSize: 13)),
+                ),
+              const SizedBox(width: 8),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              collapseMode: CollapseMode.pin,
+              background: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.deepGreen, AppColors.primaryGreen],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  child: Icon(Icons.wifi_off_rounded,
-                      size: 48, color: Colors.orange.shade700),
                 ),
-                const SizedBox(height: 18),
-                Text(
-                  'Notifications could not load',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkText,
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                  Icons.notifications_rounded,
+                                  color: Colors.white,
+                                  size: 24),
+                            ),
+                            const SizedBox(width: 14),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Notifications',
+                                  style: GoogleFonts.outfit(
+                                      color: Colors.white,
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                if (unreadCount > 0)
+                                  Text(
+                                    '$unreadCount unread',
+                                    style: GoogleFonts.outfit(
+                                        color: Colors.white70, fontSize: 13),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Check your internet connection and try again.',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.outfit(color: Colors.grey.shade600),
-                ),
-                const SizedBox(height: 18),
-                OutlinedButton.icon(
-                  onPressed: () =>
-                      _refreshNotifications(ref, businessId: businessId),
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Retry'),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-        data: (notifications) {
-          if (notifications.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.notifications_none_rounded,
-                        size: 64, color: Colors.grey.shade400),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'All caught up!',
-                    style: GoogleFonts.outfit(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'New messages, B2B matches, and leads will appear here.',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      color: Colors.grey.shade500,
-                    ),
-                  ),
-                ],
-              ).animate().fadeIn(),
-            );
-          }
 
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            itemCount: notifications.length,
-            itemBuilder: (context, index) {
-              final notification = notifications[index];
-              return _NotificationCard(
-                notification: notification,
-                index: index,
-                businessId: businessId,
+          // ── Body ────────────────────────────────────────────────────────
+          notificationsAsync.when(
+            loading: () => const SliverFillRemaining(
+              child: Center(child: LoadingWidget()),
+            ),
+            error: (err, stack) => SliverFillRemaining(
+              child: Center(
+                child: ErrorRetryWidget(
+                  message: friendlyError(err),
+                  onRetry: () =>
+                      _refreshNotifications(ref, businessId: businessId),
+                ),
+              ),
+            ),
+            data: (notifications) {
+              if (notifications.isEmpty) {
+                return SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(28),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.notifications_none_rounded,
+                              size: 64, color: Colors.grey.shade300),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'All caught up!',
+                          style: GoogleFonts.outfit(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey.shade700),
+                        ),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 40),
+                          child: Text(
+                            'New messages, B2B matches,\nand leads will appear here.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                color: Colors.grey.shade500,
+                                height: 1.5),
+                          ),
+                        ),
+                      ],
+                    ).animate().fadeIn(),
+                  ),
+                );
+              }
+
+              return SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _NotificationCard(
+                      notification: notifications[index],
+                      index: index,
+                      businessId: businessId,
+                    ),
+                    childCount: notifications.length,
+                  ),
+                ),
               );
             },
-          );
-        },
+          ),
+        ],
       ),
     );
   }
 }
+
+// ── Notification card ────────────────────────────────────────────────────────
 
 class _NotificationCard extends ConsumerWidget {
   final AppNotification notification;
@@ -146,33 +224,23 @@ class _NotificationCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    IconData iconData;
-    Color themeColor;
-    String typeLabel;
     final previewBody =
         NotificationPreviewFormatter.cleanBody(notification.body);
 
-    switch (notification.type) {
-      case 'chat':
-        iconData = Icons.chat_bubble_rounded;
-        themeColor = Colors.blue;
-        typeLabel = 'Chat';
-        break;
-      case 'b2b_match':
-        iconData = Icons.handshake_rounded;
-        themeColor = Colors.amber.shade700;
-        typeLabel = 'B2B Match';
-        break;
-      case 'need_match':
-        iconData = Icons.local_offer_rounded;
-        themeColor = AppColors.primaryGreen;
-        typeLabel = 'Lead Alert';
-        break;
-      default:
-        iconData = Icons.notifications_rounded;
-        themeColor = AppColors.deepGreen;
-        typeLabel = 'System';
-    }
+    final (iconData, themeColor, typeLabel) = switch (notification.type) {
+      'chat' => (Icons.chat_bubble_rounded, Colors.blue, 'Message'),
+      'b2b_match' => (Icons.handshake_rounded, Colors.amber.shade700, 'B2B Match'),
+      'need_match' => (
+          Icons.local_offer_rounded,
+          AppColors.primaryGreen,
+          'Lead Alert'
+        ),
+      _ => (
+          Icons.notifications_rounded,
+          AppColors.deepGreen,
+          'System'
+        ),
+    };
 
     return Dismissible(
       key: Key('notif_${notification.id}'),
@@ -182,42 +250,37 @@ class _NotificationCard extends ConsumerWidget {
         padding: const EdgeInsets.only(right: 24),
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: Colors.redAccent.shade100.withValues(alpha: 0.15),
+          color: Colors.red.shade50,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Icon(Icons.delete_outline_rounded,
-            color: Colors.redAccent.shade400, size: 28),
+            color: Colors.redAccent.shade400, size: 26),
       ),
       onDismissed: (_) async {
-        final messenger = ScaffoldMessenger.of(context);
         await ref
             .read(notificationRepositoryProvider)
             .deleteNotification(notification.id);
         _refreshNotifications(ref, businessId: businessId);
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Notification deleted', style: GoogleFonts.outfit()),
-            backgroundColor: Colors.grey.shade900,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        if (context.mounted) {
+          AppToast.show(context, 'Notification removed',
+              type: ToastType.info);
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
-          color: notification.isRead ? Colors.white : Colors.white,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: notification.isRead
-                ? Colors.grey.shade200
-                : themeColor.withValues(alpha: 0.3),
+                ? Colors.grey.shade100
+                : themeColor.withValues(alpha: 0.25),
             width: notification.isRead ? 1 : 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
@@ -227,24 +290,18 @@ class _NotificationCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(20),
           child: InkWell(
             onTap: () async {
-              final route = switch (notification.type) {
-                'chat' => '/chats',
-                'need_match' || 'b2b_match' => '/my-shop',
-                _ => null,
-              };
-
-              // Mark as read
               if (!notification.isRead) {
                 await ref
                     .read(notificationRepositoryProvider)
                     .markAsRead(notification.id);
                 _refreshNotifications(ref, businessId: businessId);
               }
-
-              // Route contextually
-              if (route != null && context.mounted) {
-                context.go(route);
-              }
+              final route = switch (notification.type) {
+                'chat' => '/chats',
+                'need_match' || 'b2b_match' => '/my-shop',
+                _ => null,
+              };
+              if (route != null && context.mounted) context.go(route);
             },
             borderRadius: BorderRadius.circular(20),
             child: Padding(
@@ -252,31 +309,26 @@ class _NotificationCard extends ConsumerWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Type Icon
+                  // Icon circle
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: themeColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      iconData,
-                      color: themeColor,
-                      size: 22,
-                    ),
+                    child: Icon(iconData, color: themeColor, size: 22),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
                   // Content
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
+                                  horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
                                 color: themeColor.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(8),
@@ -284,19 +336,18 @@ class _NotificationCard extends ConsumerWidget {
                               child: Text(
                                 typeLabel.toUpperCase(),
                                 style: GoogleFonts.outfit(
-                                  color: themeColor,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
+                                    color: themeColor,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5),
                               ),
                             ),
+                            const Spacer(),
                             Text(
                               timeago.format(notification.createdAt),
                               style: GoogleFonts.outfit(
-                                fontSize: 11,
-                                color: Colors.grey.shade500,
-                              ),
+                                  fontSize: 11,
+                                  color: Colors.grey.shade400),
                             ),
                           ],
                         ),
@@ -314,7 +365,7 @@ class _NotificationCard extends ConsumerWidget {
                                       fontWeight: notification.isRead
                                           ? FontWeight.w600
                                           : FontWeight.bold,
-                                      fontSize: 16,
+                                      fontSize: 15,
                                       color: Colors.black87,
                                     ),
                                   ),
@@ -322,10 +373,9 @@ class _NotificationCard extends ConsumerWidget {
                                   Text(
                                     previewBody,
                                     style: GoogleFonts.outfit(
-                                      fontSize: 14,
-                                      color: Colors.grey.shade600,
-                                      height: 1.3,
-                                    ),
+                                        fontSize: 13,
+                                        color: Colors.grey.shade600,
+                                        height: 1.4),
                                   ),
                                 ],
                               ),
@@ -334,7 +384,8 @@ class _NotificationCard extends ConsumerWidget {
                               Container(
                                 width: 8,
                                 height: 8,
-                                margin: const EdgeInsets.only(left: 8, top: 4),
+                                margin:
+                                    const EdgeInsets.only(left: 8, top: 6),
                                 decoration: BoxDecoration(
                                   color: themeColor,
                                   shape: BoxShape.circle,
@@ -350,7 +401,7 @@ class _NotificationCard extends ConsumerWidget {
             ),
           ),
         ),
-      ).animate().fadeIn(delay: (index * 50).ms).slideY(begin: 0.05, end: 0),
+      ).animate().fadeIn(delay: (index * 40).ms).slideY(begin: 0.05, end: 0),
     );
   }
 }

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chewie/chewie.dart';
 import 'package:video_player/video_player.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -78,8 +80,7 @@ class _GalleryMediaViewScreenState
 
   void _copyLink() {
     Clipboard.setData(ClipboardData(text: widget.item.mediaUrl));
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Link copied to clipboard!')));
+    AppToast.show(context, 'Link copied to clipboard!', type: ToastType.success);
   }
 
   Future<void> _toggleLike() async {
@@ -93,9 +94,7 @@ class _GalleryMediaViewScreenState
       result.fold(
         (failure) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error: ${failure.toString()}')),
-            );
+            AppToast.show(context, friendlyError(Exception(failure.toString())), type: ToastType.error);
           }
         },
         (isLiked) {

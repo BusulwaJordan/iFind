@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/utils/error_utils.dart';
+import 'package:ifind/core/widgets/app_toast.dart';
+import 'package:ifind/core/widgets/error_retry_widget.dart';
+import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
@@ -32,27 +36,95 @@ class ChatRoomScreen extends ConsumerWidget {
       error: (_, __) => otherPartyName,
     );
 
+    final business = businessAsync.valueOrNull;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FB),
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(displayName,
-                style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.bold, fontSize: 18)),
-            Text('Online',
-                style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    color: AppColors.primaryGreen,
-                    fontWeight: FontWeight.bold)),
-          ],
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 1,
+      body: Column(
+        children: [
+          // ── Green gradient app bar ──────────────────────────────────────
+          Container(
+            padding: EdgeInsets.fromLTRB(
+                16, MediaQuery.of(context).padding.top + 12, 16, 16),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF003D2B), Color(0xFF006241)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.arrow_back_ios_new_rounded,
+                        color: Colors.white, size: 16),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Business logo
+                business?.logoUrl != null
+                    ? CircleAvatar(
+                        radius: 20,
+                        backgroundImage: NetworkImage(business!.logoUrl!),
+                        backgroundColor:
+                            Colors.white.withValues(alpha: 0.15),
+                      )
+                    : CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.white.withValues(alpha: 0.15),
+                        child: Text(
+                          displayName.isNotEmpty
+                              ? displayName[0].toUpperCase()
+                              : 'B',
+                          style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(displayName,
+                          style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16)),
+                      Row(
+                        children: [
+                          Container(
+                            width: 7,
+                            height: 7,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF4ADE80),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text('Active',
+                              style: GoogleFonts.outfit(
+                                  color: Colors.white.withValues(alpha: 0.75),
+                                  fontSize: 11)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // ── Chat body ──────────────────────────────────────────────────
+          Expanded(child: _ChatRoomBody(chat: chat)),
+        ],
       ),
-      body: _ChatRoomBody(chat: chat),
     );
   }
 }
@@ -133,8 +205,7 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Failed to send: $e')));
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
         setState(() {
           _optimisticMessages.remove(tempMsg);
         });
@@ -184,8 +255,8 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
                 },
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, s) => Center(child: Text('Error: $e')),
+            loading: () => const Center(child: IFindLoaderInline(size: 60)),
+            error: (e, s) => ErrorRetryWidget(message: friendlyError(e), onRetry: () => ref.invalidate(messagesStreamProvider(widget.chat.id))),
           ),
         ),
         _buildInputArea(),
@@ -496,51 +567,70 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
       ref.invalidate(messagesStreamProvider(widget.chat.id));
       ref.invalidate(myChatsProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Message deleted')),
-        );
+        AppToast.show(context, 'Message deleted', type: ToastType.success);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
       }
     }
   }
 
   Widget _buildInputArea() {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFEEEEEE))),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 12,
+              offset: const Offset(0, -3)),
+        ],
       ),
       child: SafeArea(
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                constraints: const BoxConstraints(maxHeight: 120),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: const Color(0xFFF3F4F6),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: TextField(
                   controller: _controller,
-                  decoration: const InputDecoration(
-                    hintText: 'Type a message...',
+                  maxLines: null,
+                  textCapitalization: TextCapitalization.sentences,
+                  style: GoogleFonts.outfit(fontSize: 15),
+                  decoration: InputDecoration(
+                    hintText: 'Type a message…',
+                    hintStyle: GoogleFonts.outfit(color: Colors.grey),
                     border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            CircleAvatar(
-              backgroundColor: AppColors.primaryGreen,
-              child: IconButton(
-                icon: const Icon(Icons.send, color: Colors.white, size: 20),
-                onPressed: _sendMessage,
+            const SizedBox(width: 10),
+            GestureDetector(
+              onTap: _sendMessage,
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.primaryGreen, AppColors.deepGreen],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.send_rounded,
+                    color: Colors.white, size: 20),
               ),
             ),
           ],
