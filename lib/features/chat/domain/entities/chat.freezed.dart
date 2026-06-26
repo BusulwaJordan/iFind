@@ -16,15 +16,27 @@ final _privateConstructorUsedError = UnsupportedError(
 
 /// @nodoc
 mixin _$Chat {
-  String get id => throw _privateConstructorUsedError;
-  String get customerId => throw _privateConstructorUsedError;
-  String get businessId => throw _privateConstructorUsedError;
+  String get id =>
+      throw _privateConstructorUsedError; // B2C fields (nullable for B2B)
+  String? get customerId => throw _privateConstructorUsedError;
+  String? get businessId =>
+      throw _privateConstructorUsedError; // B2B fields (nullable for B2C)
+  String? get businessAId => throw _privateConstructorUsedError;
+  String? get businessBId =>
+      throw _privateConstructorUsedError; // Flag to distinguish chat type
+  bool get isB2B => throw _privateConstructorUsedError; // Common fields
   String? get lastMessage => throw _privateConstructorUsedError;
   DateTime? get lastMessageAt => throw _privateConstructorUsedError;
-  DateTime get createdAt =>
-      throw _privateConstructorUsedError; // Transient UI fields
+  DateTime get createdAt => throw _privateConstructorUsedError;
+  DateTime get updatedAt =>
+      throw _privateConstructorUsedError; // Transient UI fields (for B2C)
   String? get businessName => throw _privateConstructorUsedError;
   String? get businessLogoUrl => throw _privateConstructorUsedError;
+  String? get customerName => throw _privateConstructorUsedError;
+  String? get customerAvatarUrl =>
+      throw _privateConstructorUsedError; // Transient UI fields (for B2B)
+  String? get partnerBusinessName => throw _privateConstructorUsedError;
+  String? get partnerBusinessLogo => throw _privateConstructorUsedError;
 
   /// Create a copy of Chat
   /// with the given fields replaced by the non-null parameter values.
@@ -39,13 +51,21 @@ abstract class $ChatCopyWith<$Res> {
   @useResult
   $Res call(
       {String id,
-      String customerId,
-      String businessId,
+      String? customerId,
+      String? businessId,
+      String? businessAId,
+      String? businessBId,
+      bool isB2B,
       String? lastMessage,
       DateTime? lastMessageAt,
       DateTime createdAt,
+      DateTime updatedAt,
       String? businessName,
-      String? businessLogoUrl});
+      String? businessLogoUrl,
+      String? customerName,
+      String? customerAvatarUrl,
+      String? partnerBusinessName,
+      String? partnerBusinessLogo});
 }
 
 /// @nodoc
@@ -64,27 +84,47 @@ class _$ChatCopyWithImpl<$Res, $Val extends Chat>
   @override
   $Res call({
     Object? id = null,
-    Object? customerId = null,
-    Object? businessId = null,
+    Object? customerId = freezed,
+    Object? businessId = freezed,
+    Object? businessAId = freezed,
+    Object? businessBId = freezed,
+    Object? isB2B = null,
     Object? lastMessage = freezed,
     Object? lastMessageAt = freezed,
     Object? createdAt = null,
+    Object? updatedAt = null,
     Object? businessName = freezed,
     Object? businessLogoUrl = freezed,
+    Object? customerName = freezed,
+    Object? customerAvatarUrl = freezed,
+    Object? partnerBusinessName = freezed,
+    Object? partnerBusinessLogo = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
           ? _value.id
           : id // ignore: cast_nullable_to_non_nullable
               as String,
-      customerId: null == customerId
+      customerId: freezed == customerId
           ? _value.customerId
           : customerId // ignore: cast_nullable_to_non_nullable
-              as String,
-      businessId: null == businessId
+              as String?,
+      businessId: freezed == businessId
           ? _value.businessId
           : businessId // ignore: cast_nullable_to_non_nullable
-              as String,
+              as String?,
+      businessAId: freezed == businessAId
+          ? _value.businessAId
+          : businessAId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      businessBId: freezed == businessBId
+          ? _value.businessBId
+          : businessBId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      isB2B: null == isB2B
+          ? _value.isB2B
+          : isB2B // ignore: cast_nullable_to_non_nullable
+              as bool,
       lastMessage: freezed == lastMessage
           ? _value.lastMessage
           : lastMessage // ignore: cast_nullable_to_non_nullable
@@ -97,6 +137,10 @@ class _$ChatCopyWithImpl<$Res, $Val extends Chat>
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
+      updatedAt: null == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
       businessName: freezed == businessName
           ? _value.businessName
           : businessName // ignore: cast_nullable_to_non_nullable
@@ -104,6 +148,22 @@ class _$ChatCopyWithImpl<$Res, $Val extends Chat>
       businessLogoUrl: freezed == businessLogoUrl
           ? _value.businessLogoUrl
           : businessLogoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      customerName: freezed == customerName
+          ? _value.customerName
+          : customerName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      customerAvatarUrl: freezed == customerAvatarUrl
+          ? _value.customerAvatarUrl
+          : customerAvatarUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      partnerBusinessName: freezed == partnerBusinessName
+          ? _value.partnerBusinessName
+          : partnerBusinessName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      partnerBusinessLogo: freezed == partnerBusinessLogo
+          ? _value.partnerBusinessLogo
+          : partnerBusinessLogo // ignore: cast_nullable_to_non_nullable
               as String?,
     ) as $Val);
   }
@@ -118,13 +178,21 @@ abstract class _$$ChatImplCopyWith<$Res> implements $ChatCopyWith<$Res> {
   @useResult
   $Res call(
       {String id,
-      String customerId,
-      String businessId,
+      String? customerId,
+      String? businessId,
+      String? businessAId,
+      String? businessBId,
+      bool isB2B,
       String? lastMessage,
       DateTime? lastMessageAt,
       DateTime createdAt,
+      DateTime updatedAt,
       String? businessName,
-      String? businessLogoUrl});
+      String? businessLogoUrl,
+      String? customerName,
+      String? customerAvatarUrl,
+      String? partnerBusinessName,
+      String? partnerBusinessLogo});
 }
 
 /// @nodoc
@@ -140,27 +208,47 @@ class __$$ChatImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? id = null,
-    Object? customerId = null,
-    Object? businessId = null,
+    Object? customerId = freezed,
+    Object? businessId = freezed,
+    Object? businessAId = freezed,
+    Object? businessBId = freezed,
+    Object? isB2B = null,
     Object? lastMessage = freezed,
     Object? lastMessageAt = freezed,
     Object? createdAt = null,
+    Object? updatedAt = null,
     Object? businessName = freezed,
     Object? businessLogoUrl = freezed,
+    Object? customerName = freezed,
+    Object? customerAvatarUrl = freezed,
+    Object? partnerBusinessName = freezed,
+    Object? partnerBusinessLogo = freezed,
   }) {
     return _then(_$ChatImpl(
       id: null == id
           ? _value.id
           : id // ignore: cast_nullable_to_non_nullable
               as String,
-      customerId: null == customerId
+      customerId: freezed == customerId
           ? _value.customerId
           : customerId // ignore: cast_nullable_to_non_nullable
-              as String,
-      businessId: null == businessId
+              as String?,
+      businessId: freezed == businessId
           ? _value.businessId
           : businessId // ignore: cast_nullable_to_non_nullable
-              as String,
+              as String?,
+      businessAId: freezed == businessAId
+          ? _value.businessAId
+          : businessAId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      businessBId: freezed == businessBId
+          ? _value.businessBId
+          : businessBId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      isB2B: null == isB2B
+          ? _value.isB2B
+          : isB2B // ignore: cast_nullable_to_non_nullable
+              as bool,
       lastMessage: freezed == lastMessage
           ? _value.lastMessage
           : lastMessage // ignore: cast_nullable_to_non_nullable
@@ -173,6 +261,10 @@ class __$$ChatImplCopyWithImpl<$Res>
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
               as DateTime,
+      updatedAt: null == updatedAt
+          ? _value.updatedAt
+          : updatedAt // ignore: cast_nullable_to_non_nullable
+              as DateTime,
       businessName: freezed == businessName
           ? _value.businessName
           : businessName // ignore: cast_nullable_to_non_nullable
@@ -180,6 +272,22 @@ class __$$ChatImplCopyWithImpl<$Res>
       businessLogoUrl: freezed == businessLogoUrl
           ? _value.businessLogoUrl
           : businessLogoUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      customerName: freezed == customerName
+          ? _value.customerName
+          : customerName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      customerAvatarUrl: freezed == customerAvatarUrl
+          ? _value.customerAvatarUrl
+          : customerAvatarUrl // ignore: cast_nullable_to_non_nullable
+              as String?,
+      partnerBusinessName: freezed == partnerBusinessName
+          ? _value.partnerBusinessName
+          : partnerBusinessName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      partnerBusinessLogo: freezed == partnerBusinessLogo
+          ? _value.partnerBusinessLogo
+          : partnerBusinessLogo // ignore: cast_nullable_to_non_nullable
               as String?,
     ));
   }
@@ -190,35 +298,65 @@ class __$$ChatImplCopyWithImpl<$Res>
 class _$ChatImpl implements _Chat {
   const _$ChatImpl(
       {required this.id,
-      required this.customerId,
-      required this.businessId,
+      this.customerId,
+      this.businessId,
+      this.businessAId,
+      this.businessBId,
+      this.isB2B = false,
       this.lastMessage,
       this.lastMessageAt,
       required this.createdAt,
+      required this.updatedAt,
       this.businessName,
-      this.businessLogoUrl});
+      this.businessLogoUrl,
+      this.customerName,
+      this.customerAvatarUrl,
+      this.partnerBusinessName,
+      this.partnerBusinessLogo});
 
   @override
   final String id;
+// B2C fields (nullable for B2B)
   @override
-  final String customerId;
+  final String? customerId;
   @override
-  final String businessId;
+  final String? businessId;
+// B2B fields (nullable for B2C)
+  @override
+  final String? businessAId;
+  @override
+  final String? businessBId;
+// Flag to distinguish chat type
+  @override
+  @JsonKey()
+  final bool isB2B;
+// Common fields
   @override
   final String? lastMessage;
   @override
   final DateTime? lastMessageAt;
   @override
   final DateTime createdAt;
-// Transient UI fields
+  @override
+  final DateTime updatedAt;
+// Transient UI fields (for B2C)
   @override
   final String? businessName;
   @override
   final String? businessLogoUrl;
+  @override
+  final String? customerName;
+  @override
+  final String? customerAvatarUrl;
+// Transient UI fields (for B2B)
+  @override
+  final String? partnerBusinessName;
+  @override
+  final String? partnerBusinessLogo;
 
   @override
   String toString() {
-    return 'Chat(id: $id, customerId: $customerId, businessId: $businessId, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, createdAt: $createdAt, businessName: $businessName, businessLogoUrl: $businessLogoUrl)';
+    return 'Chat(id: $id, customerId: $customerId, businessId: $businessId, businessAId: $businessAId, businessBId: $businessBId, isB2B: $isB2B, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, createdAt: $createdAt, updatedAt: $updatedAt, businessName: $businessName, businessLogoUrl: $businessLogoUrl, customerName: $customerName, customerAvatarUrl: $customerAvatarUrl, partnerBusinessName: $partnerBusinessName, partnerBusinessLogo: $partnerBusinessLogo)';
   }
 
   @override
@@ -231,21 +369,52 @@ class _$ChatImpl implements _Chat {
                 other.customerId == customerId) &&
             (identical(other.businessId, businessId) ||
                 other.businessId == businessId) &&
+            (identical(other.businessAId, businessAId) ||
+                other.businessAId == businessAId) &&
+            (identical(other.businessBId, businessBId) ||
+                other.businessBId == businessBId) &&
+            (identical(other.isB2B, isB2B) || other.isB2B == isB2B) &&
             (identical(other.lastMessage, lastMessage) ||
                 other.lastMessage == lastMessage) &&
             (identical(other.lastMessageAt, lastMessageAt) ||
                 other.lastMessageAt == lastMessageAt) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
+            (identical(other.updatedAt, updatedAt) ||
+                other.updatedAt == updatedAt) &&
             (identical(other.businessName, businessName) ||
                 other.businessName == businessName) &&
             (identical(other.businessLogoUrl, businessLogoUrl) ||
-                other.businessLogoUrl == businessLogoUrl));
+                other.businessLogoUrl == businessLogoUrl) &&
+            (identical(other.customerName, customerName) ||
+                other.customerName == customerName) &&
+            (identical(other.customerAvatarUrl, customerAvatarUrl) ||
+                other.customerAvatarUrl == customerAvatarUrl) &&
+            (identical(other.partnerBusinessName, partnerBusinessName) ||
+                other.partnerBusinessName == partnerBusinessName) &&
+            (identical(other.partnerBusinessLogo, partnerBusinessLogo) ||
+                other.partnerBusinessLogo == partnerBusinessLogo));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, customerId, businessId,
-      lastMessage, lastMessageAt, createdAt, businessName, businessLogoUrl);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      customerId,
+      businessId,
+      businessAId,
+      businessBId,
+      isB2B,
+      lastMessage,
+      lastMessageAt,
+      createdAt,
+      updatedAt,
+      businessName,
+      businessLogoUrl,
+      customerName,
+      customerAvatarUrl,
+      partnerBusinessName,
+      partnerBusinessLogo);
 
   /// Create a copy of Chat
   /// with the given fields replaced by the non-null parameter values.
@@ -259,30 +428,54 @@ class _$ChatImpl implements _Chat {
 abstract class _Chat implements Chat {
   const factory _Chat(
       {required final String id,
-      required final String customerId,
-      required final String businessId,
+      final String? customerId,
+      final String? businessId,
+      final String? businessAId,
+      final String? businessBId,
+      final bool isB2B,
       final String? lastMessage,
       final DateTime? lastMessageAt,
       required final DateTime createdAt,
+      required final DateTime updatedAt,
       final String? businessName,
-      final String? businessLogoUrl}) = _$ChatImpl;
+      final String? businessLogoUrl,
+      final String? customerName,
+      final String? customerAvatarUrl,
+      final String? partnerBusinessName,
+      final String? partnerBusinessLogo}) = _$ChatImpl;
 
   @override
-  String get id;
+  String get id; // B2C fields (nullable for B2B)
   @override
-  String get customerId;
+  String? get customerId;
   @override
-  String get businessId;
+  String? get businessId; // B2B fields (nullable for B2C)
+  @override
+  String? get businessAId;
+  @override
+  String? get businessBId; // Flag to distinguish chat type
+  @override
+  bool get isB2B; // Common fields
   @override
   String? get lastMessage;
   @override
   DateTime? get lastMessageAt;
   @override
-  DateTime get createdAt; // Transient UI fields
+  DateTime get createdAt;
+  @override
+  DateTime get updatedAt; // Transient UI fields (for B2C)
   @override
   String? get businessName;
   @override
   String? get businessLogoUrl;
+  @override
+  String? get customerName;
+  @override
+  String? get customerAvatarUrl; // Transient UI fields (for B2B)
+  @override
+  String? get partnerBusinessName;
+  @override
+  String? get partnerBusinessLogo;
 
   /// Create a copy of Chat
   /// with the given fields replaced by the non-null parameter values.

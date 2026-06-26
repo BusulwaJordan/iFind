@@ -6,14 +6,27 @@ part 'chat.freezed.dart';
 class Chat with _$Chat {
   const factory Chat({
     required String id,
-    required String customerId,
-    required String businessId,
+    // B2C fields (nullable for B2B)
+    String? customerId,
+    String? businessId,
+    // B2B fields (nullable for B2C)
+    String? businessAId,
+    String? businessBId,
+    // Flag to distinguish chat type
+    @Default(false) bool isB2B,
+    // Common fields
     String? lastMessage,
     DateTime? lastMessageAt,
     required DateTime createdAt,
-    // Transient UI fields
+    required DateTime updatedAt,
+    // Transient UI fields (for B2C)
     String? businessName,
     String? businessLogoUrl,
+    String? customerName,
+    String? customerAvatarUrl,
+    // Transient UI fields (for B2B)
+    String? partnerBusinessName,
+    String? partnerBusinessLogo,
   }) = _Chat;
 }
 

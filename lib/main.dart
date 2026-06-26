@@ -5,19 +5,19 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:ifind/app.dart';
 import 'package:ifind/core/constants/api_constants.dart';
+import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/services/deep_link_service.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
+import 'package:ifind/core/providers/theme_provider.dart';
+import 'package:ifind/core/router/app_router.dart'; // Import the router
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env", isOptional: true);
 
-  // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();
 
-  // Initialize Supabase
   await Supabase.initialize(
     url: ApiConstants.supabaseUrl,
     anonKey: ApiConstants.supabaseAnonKey,
@@ -26,7 +26,6 @@ void main() async {
     ),
   );
 
-  // Handle email-verification and OAuth deep links
   await DeepLinkService().initialize();
 
   FlutterError.onError = (FlutterErrorDetails details) {
@@ -50,4 +49,45 @@ void main() async {
     ),
     (error, stack) => debugPrint('[ZoneError] $error\n$stack'),
   );
+}
+
+ThemeData _buildTheme(Brightness brightness) {
+  final base = ColorScheme.fromSeed(
+    seedColor: AppColors.primaryGreen,
+    brightness: brightness,
+  );
+  const clickStyle = ButtonStyle(
+    mouseCursor: WidgetStatePropertyAll(SystemMouseCursors.click),
+  );
+  return ThemeData(
+    useMaterial3: true,
+    colorScheme: base,
+    elevatedButtonTheme: const ElevatedButtonThemeData(style: clickStyle),
+    textButtonTheme: const TextButtonThemeData(style: clickStyle),
+    outlinedButtonTheme: const OutlinedButtonThemeData(style: clickStyle),
+    iconButtonTheme: const IconButtonThemeData(style: clickStyle),
+    listTileTheme: const ListTileThemeData(
+      mouseCursor: WidgetStateMouseCursor.clickable,
+    ),
+  );
+}
+
+// Override MyApp to use theme provider and router
+class MyApp extends ConsumerWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    final router = ref.watch(routerProvider); // Get the router from your provider
+
+    return MaterialApp.router(
+      title: 'iFind',
+      theme: _buildTheme(Brightness.light),
+      darkTheme: _buildTheme(Brightness.dark),
+      themeMode: themeMode,
+      routerConfig: router,
+      debugShowCheckedModeBanner: false,
+    );
+  }
 }

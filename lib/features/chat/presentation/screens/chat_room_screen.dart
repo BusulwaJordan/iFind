@@ -9,6 +9,7 @@ import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
+import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
 import 'package:ifind/features/chat/domain/entities/chat.dart';
@@ -29,7 +30,9 @@ class ChatRoomScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final businessAsync = ref.watch(businessProvider(chat.businessId));
+    final businessAsync = chat.businessId != null
+        ? ref.watch(businessProvider(chat.businessId!))
+        : const AsyncValue<Business?>.data(null);
     final displayName = businessAsync.when(
       data: (b) => b?.name ?? otherPartyName,
       loading: () => otherPartyName,
@@ -508,7 +511,7 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
   ) {
     final portfolioItem = PortfolioItem(
       id: 'inquiry-media',
-      businessId: widget.chat.businessId,
+      businessId: widget.chat.businessId ?? '',
       mediaType: mediaType == 'video' ? MediaType.video : MediaType.image,
       mediaUrl: mediaUrl,
       caption: caption,

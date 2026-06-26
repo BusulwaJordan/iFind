@@ -544,6 +544,54 @@ final postNeedProvider =
   );
 });
 
+/// Businesses that match the user's active posted needs.
+/// Returns a list of (need, businesses) pairs so the UI can show context.
+final needsBasedBusinessesProvider = FutureProvider.family<
+    List<({Need need, List<Business> businesses})>, String>(
+  (ref, userId) async {
+    final needsRepo = ref.read(needsRepositoryProvider);
+    final businessRepo = ref.read(businessRepositoryProvider);
+
+    final needs = await needsRepo.getMyNeeds(userId);
+    if (needs.isEmpty) return [];
+
+    // Get current position, fall back to Kampala centre
+    double lat = 0.3476, lng = 32.5825;
+    try {
+      final perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.whileInUse ||
+          perm == LocationPermission.always) {
+        final pos = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.low);
+        lat = pos.latitude;
+        lng = pos.longitude;
+      }
+    } catch (_) {}
+
+    final result = <({Need need, List<Business> businesses})>[];
+    final seenIds = <String>{};
+
+    for (final need in needs) {
+      final category = businessCategoryForNeedCategory(need.category);
+      final businessesResult = await businessRepo.getNearbyBusinesses(
+        latitude: lat,
+        longitude: lng,
+        radiusKm: 20.0,
+        category: category == BusinessCategory.other ? null : category,
+      );
+      final businesses = businessesResult
+          .getOrElse(() => [])
+          .where((b) => seenIds.add(b.id))
+          .take(6)
+          .toList();
+      if (businesses.isNotEmpty) {
+        result.add((need: need, businesses: businesses));
+      }
+    }
+    return result;
+  },
+);
+
 final nearbyNeedsProvider = FutureProvider<List<Need>>((ref) async {
   final repository = ref.read(needsRepositoryProvider);
   // Hardcoded location for MVP, or use Geolocator

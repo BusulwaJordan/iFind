@@ -302,6 +302,15 @@ class AuthRemoteDataSource {
           .eq('id', user.id)
           .single();
 
+      // Merge auth-metadata avatar when the users table row lacks avatar_url
+      // (e.g. before migration 16 is applied).
+      final metadata = user.userMetadata ?? {};
+      if (userProfile['avatar_url'] == null && metadata['avatar_url'] != null) {
+        final merged = Map<String, dynamic>.from(userProfile);
+        merged['avatar_url'] = metadata['avatar_url'];
+        return UserModel.fromJson(merged);
+      }
+
       return UserModel.fromJson(userProfile);
     } catch (e) {
       // Fallback: Use user metadata

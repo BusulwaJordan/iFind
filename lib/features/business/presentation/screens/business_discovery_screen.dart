@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/error_retry_widget.dart';
+import 'package:ifind/core/widgets/owner_avatar.dart';
 import 'package:ifind/core/providers/ai_providers.dart';
 import 'package:ifind/core/services/interaction_service.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
@@ -606,6 +607,14 @@ class _BusinessGridTile extends ConsumerWidget {
                           ),
                         ),
                       ),
+                    Positioned(
+                      bottom: -6,
+                      right: -6,
+                      child: OwnerAvatar(
+                        ownerId: liveBusiness.ownerId,
+                        radius: 13,
+                      ),
+                    ),
                   ],
                 ),
               ),

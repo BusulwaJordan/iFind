@@ -10,4 +10,8 @@ abstract class ReviewRepository {
     required int rating,
     String? comment,
   });
+  Future<Either<Failure, void>> addReply({
+    required String reviewId,
+    required String reply,
+  });
 }

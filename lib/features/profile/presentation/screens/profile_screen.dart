@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/app_toast.dart';
@@ -12,7 +13,8 @@ import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
-  const ProfileScreen({super.key});
+  final bool initialEditing;
+  const ProfileScreen({super.key, this.initialEditing = false});
 
   @override
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
@@ -23,6 +25,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   late TextEditingController _phoneCtrl;
   bool _editing = false;
   bool _saving = false;
+  Uint8List? _imageBytes;  // picked image bytes — works on web + mobile
+  String? _imageExt;
+  String? _imageUrl;
 
   @override
   void initState() {
@@ -30,6 +35,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final user = ref.read(currentUserProvider);
     _nameCtrl  = TextEditingController(text: user?.fullName ?? '');
     _phoneCtrl = TextEditingController(text: user?.phone ?? '');
+    _imageUrl  = user?.avatarUrl;
+    _editing   = widget.initialEditing;
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    setState(() {
+      _imageBytes = bytes;
+      _imageExt = picked.mimeType?.split('/').last?.toLowerCase()
+          ?? (picked.name.contains('.')
+              ? picked.name.split('.').last.toLowerCase()
+              : 'jpg');
+    });
   }
 
   @override
@@ -42,14 +63,58 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      await Supabase.instance.client.from('users').update({
+      final supabase = Supabase.instance.client;
+      final userId = supabase.auth.currentUser?.id;
+      if (userId == null) {
+        AppToast.show(context, 'Not signed in — please log in again.', type: ToastType.error);
+        return;
+      }
+
+      // Upload avatar separately so a storage failure doesn't block the text save.
+      if (_imageBytes != null) {
+        try {
+          final ext = _imageExt ?? 'jpg';
+          final path = 'avatars/$userId.$ext';
+          await supabase.storage.from('profile_images').uploadBinary(
+            path,
+            _imageBytes!,
+            fileOptions: FileOptions(
+              contentType: 'image/$ext',
+              upsert: true,
+            ),
+          );
+          _imageUrl = supabase.storage.from('profile_images').getPublicUrl(path);
+          await supabase.auth.updateUser(
+            UserAttributes(data: {'avatar_url': _imageUrl}),
+          );
+        } catch (storageErr) {
+          if (mounted) {
+            AppToast.show(
+              context,
+              'Photo upload failed: $storageErr',
+              type: ToastType.error,
+            );
+          }
+        }
+      }
+
+      final phone = _phoneCtrl.text.trim();
+      // Use .select() so Supabase throws if RLS blocks the update.
+      // avatar_url is stored via auth metadata above; do NOT include it here
+      // until migration 16 (which adds the column) has been applied.
+      await supabase.from('users').update({
         'full_name': _nameCtrl.text.trim(),
-        'phone':     _phoneCtrl.text.trim(),
-      }).eq('id', Supabase.instance.client.auth.currentUser!.id);
+        'phone': phone.isEmpty ? null : phone,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', userId).select().single();
 
       await ref.read(authProvider.notifier).refreshCurrentUser();
       if (mounted) {
-        setState(() => _editing = false);
+        setState(() {
+          _editing = false;
+          _imageBytes = null;
+          _imageExt = null;
+        });
         AppToast.show(context, 'Profile updated', type: ToastType.success);
       }
     } catch (e) {
@@ -214,10 +279,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             fontSize: 20,
                             fontWeight: FontWeight.bold)),
                     const Spacer(),
-                    // Edit toggle
+                    // Edit / Cancel toggle
                     GestureDetector(
-                      onTap: () => setState(
-                          () => _editing ? _save() : _editing = true),
+                      onTap: () {
+                        if (_editing) {
+                          // Cancel: revert unsaved changes
+                          final user = ref.read(currentUserProvider);
+                          setState(() {
+                            _editing = false;
+                            _imageBytes = null;
+                            _imageExt = null;
+                            _imageUrl = user?.avatarUrl;
+                            _nameCtrl.text = user?.fullName ?? '';
+                            _phoneCtrl.text = user?.phone ?? '';
+                          });
+                        } else {
+                          setState(() => _editing = true);
+                        }
+                      },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 7),
@@ -242,33 +321,39 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SizedBox(height: 28),
 
                 // Avatar
-                Stack(
-                  alignment: Alignment.bottomRight,
-                  children: [
-                    CircleAvatar(
-                      radius: 46,
-                      backgroundColor: Colors.white.withValues(alpha: 0.15),
-                      backgroundImage: user.avatarUrl != null
-                          ? NetworkImage(user.avatarUrl!) : null,
-                      child: user.avatarUrl == null
-                          ? Text(initials,
-                              style: GoogleFonts.outfit(
-                                  color: Colors.white,
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.bold))
-                          : null,
-                    ),
-                    if (_editing)
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
-                          color: AppColors.primaryGreen,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.camera_alt_rounded,
-                            color: Colors.white, size: 14),
+                GestureDetector(
+                  onTap: _editing ? _pickImage : null,
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      CircleAvatar(
+                        radius: 46,
+                        backgroundColor: Colors.white.withValues(alpha: 0.15),
+                        backgroundImage: _imageBytes != null
+                            ? MemoryImage(_imageBytes!) as ImageProvider
+                            : (_imageUrl ?? user.avatarUrl) != null
+                                ? NetworkImage(_imageUrl ?? user.avatarUrl!)
+                                : null,
+                        child: (_imageBytes == null && (_imageUrl ?? user.avatarUrl) == null)
+                            ? Text(initials,
+                                style: GoogleFonts.outfit(
+                                    color: Colors.white,
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.bold))
+                            : null,
                       ),
-                  ],
+                      if (_editing)
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: AppColors.primaryGreen,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.camera_alt_rounded,
+                              color: Colors.white, size: 14),
+                        ),
+                    ],
+                  ),
                 ).animate().scale(
                     delay: 100.ms, duration: 600.ms, curve: Curves.elasticOut,
                     begin: const Offset(0.7, 0.7)),

@@ -32,6 +32,7 @@ import 'package:ifind/features/help/presentation/screens/help_support_screen.dar
 import 'package:ifind/features/inquiries/presentation/screens/inquiries_screen.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
 import 'package:ifind/core/widgets/ifind_loader.dart';
+import 'package:ifind/features/business/presentation/screens/b2b_matches_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -118,6 +119,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/b2b-matches',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const B2bMatchesScreen(),
+      ),
+      GoRoute(
         path: '/email-verified',
         builder: (context, state) {
           final email = state.uri.queryParameters['email'] ?? '';
@@ -195,7 +201,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const ProfileScreen(),
+        builder: (context, state) => ProfileScreen(
+          initialEditing: state.extra == true,
+        ),
       ),
       GoRoute(
         path: '/help',
@@ -267,7 +275,9 @@ List<StatefulShellBranch> _buildBranches(
         routes: [
           GoRoute(
             path: '/profile',
-            builder: (context, state) => const ProfileScreen(),
+            builder: (context, state) => ProfileScreen(
+              initialEditing: state.extra == true,
+            ),
           ),
         ],
       ),

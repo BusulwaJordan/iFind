@@ -7,7 +7,7 @@ part of 'recommendation_providers.dart';
 // **************************************************************************
 
 String _$aiRecommendationDataSourceHash() =>
-    r'29dc25a3434f4ff0ef1ed8fff28dc3952ca3d6c3';
+    r'e0efddf81b916ac5c8a9d80bbc8c1727b456c7f5';
 
 /// See also [aiRecommendationDataSource].
 @ProviderFor(aiRecommendationDataSource)
@@ -27,7 +27,7 @@ final aiRecommendationDataSourceProvider =
 typedef AiRecommendationDataSourceRef
     = AutoDisposeProviderRef<AiRecommendationDataSource>;
 String _$recommendationRepositoryHash() =>
-    r'eb15b31546651021bb356a3fe1766c7f1acbfcfd';
+    r'2031b7b077da7dd8c521f27f2fac80e3d7445e95';
 
 /// See also [recommendationRepository].
 @ProviderFor(recommendationRepository)
@@ -47,7 +47,7 @@ final recommendationRepositoryProvider =
 typedef RecommendationRepositoryRef
     = AutoDisposeProviderRef<RecommendationRepository>;
 String _$userRecommendationsHash() =>
-    r'302b8c0713ca0557236299abcd7b52858382382b';
+    r'40c0a4e0efe550e7f36845fe67aed8c09d05bdda';
 
 /// Copied from Dart SDK
 class _SystemHash {
