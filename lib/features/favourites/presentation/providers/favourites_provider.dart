@@ -1,44 +1,67 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 
-const _prefsKey = 'saved_business_ids';
+class FavouritesNotifier extends AsyncNotifier<Set<String>> {
+  SupabaseClient get _client => Supabase.instance.client;
 
-class FavouritesNotifier extends StateNotifier<Set<String>> {
-  FavouritesNotifier() : super({}) {
-    _load();
-  }
+  @override
+  Future<Set<String>> build() async {
+    final user = _client.auth.currentUser;
+    if (user == null) return {};
 
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final ids = prefs.getStringList(_prefsKey) ?? [];
-    state = ids.toSet();
+    final response = await _client
+        .from('favorites')
+        .select('business_id')
+        .eq('user_id', user.id);
+
+    return (response as List)
+        .map((r) => r['business_id'] as String)
+        .toSet();
   }
 
   Future<void> toggle(String businessId) async {
-    final updated = Set<String>.from(state);
-    if (updated.contains(businessId)) {
-      updated.remove(businessId);
-    } else {
-      updated.add(businessId);
-    }
-    state = updated;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_prefsKey, updated.toList());
-  }
+    final user = _client.auth.currentUser;
+    if (user == null) return;
 
-  bool isSaved(String businessId) => state.contains(businessId);
+    final current = state.valueOrNull ?? {};
+
+    if (current.contains(businessId)) {
+      // Optimistic remove
+      state = AsyncData(current.difference({businessId}));
+      try {
+        await _client
+            .from('favorites')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('business_id', businessId);
+      } catch (_) {
+        state = AsyncData(current);
+      }
+    } else {
+      // Optimistic add
+      state = AsyncData({...current, businessId});
+      try {
+        await _client.from('favorites').upsert({
+          'user_id': user.id,
+          'business_id': businessId,
+        });
+      } catch (_) {
+        state = AsyncData(current);
+      }
+    }
+  }
 }
 
 final favouritesProvider =
-    StateNotifierProvider<FavouritesNotifier, Set<String>>(
-  (ref) => FavouritesNotifier(),
+    AsyncNotifierProvider<FavouritesNotifier, Set<String>>(
+  FavouritesNotifier.new,
 );
 
 final savedBusinessesProvider =
     FutureProvider.autoDispose<List<Business>>((ref) async {
-  final ids = ref.watch(favouritesProvider);
+  final ids = ref.watch(favouritesProvider).valueOrNull ?? {};
   if (ids.isEmpty) return [];
 
   final repository = ref.watch(businessRepositoryProvider);

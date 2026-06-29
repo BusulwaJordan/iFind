@@ -37,12 +37,9 @@ class _ProductManagementScreenState
     final myBusinessesAsync = ref.watch(myBusinessesProvider(user.id));
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text('My Products',
             style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
         elevation: 0,
       ),
       body: myBusinessesAsync.when(

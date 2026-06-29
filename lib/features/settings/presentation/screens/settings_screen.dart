@@ -28,7 +28,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ref.watch(notificationSettingsProvider).value ?? true;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(
           'Settings',

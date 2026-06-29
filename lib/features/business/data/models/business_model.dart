@@ -92,6 +92,14 @@ class BusinessModel with _$BusinessModel {
       }
     }
 
+    // Normalize image URLs — try alternative column names if primary is absent
+    if ((data['logo_url'] == null || (data['logo_url'] as String?)?.isEmpty == true)) {
+      data['logo_url'] = data['logo'] ?? data['image_url'] ?? data['avatar_url'] ?? data['profile_image'];
+    }
+    if ((data['cover_image_url'] == null || (data['cover_image_url'] as String?)?.isEmpty == true)) {
+      data['cover_image_url'] = data['cover_url'] ?? data['cover_image'] ?? data['banner_url'];
+    }
+
     return data;
   }
 

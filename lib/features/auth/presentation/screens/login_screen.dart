@@ -25,6 +25,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _obscurePass = true;
+  String? _loginError;
 
   @override
   void dispose() {
@@ -37,10 +38,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
-    await ref.read(authProvider.notifier).login(
+    final errorMsg = await ref.read(authProvider.notifier).login(
           _emailCtrl.text.trim(),
           _passCtrl.text,
         );
+    if (!mounted) return;
+    if (errorMsg != null) {
+      final msg = errorMsg.toLowerCase();
+      if (msg.contains('email not confirmed') ||
+          msg.contains('email_not_confirmed')) {
+        final email = _emailCtrl.text.trim();
+        ref.read(pendingRegistrationProvider.notifier).state =
+            PendingRegistration(email: email, password: _passCtrl.text);
+        context.go('/confirmation?email=${Uri.encodeComponent(email)}');
+      } else {
+        setState(() => _loginError = 'Incorrect email or password. Please try again.');
+      }
+    } else {
+      setState(() => _loginError = null);
+    }
   }
 
   Future<void> _handleGoogleLogin() async {
@@ -57,7 +73,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Listen for auth state transitions out of loading — show feedback immediately.
+    // Show welcome toast when login succeeds.
     ref.listen<AsyncValue<User?>>(authProvider, (previous, current) {
       if (previous?.isLoading != true) return;
       current.whenOrNull(
@@ -67,22 +83,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               context,
               'Welcome back, ${user.fullName.split(' ').first}! 👋',
               type: ToastType.success,
-            );
-          }
-        },
-        error: (error, _) {
-          final msg = error.toString().toLowerCase();
-          if (msg.contains('email not confirmed') ||
-              msg.contains('email_not_confirmed')) {
-            final email = _emailCtrl.text.trim();
-            ref.read(pendingRegistrationProvider.notifier).state =
-                PendingRegistration(email: email, password: _passCtrl.text);
-            context.go('/confirmation?email=${Uri.encodeComponent(email)}');
-          } else {
-            AppToast.show(
-              context,
-              'Incorrect email or password. Please try again.',
-              type: ToastType.error,
             );
           }
         },
@@ -240,6 +240,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               controller: _emailCtrl,
                               keyboardType: TextInputType.emailAddress,
                               textInputAction: TextInputAction.next,
+                              onChanged: (_) {
+                                if (_loginError != null) setState(() => _loginError = null);
+                              },
                               decoration: _field(
                                   label: 'Email Address',
                                   icon: Icons.alternate_email_rounded),
@@ -256,6 +259,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               controller: _passCtrl,
                               obscureText: _obscurePass,
                               textInputAction: TextInputAction.done,
+                              onChanged: (_) {
+                                if (_loginError != null) setState(() => _loginError = null);
+                              },
                               onFieldSubmitted: (_) =>
                                   isLoading ? null : _handleLogin(),
                               decoration: _field(
@@ -279,7 +285,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 .animate()
                                 .fadeIn(delay: 540.ms, duration: 450.ms)
                                 .slideX(begin: -0.06),
-                            const SizedBox(height: 32),
+
+                            // Error banner
+                            if (_loginError != null) ...[
+                              const SizedBox(height: 16),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFEBEE),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color: const Color(0xFFE53935),
+                                      width: 1),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.error_rounded,
+                                        color: Color(0xFFE53935), size: 18),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        _loginError!,
+                                        style: GoogleFonts.outfit(
+                                          color: const Color(0xFFB71C1C),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 24),
 
                             // Sign In button
                             _SignInButton(

@@ -11,6 +11,7 @@ import 'package:ifind/features/business/presentation/providers/business_provider
 import 'package:ifind/features/needs/presentation/providers/need_provider.dart';
 import 'package:ifind/features/recommendations/presentation/providers/recommendation_providers.dart';
 import 'package:ifind/core/widgets/ifind_loader.dart';
+import 'package:ifind/core/widgets/app_drawer.dart';
 
 class AiSearchScreen extends ConsumerWidget {
   const AiSearchScreen({super.key});
@@ -21,6 +22,7 @@ class AiSearchScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
+      drawer: const AppDrawer(),
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -28,6 +30,13 @@ class AiSearchScreen extends ConsumerWidget {
             pinned: true,
             stretch: true,
             automaticallyImplyLeading: false,
+            leading: Builder(
+              builder: (ctx) => IconButton(
+                icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 26),
+                onPressed: () => Scaffold.of(ctx).openDrawer(),
+                tooltip: 'Menu',
+              ),
+            ),
             backgroundColor: const Color(0xFF003D2B),
             flexibleSpace: FlexibleSpaceBar(
               stretchModes: const [StretchMode.zoomBackground],
@@ -499,7 +508,7 @@ class _RecommendationCard extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -642,7 +651,7 @@ class _NearbyCard extends StatelessWidget {
         width: 160,
         margin: const EdgeInsets.only(right: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -802,7 +811,7 @@ class _FeaturedListCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(

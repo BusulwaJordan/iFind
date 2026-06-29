@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/widgets/app_drawer.dart';
 import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/core/widgets/owner_avatar.dart';
@@ -178,6 +179,7 @@ class _BusinessDiscoveryScreenState
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFB),
+      drawer: const AppDrawer(),
       body: RefreshIndicator(
         onRefresh: () async {
           await ref.read(nearbyBusinessesProvider.notifier).loadBusinesses();
@@ -202,8 +204,14 @@ class _BusinessDiscoveryScreenState
       floating: true,
       pinned: true,
       expandedHeight: 180,
-      backgroundColor: Colors.white,
       elevation: 0,
+      leading: Builder(
+        builder: (ctx) => IconButton(
+          icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 26),
+          onPressed: () => Scaffold.of(ctx).openDrawer(),
+          tooltip: 'Menu',
+        ),
+      ),
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: const BoxDecoration(
@@ -547,7 +555,7 @@ class _BusinessGridTile extends ConsumerWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: AppColors.divider.withValues(alpha: 0.5)),
           boxShadow: [
@@ -703,8 +711,8 @@ class BusinessSearchDelegate extends SearchDelegate {
   @override
   ThemeData appBarTheme(BuildContext context) {
     return Theme.of(context).copyWith(
-      appBarTheme:
-          const AppBarTheme(backgroundColor: Colors.white, elevation: 0),
+      appBarTheme: AppBarTheme(
+          backgroundColor: Theme.of(context).colorScheme.surface, elevation: 0),
       inputDecorationTheme:
           const InputDecorationTheme(border: InputBorder.none),
     );
@@ -733,7 +741,7 @@ class BusinessSearchDelegate extends SearchDelegate {
 
   @override
   Widget buildSuggestions(BuildContext context) => Container(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         child: Center(
           child: Text('Search businesses or items...',
               style: GoogleFonts.outfit(color: Colors.grey)),

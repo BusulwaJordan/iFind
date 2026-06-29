@@ -194,9 +194,7 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
       appBar: AppBar(
         title: Text('Manage Gallery',
             style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0.5,
+        elevation: 0,
       ),
       body: galleryItemsAsync.when(
         data: (items) {

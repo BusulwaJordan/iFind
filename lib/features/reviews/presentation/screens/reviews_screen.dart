@@ -72,7 +72,7 @@ class ReviewsScreen extends ConsumerWidget {
               children: [
                 _buildOverallRating(context, reviews),
                 const SizedBox(height: 24),
-                _buildRatingDistribution(reviews),
+                _buildRatingDistribution(context, reviews),
                 const SizedBox(height: 24),
                 Text(
                   'All Reviews',
@@ -118,7 +118,7 @@ class ReviewsScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -184,7 +184,7 @@ class ReviewsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRatingDistribution(List<Review> reviews) {
+  Widget _buildRatingDistribution(BuildContext context, List<Review> reviews) {
     final total = reviews.length;
     final distribution = <int, int>{};
     for (int i = 1; i <= 5; i++) {
@@ -194,7 +194,7 @@ class ReviewsScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -330,7 +330,7 @@ class _ReviewCardState extends ConsumerState<_ReviewCard> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(

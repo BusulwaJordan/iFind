@@ -149,7 +149,7 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
       elevation: 16,
       shadowColor: Colors.black.withValues(alpha: 0.18),
       surfaceTintColor: Colors.transparent,
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       child: Row(
         children: [
           // ── Left 2 items ──────────────────────────────────────────────

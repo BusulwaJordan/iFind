@@ -18,7 +18,8 @@ class FavouritesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final savedAsync = ref.watch(savedBusinessesProvider);
-    final savedIds = ref.watch(favouritesProvider);
+    final favouritesAsync = ref.watch(favouritesProvider);
+    final savedIds = favouritesAsync.valueOrNull ?? {};
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -103,7 +104,9 @@ class FavouritesScreen extends ConsumerWidget {
             ),
           ),
 
-          if (savedIds.isEmpty)
+          if (favouritesAsync.isLoading)
+            const SliverFillRemaining(child: IFindLoaderInline())
+          else if (savedIds.isEmpty)
             SliverFillRemaining(
               child: Center(
                 child: Column(
@@ -190,7 +193,7 @@ class _SavedBusinessCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(

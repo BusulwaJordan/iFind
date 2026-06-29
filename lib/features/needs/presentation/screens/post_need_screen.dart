@@ -211,7 +211,7 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
                   // Main input card
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
@@ -332,7 +332,7 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -529,7 +529,7 @@ class _MatchingBusinessCard extends StatelessWidget {
       child: Container(
         width: 160,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(

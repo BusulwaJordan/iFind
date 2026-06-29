@@ -535,7 +535,6 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
   void _showMessageMenu(Message msg) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
