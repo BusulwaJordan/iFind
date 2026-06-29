@@ -17,7 +17,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/features/business/presentation/screens/location_picker_screen.dart';
 import 'package:latlong2/latlong.dart';
-import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'dart:io' show File;
 
 class CreateBusinessNotifier extends StateNotifier<AsyncValue<void>> {
   final ConfigureBusiness configureBusiness;
@@ -36,8 +37,8 @@ class CreateBusinessNotifier extends StateNotifier<AsyncValue<void>> {
     String? phone,
     String? website,
     String? email,
-    File? logoFile,
-    File? coverFile,
+    XFile? logoFile,
+    XFile? coverFile,
     String? businessId, // If null, create new
   }) async {
     state = const AsyncValue.loading();
@@ -80,8 +81,8 @@ class CreateBusinessNotifier extends StateNotifier<AsyncValue<void>> {
     String? description,
     String? phone,
     String? address,
-    File? logoFile,
-    File? coverFile,
+    XFile? logoFile,
+    XFile? coverFile,
   }) async {
     return await configureBusiness.repository.updateBusiness(
       businessId: businessId,
@@ -126,8 +127,8 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
   double _latitude = 0.3476;
   double _longitude = 32.5825;
   bool _isGettingLocation = false;
-  File? _logoImage;
-  File? _coverImage;
+  XFile? _logoImage;
+  XFile? _coverImage;
   final _picker = ImagePicker();
 
   @override
@@ -156,13 +157,17 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
     if (pickedFile != null) {
       setState(() {
         if (isLogo) {
-          _logoImage = File(pickedFile.path);
+          _logoImage = pickedFile;
         } else {
-          _coverImage = File(pickedFile.path);
+          _coverImage = pickedFile;
         }
       });
     }
   }
+
+  ImageProvider _xFileImage(XFile f) => kIsWeb
+      ? NetworkImage(f.path) as ImageProvider
+      : FileImage(File(f.path));
 
   Future<void> _getCurrentLocation() async {
     setState(() => _isGettingLocation = true);
@@ -267,8 +272,12 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
         } else {
           // Success: Invalidate providers to trigger UI updates
           ref.invalidate(myBusinessesProvider(ownerId));
+          ref.invalidate(myBusinessesStreamProvider(ownerId));
           ref.invalidate(nearbyBusinessesProvider);
           ref.invalidate(featuredBusinessesProvider);
+          if (widget.business != null) {
+            ref.invalidate(businessStreamProvider(widget.business!.id));
+          }
 
           if (mounted) {
             AppToast.show(
@@ -336,6 +345,23 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
   }
 
   Widget _buildImageSection() {
+    final existingCover = widget.business?.coverImageUrl;
+    final existingLogo = widget.business?.logoUrl;
+
+    ImageProvider? coverProvider;
+    if (_coverImage != null) {
+      coverProvider = _xFileImage(_coverImage!);
+    } else if (existingCover != null) {
+      coverProvider = NetworkImage(existingCover);
+    }
+
+    ImageProvider? logoProvider;
+    if (_logoImage != null) {
+      logoProvider = _xFileImage(_logoImage!);
+    } else if (existingLogo != null) {
+      logoProvider = NetworkImage(existingLogo);
+    }
+
     return Stack(
       children: [
         // Cover photo background
@@ -345,12 +371,11 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
             height: 160,
             width: double.infinity,
             decoration: BoxDecoration(
-              image: _coverImage != null
-                  ? DecorationImage(
-                      image: FileImage(_coverImage!), fit: BoxFit.cover)
+              image: coverProvider != null
+                  ? DecorationImage(image: coverProvider, fit: BoxFit.cover)
                   : null,
             ),
-            child: _coverImage == null
+            child: coverProvider == null
                 ? Container(
                     decoration: BoxDecoration(
                       border: Border.all(
@@ -400,12 +425,11 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 3),
                 color: Colors.white.withValues(alpha: 0.15),
-                image: _logoImage != null
-                    ? DecorationImage(
-                        image: FileImage(_logoImage!), fit: BoxFit.cover)
+                image: logoProvider != null
+                    ? DecorationImage(image: logoProvider, fit: BoxFit.cover)
                     : null,
               ),
-              child: _logoImage == null
+              child: logoProvider == null
                   ? const Icon(Icons.add_a_photo_outlined,
                       color: Colors.white, size: 28)
                   : null,
@@ -455,7 +479,7 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
   Widget _sectionCard({required String title, required List<Widget> children}) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(

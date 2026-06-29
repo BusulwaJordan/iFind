@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:dartz/dartz.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:ifind/core/errors/failures.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/domain/repositories/business_repository.dart';
@@ -20,8 +20,8 @@ class ConfigureBusiness {
     String? phone,
     String? website,
     String? email,
-    File? logoFile,
-    File? coverFile,
+    XFile? logoFile,
+    XFile? coverFile,
   }) {
     return repository.createBusiness(
       ownerId: ownerId,

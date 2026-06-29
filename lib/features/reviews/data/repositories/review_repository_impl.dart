@@ -13,14 +13,25 @@ class ReviewRepositoryImpl implements ReviewRepository {
   @override
   Future<Either<Failure, List<Review>>> getReviews(String businessId) async {
     try {
-      final response = await _client
-          .from('reviews')
-          .select('*, users(full_name)')
-          .eq('business_id', businessId)
-          .order('created_at', ascending: false);
+      List<dynamic> response;
+      try {
+        // Try with user join (requires FK constraint in Supabase)
+        response = await _client
+            .from('reviews')
+            .select('*, users(full_name, avatar_url)')
+            .eq('business_id', businessId)
+            .order('created_at', ascending: false);
+      } catch (_) {
+        // FK not set up — fall back to plain reviews; authorName shows as Anonymous
+        response = await _client
+            .from('reviews')
+            .select()
+            .eq('business_id', businessId)
+            .order('created_at', ascending: false);
+      }
 
       final reviews =
-          (response as List).map((json) => ReviewModel.fromJson(json)).toList();
+          response.map((json) => ReviewModel.fromJson(json)).toList();
       return Right(reviews);
     } catch (e) {
       return Left(ServerFailure(e.toString()));

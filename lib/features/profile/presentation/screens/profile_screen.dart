@@ -9,6 +9,7 @@ import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/widgets/ifind_loader.dart';
+import 'package:ifind/core/widgets/app_drawer.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -83,10 +84,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               upsert: true,
             ),
           );
-          _imageUrl = supabase.storage.from('profile_images').getPublicUrl(path);
+          // Cache-bust so Image.network fetches the new file instead of the old cached one.
+          _imageUrl =
+              '${supabase.storage.from('profile_images').getPublicUrl(path)}'
+              '?v=${DateTime.now().millisecondsSinceEpoch}';
+          // Update both sources so refreshCurrentUser always picks up the new URL.
+          await supabase.from('users').update({
+            'avatar_url': _imageUrl,
+            'updated_at': DateTime.now().toIso8601String(),
+          }).eq('id', userId);
           await supabase.auth.updateUser(
             UserAttributes(data: {'avatar_url': _imageUrl}),
           );
+          // Refresh OwnerAvatar widgets that cache this user's profile.
+          ref.invalidate(userProfileProvider(userId));
         } catch (storageErr) {
           if (mounted) {
             AppToast.show(
@@ -99,9 +110,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
 
       final phone = _phoneCtrl.text.trim();
-      // Use .select() so Supabase throws if RLS blocks the update.
-      // avatar_url is stored via auth metadata above; do NOT include it here
-      // until migration 16 (which adds the column) has been applied.
       await supabase.from('users').update({
         'full_name': _nameCtrl.text.trim(),
         'phone': phone.isEmpty ? null : phone,
@@ -137,6 +145,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
+        drawer: const AppDrawer(),
         body: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
@@ -272,7 +281,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               color: Colors.white, size: 16),
                         ),
                       ),
-                    if (canPop) const SizedBox(width: 12),
+                    if (!canPop)
+                      Builder(
+                        builder: (ctx) => GestureDetector(
+                          onTap: () => Scaffold.of(ctx).openDrawer(),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.menu_rounded,
+                                color: Colors.white, size: 20),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(width: 12),
                     Text('My Profile',
                         style: GoogleFonts.outfit(
                             color: Colors.white,
@@ -481,7 +505,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(

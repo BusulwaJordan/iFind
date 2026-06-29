@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
+import 'package:ifind/core/widgets/app_drawer.dart';
 import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/core/widgets/ifind_loader.dart';
@@ -97,6 +98,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
+        drawer: const AppDrawer(),
         body: RefreshIndicator(
           color: AppColors.primaryGreen,
           onRefresh: _onRefresh,
@@ -242,9 +244,18 @@ class _TopNav extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 8, 0),
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
       child: Row(
         children: [
+          // Hamburger menu
+          Builder(
+            builder: (ctx) => IconButton(
+              icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 26),
+              onPressed: () => Scaffold.of(ctx).openDrawer(),
+              tooltip: 'Menu',
+            ),
+          ),
+          const SizedBox(width: 4),
           // iFind wordmark
           Row(
             children: [
@@ -416,7 +427,7 @@ class _PostNeedCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
@@ -931,71 +942,108 @@ class _FeaturedBusinessCard extends ConsumerWidget {
     return GestureDetector(
       onTap: () =>
           context.push('/business-details', extra: liveBusiness),
-      child: Container(
-        width: 280,
-        margin: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          image: DecorationImage(
-            image: NetworkImage(
-              liveBusiness.coverImageUrl ??
-                  'https://via.placeholder.com/300',
-            ),
-            fit: BoxFit.cover,
-            onError: (_, __) {},
-          ),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.transparent,
-                Colors.black.withValues(alpha: 0.8)
-              ],
-            ),
-          ),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          children: [
+            Container(
+              width: 280,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: NetworkImage(
+                    liveBusiness.coverImageUrl ??
+                        'https://via.placeholder.com/300',
+                  ),
+                  fit: BoxFit.cover,
+                  onError: (_, __) {},
+                ),
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.8)
+                    ],
+                  ),
+                ),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(
-                          liveBusiness.name,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                liveBusiness.name,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.star, color: Colors.amber, size: 16),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${liveBusiness.rating.toStringAsFixed(1)} (${liveBusiness.reviewCount} reviews)',
+                                    style: const TextStyle(
+                                        color: Colors.white70, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(Icons.star, color: Colors.amber, size: 16),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${liveBusiness.rating.toStringAsFixed(1)} (${liveBusiness.reviewCount} reviews)',
-                              style: const TextStyle(
-                                  color: Colors.white70, fontSize: 12),
-                            ),
-                          ],
-                        ),
+                        OwnerAvatar(ownerId: liveBusiness.ownerId, radius: 18),
                       ],
                     ),
-                  ),
-                  OwnerAvatar(ownerId: liveBusiness.ownerId, radius: 18),
-                ],
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+            // Business logo badge
+            Positioned(
+              top: 12,
+              left: 20,
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  color: AppColors.primaryGreen,
+                  image: liveBusiness.logoUrl != null
+                      ? DecorationImage(
+                          image: NetworkImage(liveBusiness.logoUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: liveBusiness.logoUrl == null
+                    ? Center(
+                        child: Text(
+                          liveBusiness.name.substring(0, 1).toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1238,7 +1286,7 @@ class _NearbyBusinessCard extends ConsumerWidget {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
@@ -1340,7 +1388,7 @@ class _NearbyPlaceholder extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(

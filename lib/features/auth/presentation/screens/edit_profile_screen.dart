@@ -21,9 +21,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   Uint8List? _imageBytes;
-  String? _imageExt;
   String? _imageUrl;
   bool _isLoading = false;
+  bool _isUploadingPhoto = false;
 
   @override
   void initState() {
@@ -45,14 +45,61 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (picked == null) return;
+
     final bytes = await picked.readAsBytes();
+    final ext = picked.mimeType?.split('/').last.toLowerCase() ??
+        (picked.name.contains('.') ? picked.name.split('.').last.toLowerCase() : 'jpg');
+
+    // Show preview immediately
     setState(() {
       _imageBytes = bytes;
-      _imageExt = picked.mimeType?.split('/').last.toLowerCase()
-          ?? (picked.name.contains('.')
-              ? picked.name.split('.').last.toLowerCase()
-              : 'jpg');
+      _isUploadingPhoto = true;
     });
+
+    try {
+      final user = ref.read(currentUserProvider);
+      if (user == null) return;
+
+      final supabase = Supabase.instance.client;
+      final path = 'avatars/${user.id}.$ext';
+
+      await supabase.storage.from('profile_images').uploadBinary(
+        path,
+        bytes,
+        fileOptions: FileOptions(contentType: 'image/$ext', upsert: true),
+      );
+
+      final newUrl =
+          '${supabase.storage.from('profile_images').getPublicUrl(path)}'
+          '?v=${DateTime.now().millisecondsSinceEpoch}';
+
+      // Update both the users table and auth metadata so refreshCurrentUser
+      // picks up the new URL regardless of which source it reads from.
+      await supabase.from('users').update({
+        'avatar_url': newUrl,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', user.id);
+      await supabase.auth.updateUser(
+        UserAttributes(data: {'avatar_url': newUrl}),
+      );
+
+      await ref.read(authProvider.notifier).refreshCurrentUser();
+
+      // Refresh OwnerAvatar widgets that cache this user's profile.
+      ref.invalidate(userProfileProvider(user.id));
+
+      setState(() => _imageUrl = newUrl);
+
+      if (mounted) {
+        AppToast.show(context, 'Profile photo updated', type: ToastType.success);
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.show(context, 'Photo upload failed: $e', type: ToastType.error);
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
   }
 
   Future<void> _saveProfile() async {
@@ -65,25 +112,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         return;
       }
 
-      String? uploadedUrl = _imageUrl;
-      if (_imageBytes != null) {
-        try {
-          final supabase = Supabase.instance.client;
-          final ext = _imageExt ?? 'jpg';
-          final path = 'avatars/${user.id}.$ext';
-          await supabase.storage.from('profile_images').uploadBinary(
-            path,
-            _imageBytes!,
-            fileOptions: FileOptions(contentType: 'image/$ext', upsert: true),
-          );
-          uploadedUrl = supabase.storage.from('profile_images').getPublicUrl(path);
-        } catch (storageErr) {
-          if (mounted) {
-            AppToast.show(context, 'Photo upload failed: $storageErr', type: ToastType.error);
-          }
-        }
-      }
-
+      // Photo is already uploaded in _pickImage — just save name/phone here.
       final supabase = Supabase.instance.client;
       final phone = _phoneController.text.trim();
       await supabase.from('users').update({
@@ -95,7 +124,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       await supabase.auth.updateUser(
         UserAttributes(data: {
           'full_name': _nameController.text.trim(),
-          if (uploadedUrl != null) 'avatar_url': uploadedUrl,
         }),
       );
 
@@ -117,7 +145,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Edit Profile', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
         elevation: 0,
         actions: [
           TextButton(
@@ -136,9 +163,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           child: Column(
             children: [
               GestureDetector(
-                onTap: _pickImage,
+                onTap: _isUploadingPhoto ? null : _pickImage,
                 child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
+                  cursor: _isUploadingPhoto
+                      ? SystemMouseCursors.basic
+                      : SystemMouseCursors.click,
                   child: _buildAvatar(user),
                 ),
               ),
@@ -178,32 +207,74 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   }
 
   Widget _buildAvatar(User? user) {
-    final ImageProvider? image = _imageBytes != null
-        ? MemoryImage(_imageBytes!) as ImageProvider
-        : (_imageUrl != null && _imageUrl!.isNotEmpty)
-            ? NetworkImage(_imageUrl!) as ImageProvider
-            : null;
+    final effectiveUrl = _imageUrl ?? user?.avatarUrl;
+    final initial = user?.fullName.isNotEmpty == true
+        ? user!.fullName[0].toUpperCase()
+        : 'U';
+
+    Widget avatarChild;
+    if (_imageBytes != null) {
+      avatarChild = Image.memory(
+        _imageBytes!,
+        width: 100,
+        height: 100,
+        fit: BoxFit.cover,
+      );
+    } else if (effectiveUrl != null && effectiveUrl.isNotEmpty) {
+      avatarChild = Image.network(
+        effectiveUrl,
+        width: 100,
+        height: 100,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Center(
+          child: Text(initial,
+              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold)),
+        ),
+        loadingBuilder: (_, child, progress) => progress == null
+            ? child
+            : const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primaryGreen,
+                ),
+              ),
+      );
+    } else {
+      avatarChild = Center(
+        child: Text(initial,
+            style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold)),
+      );
+    }
 
     return Stack(
       children: [
         CircleAvatar(
           radius: 50,
           backgroundColor: Colors.grey.shade200,
-          backgroundImage: image,
-          child: image == null
-              ? Text(
-                  user?.fullName.isNotEmpty == true ? user!.fullName[0].toUpperCase() : 'U',
-                  style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
-                )
-              : null,
+          child: avatarChild,
         ),
+        if (_isUploadingPhoto)
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.black45,
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              ),
+            ),
+          ),
         Positioned(
           bottom: 0,
           right: 0,
           child: Container(
             padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              color: AppColors.primaryGreen,
+            decoration: BoxDecoration(
+              color: _isUploadingPhoto ? Colors.grey : AppColors.primaryGreen,
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
