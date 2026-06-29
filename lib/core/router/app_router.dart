@@ -36,19 +36,37 @@ import 'package:ifind/features/business/presentation/screens/b2b_matches_screen.
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
+// Notifies GoRouter to re-evaluate redirects when auth/onboarding state changes,
+// WITHOUT recreating the router (which would wipe widget state like _loginError).
+class _RouterRefreshNotifier extends ChangeNotifier {
+  _RouterRefreshNotifier(Ref ref) {
+    ref.listen<AsyncValue<User?>>(authProvider, (_, __) => notifyListeners());
+    ref.listen<bool>(onboardingCompleteProvider, (_, __) => notifyListeners());
+    ref.listen<PendingRegistration?>(
+        pendingRegistrationProvider, (_, __) => notifyListeners());
+  }
+}
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
-  final onboardingComplete = ref.watch(onboardingCompleteProvider);
-  final pendingRegistration = ref.watch(pendingRegistrationProvider);
+  // Watch only the resolved user — stable across loading/error states.
+  // Router is only recreated on actual login/logout (role-based branches must update).
+  final user = ref.watch(currentUserProvider);
+
+  final refreshNotifier = _RouterRefreshNotifier(ref);
+  ref.onDispose(() => refreshNotifier.dispose());
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/',
+    refreshListenable: refreshNotifier,
     redirect: (context, state) {
+      final authState = ref.read(authProvider);
       if (authState.isLoading) return null;
 
-      final isAuth = authState.valueOrNull != null;
+      final currentUser = ref.read(currentUserProvider);
+      final isAuth = currentUser != null;
       final loc = state.matchedLocation;
+      final pendingRegistration = ref.read(pendingRegistrationProvider);
       final hasPendingRegistration = pendingRegistration != null;
 
       if (!isAuth &&
@@ -68,13 +86,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           loc.startsWith('/email-verified');
 
       if (isPublicAuthRoute) {
-        if (isAuth && (loc == '/login' || loc == '/register')) {
-          return '/';
-        }
+        if (isAuth && (loc == '/login' || loc == '/register')) return '/';
         return null;
       }
 
       if (!isAuth) {
+        final onboardingComplete = ref.read(onboardingCompleteProvider);
         if (!onboardingComplete) return '/onboarding';
         return '/login';
       }
@@ -134,13 +151,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Main Application Shell - Role-based Navigation
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
-          final user = authState.valueOrNull;
           return MainScaffold(
             navigationShell: navigationShell,
             user: user,
           );
         },
-        branches: _buildBranches(ref, authState),
+        branches: _buildBranches(user),
       ),
 
       // Global Detail Routes (Not in Bottom Nav)
@@ -219,12 +235,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-// Helper function to build role-based branches
-List<StatefulShellBranch> _buildBranches(
-  Ref<GoRouter> ref,
-  AsyncValue<User?> authState,
-) {
-  final user = authState.valueOrNull;
+List<StatefulShellBranch> _buildBranches(User? user) {
   final isBusinessOwner = user?.role == UserRole.businessOwner;
 
   // AI / For You branch — shared, always at index 2

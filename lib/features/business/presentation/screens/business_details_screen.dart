@@ -111,6 +111,7 @@ class BusinessDetailScreen extends ConsumerWidget {
           value: SystemUiOverlayStyle.light,
           child: Scaffold(
             backgroundColor: const Color(0xFFF8FAFC),
+            extendBody: true,
             body: DefaultTabController(
               length: 3,
               initialIndex: 1,
@@ -163,7 +164,7 @@ class BusinessDetailScreen extends ConsumerWidget {
       ),
       actions: [
         Consumer(builder: (ctx, r, _) {
-          final saved  = r.watch(favouritesProvider).contains(b.id);
+          final saved = r.watch(favouritesProvider).valueOrNull?.contains(b.id) ?? false;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
@@ -210,7 +211,7 @@ class BusinessDetailScreen extends ConsumerWidget {
   Widget _buildStatsStrip(BuildContext context, Business b) {
     return SliverToBoxAdapter(
       child: Container(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         child: Row(
           children: [
@@ -297,7 +298,7 @@ class _HeroBg extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         // Cover image or gradient fallback
-        business.coverImageUrl != null
+        business.coverImageUrl != null && business.coverImageUrl!.isNotEmpty
             ? CachedNetworkImage(
                 imageUrl: business.coverImageUrl!,
                 fit: BoxFit.cover,
@@ -418,10 +419,20 @@ class _HeroBg extends StatelessWidget {
                         ],
                       ),
                       clipBehavior: Clip.antiAlias,
-                      child: business.logoUrl != null
+                      child: business.logoUrl != null && business.logoUrl!.isNotEmpty
                           ? CachedNetworkImage(
                               imageUrl: business.logoUrl!,
                               fit: BoxFit.cover,
+                              placeholder: (_, __) => Center(
+                                child: Text(
+                                  business.name[0].toUpperCase(),
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryGreen,
+                                  ),
+                                ),
+                              ),
                               errorWidget: (_, __, ___) => Center(
                                 child: Text(
                                   business.name[0].toUpperCase(),
@@ -611,7 +622,7 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       padding: const EdgeInsets.only(top: 12),
       child: _tabBar,
     );
@@ -635,7 +646,7 @@ class _AboutTab extends ConsumerWidget {
     final productsAsync = ref.watch(businessProductsProvider(business.id));
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 140),
       children: [
         // About card
         _SectionCard(
@@ -804,7 +815,7 @@ class _ProductCard extends StatelessWidget {
     return Container(
       width: 130,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
@@ -1021,7 +1032,7 @@ class _PortfolioTab extends ConsumerWidget {
           color: AppColors.primaryGreen,
           onRefresh: () async => ref.invalidate(portfolioProvider(businessId)),
           child: GridView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               crossAxisSpacing: 12,
@@ -1051,7 +1062,7 @@ class _PortfolioCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -1302,7 +1313,7 @@ class _ReviewsTab extends ConsumerWidget {
                 onRefresh: () async =>
                     ref.refresh(businessReviewsProvider(businessId)),
                 child: ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
                   itemCount: reviews.length,
                   itemBuilder: (ctx, i) =>
                       _ReviewCard(review: reviews[i], index: i),
@@ -1330,7 +1341,7 @@ class _ReviewCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -1424,7 +1435,7 @@ class _BottomBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius:
             const BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
@@ -1437,6 +1448,7 @@ class _BottomBar extends ConsumerWidget {
       ),
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: SafeArea(
+        top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1634,7 +1646,7 @@ class _SectionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -1691,10 +1703,7 @@ class _ErrorScaffold extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.darkText,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),

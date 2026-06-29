@@ -287,6 +287,7 @@ class AuthRemoteDataSource {
       fullName: metadata['full_name'] as String? ?? 'iFind User',
       role: parsedRole,
       phone: metadata['phone'] as String?,
+      avatarUrl: metadata['avatar_url'] as String?,
       createdAt: DateTime.tryParse(user.createdAt) ?? now,
       updatedAt: now,
     );

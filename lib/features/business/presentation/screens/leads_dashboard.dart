@@ -22,6 +22,7 @@ import 'package:ifind/features/settings/presentation/screens/settings_screen.dar
 import 'package:ifind/features/products/presentation/screens/add_product_screen.dart';
 import 'package:ifind/features/auth/presentation/screens/analytics_screen.dart';
 import 'package:ifind/features/reviews/presentation/screens/reviews_screen.dart';
+import 'package:ifind/core/widgets/app_drawer.dart';
 
 // ---------- Provider for Dashboard Stats ----------
 final dashboardStatsProvider = FutureProvider.family<Map<String, int>, String>((ref, businessId) async {
@@ -69,13 +70,13 @@ class LeadsDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _LeadsDashboardScreenState extends ConsumerState<LeadsDashboardScreen> {
-  // Dark green theme color
   static const darkGreen = Color(0xFF0A5C36);
+  final _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
-    final myBusinessesAsync = ref.watch(myBusinessesProvider(user?.id ?? ''));
+    final myBusinessesAsync = ref.watch(myBusinessesStreamProvider(user?.id ?? ''));
     final business = myBusinessesAsync.value?.firstOrNull;
     final businessId = business?.id;
     final leadsAsync = business == null
@@ -89,12 +90,12 @@ class _LeadsDashboardScreenState extends ConsumerState<LeadsDashboardScreen> {
         : const AsyncValue<List>.data([]);
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: _buildAppBar(context, business, user?.fullName),
+      key: _scaffoldKey,
+      drawer: const AppDrawer(),
+      appBar: _buildAppBar(context, business, user?.fullName, user?.avatarUrl),
       body: Stack(
         children: [
-          // ---------- Light background imagery (subtle shapes) ----------
-          Positioned.fill(child: Container(color: Colors.white)),
+          Positioned.fill(child: Container(color: Theme.of(context).colorScheme.surface)),
           Positioned(
             top: -40,
             right: -40,
@@ -145,10 +146,9 @@ class _LeadsDashboardScreenState extends ConsumerState<LeadsDashboardScreen> {
           ),
           // Main content
           RefreshIndicator(
-            backgroundColor: Colors.white,
             color: darkGreen,
             onRefresh: () async {
-              ref.invalidate(myBusinessesProvider(user?.id ?? ''));
+              ref.invalidate(myBusinessesStreamProvider(user?.id ?? ''));
               if (business != null) {
                 ref.invalidate(businessLeadsProvider(business));
                 ref.invalidate(dashboardStatsProvider(businessId!));
@@ -329,15 +329,66 @@ class _LeadsDashboardScreenState extends ConsumerState<LeadsDashboardScreen> {
     );
   }
 
-  // ---------- Dark Green App Bar (Centered Title, No Overflow) ----------
-  PreferredSizeWidget _buildAppBar(BuildContext context, Business? business, String? userName) {
+  void _showFullImage(String imageUrl, String initial) {
+    showDialog(
+      context: context,
+      builder: (ctx) => GestureDetector(
+        onTap: () => Navigator.pop(ctx),
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          child: Center(
+            child: Container(
+              width: 280,
+              height: 280,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primaryGreen,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    blurRadius: 40,
+                    offset: const Offset(0, 12),
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: Image.network(
+                  imageUrl,
+                  width: 280,
+                  height: 280,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Center(
+                    child: Text(
+                      initial,
+                      style: GoogleFonts.outfit(
+                        fontSize: 100,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------- Dark Green App Bar with profile picture ----------
+  PreferredSizeWidget _buildAppBar(BuildContext context, Business? business, String? userName, String? userAvatarUrl) {
+    final initial = (business?.name ?? 'B').substring(0, 1).toUpperCase();
+    final logoUrl = business?.logoUrl ?? userAvatarUrl;
+
     return PreferredSize(
-      preferredSize: const Size.fromHeight(84),
+      preferredSize: const Size.fromHeight(160),
       child: SafeArea(
         child: SizedBox(
-          height: 84,
+          height: 160,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               color: darkGreen,
               boxShadow: [
@@ -348,54 +399,93 @@ class _LeadsDashboardScreenState extends ConsumerState<LeadsDashboardScreen> {
                 ),
               ],
             ),
-            child: Stack(
-              alignment: Alignment.center,
+            child: Column(
               children: [
-                // Centered Title Column
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                // Top row: menu + notifications
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Dashboard',
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white70,
-                        letterSpacing: 0.5,
-                      ),
+                    IconButton(
+                      icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 26),
+                      onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      business?.name ?? 'My Business',
-                      style: GoogleFonts.outfit(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: -0.5,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                    ),
+                    business != null
+                        ? NotificationBadge(
+                            businessId: business.id,
+                            child: IconButton(
+                              icon: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 28),
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => NotificationsScreen(businessId: business.id)),
+                              ),
+                            ),
+                          )
+                        : const SizedBox(width: 48),
                   ],
                 ),
-                // Notification Badge - Positioned to the right
-                Positioned(
-                  right: 0,
-                  child: business != null
-                      ? NotificationBadge(
-                          businessId: business.id,
-                          child: IconButton(
-                            icon: const Icon(Icons.notifications_none_rounded, color: Colors.white, size: 28),
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => NotificationsScreen(businessId: business.id)),
-                            ),
+                // Profile image + business name
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      GestureDetector(
+                        onTap: logoUrl != null ? () => _showFullImage(logoUrl, initial) : null,
+                        child: Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white24,
+                            border: Border.all(color: Colors.white, width: 2),
                           ),
-                        )
-                      : const SizedBox.shrink(),
+                          child: ClipOval(
+                            child: logoUrl != null
+                                ? Image.network(
+                                    logoUrl,
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Center(
+                                      child: Text(
+                                        initial,
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : Center(
+                                    child: Text(
+                                      initial,
+                                      style: GoogleFonts.outfit(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        business?.name ?? 'My Business',
+                        style: GoogleFonts.outfit(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(height: 10),
               ],
             ),
           ),

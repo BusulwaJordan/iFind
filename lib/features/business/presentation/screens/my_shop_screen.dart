@@ -24,6 +24,7 @@ import 'dart:ui';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:ifind/features/reviews/presentation/providers/review_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:ifind/core/widgets/app_drawer.dart';
 
 class BusinessAnalytics {
   final int profileViews;
@@ -196,40 +197,6 @@ class MyShopScreen extends ConsumerWidget {
 
   static final _partnerSectionKey = GlobalKey();
 
-  Future<void> _handleSignOut(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: AlertDialog(
-          backgroundColor: Colors.white.withValues(alpha: 0.9),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: Text('Sign Out',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-          content: const Text('Are you sure you want to sign out?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child:
-                  Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text('Sign Out',
-                  style: GoogleFonts.outfit(
-                      color: AppColors.error, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (confirmed == true) {
-      await ref.read(authProvider.notifier).logout();
-    }
-  }
-
   Future<void> _deleteShop(
       BuildContext context, WidgetRef ref, String businessId) async {
     final confirmed = await showDialog<bool>(
@@ -300,6 +267,7 @@ class MyShopScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor:
           const Color(0xFFF0F4F8), // Slightly more tinted background
+      drawer: const AppDrawer(),
       body: myBusinessesAsync.when(
         data: (businesses) {
           if (businesses.isEmpty) {
@@ -346,9 +314,9 @@ class MyShopScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 24),
-                            _buildQuickStats(business),
+                            _buildQuickStats(context, business),
                             const SizedBox(height: 32),
-                            _buildReviewsSection(business.id),
+                            _buildReviewsSection(context, business.id),
                             const SizedBox(height: 32),
                             _buildPartnerRecommendations(context, business),
                             const SizedBox(height: 32),
@@ -386,6 +354,34 @@ class MyShopScreen extends ConsumerWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+
+              // Menu button — always visible at top-left
+              Positioned(
+                top: 0,
+                left: 0,
+                child: SafeArea(
+                  child: Builder(
+                    builder: (ctx) => Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: IconButton(
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black38,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.menu_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                        onPressed: () => Scaffold.of(ctx).openDrawer(),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -460,23 +456,14 @@ class MyShopScreen extends ConsumerWidget {
 
   Widget _buildSliverAppBar(
       BuildContext context, WidgetRef ref, Business business) {
+    final user = ref.read(currentUserProvider);
+    final logoUrl = business.logoUrl ?? user?.avatarUrl;
     return SliverAppBar(
       expandedHeight: 240,
       pinned: true,
       backgroundColor: AppColors.deepGreen,
       elevation: 0,
-      leading: IconButton(
-        icon: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.black26,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child:
-              const Icon(Icons.logout_rounded, color: Colors.white, size: 20),
-        ),
-        onPressed: () => _handleSignOut(context, ref),
-      ),
+      automaticallyImplyLeading: false,
       actions: [
         Padding(
           padding: const EdgeInsets.only(right: 8),
@@ -551,8 +538,18 @@ class MyShopScreen extends ConsumerWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(22),
-                      child: business.logoUrl != null
-                          ? Image.network(business.logoUrl!, fit: BoxFit.cover)
+                      child: logoUrl != null
+                          ? Image.network(
+                              logoUrl,
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.storefront_rounded,
+                                color: AppColors.primaryGreen,
+                                size: 40,
+                              ),
+                            )
                           : const Icon(Icons.storefront_rounded,
                               color: AppColors.primaryGreen, size: 40),
                     ),
@@ -565,12 +562,12 @@ class MyShopScreen extends ConsumerWidget {
                         Text(
                           business.name,
                           style: GoogleFonts.outfit(
-                            fontSize: 26,
+                            fontSize: 32,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                             letterSpacing: -0.5,
                           ),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
@@ -610,11 +607,11 @@ class MyShopScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickStats(Business business) {
+  Widget _buildQuickStats(BuildContext context, Business business) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
@@ -641,7 +638,7 @@ class MyShopScreen extends ConsumerWidget {
     ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.1);
   }
 
-  Widget _buildReviewsSection(String businessId) {
+  Widget _buildReviewsSection(BuildContext context, String businessId) {
     return Consumer(
       builder: (context, ref, child) {
         final reviewsAsync = ref.watch(businessReviewsProvider(businessId));
@@ -653,7 +650,7 @@ class MyShopScreen extends ConsumerWidget {
                 padding:
                     const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(30),
                   boxShadow: [
                     BoxShadow(
@@ -693,7 +690,7 @@ class MyShopScreen extends ConsumerWidget {
             return Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(30),
                 boxShadow: [
                   BoxShadow(
@@ -833,13 +830,41 @@ class MyShopScreen extends ConsumerWidget {
             child: Center(child: IFindLoaderInline(size: 60)),
           ),
           error: (e, s) => Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                ),
+              ],
             ),
-            child: const Center(
-              child: Text('Unable to load reviews'),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(Icons.rate_review_rounded,
+                      color: Colors.grey[300], size: 48),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No reviews yet',
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                  Text(
+                    'Great service leads to great reviews!',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -886,6 +911,7 @@ class MyShopScreen extends ConsumerWidget {
       childAspectRatio: 1.05,
       children: [
         _buildManageCard(
+          context,
           'Customer Inquiries',
           'Messages & Actions',
           Icons.bubble_chart_rounded,
@@ -894,6 +920,7 @@ class MyShopScreen extends ConsumerWidget {
               MaterialPageRoute(builder: (_) => const LeadsDashboardScreen())),
         ),
         _buildManageCard(
+          context,
           'Inventory',
           'Manage Inventory',
           Icons.inventory_2_rounded,
@@ -905,6 +932,7 @@ class MyShopScreen extends ConsumerWidget {
                       ProductManagementScreen(businessId: business.id))),
         ),
         _buildManageCard(
+          context,
           'Media Gallery',
           'Premium Visuals',
           Icons.auto_awesome_rounded,
@@ -935,7 +963,7 @@ class MyShopScreen extends ConsumerWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(30),
             boxShadow: [
               BoxShadow(
@@ -1137,7 +1165,7 @@ class MyShopScreen extends ConsumerWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(30),
             boxShadow: [
               BoxShadow(
@@ -1269,11 +1297,11 @@ class MyShopScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildManageCard(String title, String subtitle, IconData icon,
-      Color color, VoidCallback onTap) {
+  Widget _buildManageCard(BuildContext context, String title, String subtitle,
+      IconData icon, Color color, VoidCallback onTap) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
@@ -1334,7 +1362,7 @@ class MyShopScreen extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(30),
         border: Border.all(color: Colors.red.withValues(alpha: 0.1)),
       ),

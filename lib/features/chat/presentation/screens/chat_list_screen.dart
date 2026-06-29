@@ -13,6 +13,7 @@ import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/core/widgets/empty_state_widget.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
+import 'package:ifind/core/widgets/app_drawer.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class ChatListScreen extends ConsumerWidget {
@@ -28,6 +29,7 @@ class ChatListScreen extends ConsumerWidget {
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
+        drawer: const AppDrawer(),
         body: Column(
           children: [
             // ── Hero Header ───────────────────────────────────────────────
@@ -68,6 +70,21 @@ class ChatListScreen extends ConsumerWidget {
                       children: [
                         Row(
                           children: [
+                            Builder(
+                              builder: (ctx) => GestureDetector(
+                                onTap: () => Scaffold.of(ctx).openDrawer(),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.menu_rounded,
+                                      color: Colors.white, size: 20),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
                             const Icon(Icons.chat_bubble_rounded,
                                 color: Colors.white, size: 22),
                             const SizedBox(width: 10),
@@ -204,7 +221,7 @@ class ChatListScreen extends ConsumerWidget {
                           child: Container(
                             margin: const EdgeInsets.only(bottom: 12),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.surface,
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(

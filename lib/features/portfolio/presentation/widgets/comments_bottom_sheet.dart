@@ -108,9 +108,9 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         children: [
@@ -237,7 +237,7 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               border: Border(top: BorderSide(color: Colors.grey.shade200)),
               boxShadow: [
                 BoxShadow(

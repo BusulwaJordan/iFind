@@ -58,7 +58,6 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     const darkGreen = Color(0xFF0A5C36);
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: _buildAppBar(context),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

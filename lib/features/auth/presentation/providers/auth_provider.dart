@@ -94,50 +94,61 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
     final session = Supabase.instance.client.auth.currentSession;
 
     if (session != null) {
-      debugPrint('Found existing Supabase session for: ${session.user.id}');
-      final result = await getCurrentUserUseCase();
-      result.fold(
-        (failure) {
-          // Network issue — don't log the user out, keep them authenticated
-          // using basic info from the JWT session token. They can still use the app.
-          debugPrint(
-              'Profile fetch failed (likely network issue). Keeping session alive.');
-          final u = session.user;
-          final metadata = u.userMetadata ?? {};
-          final roleStr = metadata['role'] as String? ?? 'customer';
-          final parsedRole = roleStr == 'business_owner'
-              ? UserRole.businessOwner
-              : (roleStr == 'manager' ? UserRole.manager : UserRole.customer);
-          state = AsyncValue.data(User(
-            id: u.id,
-            email: u.email ?? '',
-            fullName: metadata['full_name'] as String? ?? 'iFind User',
-            role: parsedRole,
-            phone: metadata['phone'] as String?,
-            createdAt: DateTime.tryParse(u.createdAt) ?? DateTime.now(),
-            updatedAt: DateTime.now(),
-          ));
-        },
-        (user) => state = AsyncValue.data(user),
-      );
+      // Resolve immediately from JWT metadata — no network call needed.
+      // The user sees their screen right away while the full profile loads behind the scenes.
+      state = AsyncValue.data(_userFromSession(session));
+
+      // Background refresh: fetch full DB profile and update silently.
+      getCurrentUserUseCase().then((result) {
+        if (!mounted) return;
+        result.fold(
+          (_) => null, // keep metadata state on network error
+          (user) => state = AsyncValue.data(user),
+        );
+      });
     } else {
       state = const AsyncValue.data(null);
     }
 
     // Listen to auth state changes for real-time updates (Google OAuth callback lands here)
     authRepository.authStateChanges.listen((user) {
+      if (!mounted) return;
       debugPrint('Auth state changed. User: ${user?.id}');
       state = AsyncValue.data(user);
     });
   }
 
-  Future<void> login(String email, String password) async {
+  User _userFromSession(Session session) {
+    final u = session.user;
+    final metadata = u.userMetadata ?? {};
+    final roleStr = metadata['role'] as String? ?? 'customer';
+    final parsedRole = roleStr == 'business_owner'
+        ? UserRole.businessOwner
+        : (roleStr == 'manager' ? UserRole.manager : UserRole.customer);
+    return User(
+      id: u.id,
+      email: u.email ?? '',
+      fullName: metadata['full_name'] as String? ?? 'iFind User',
+      role: parsedRole,
+      phone: metadata['phone'] as String?,
+      avatarUrl: metadata['avatar_url'] as String?,
+      createdAt: DateTime.tryParse(u.createdAt) ?? DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  Future<String?> login(String email, String password) async {
     state = const AsyncValue.loading();
     final result = await loginUseCase(email: email, password: password);
-    result.fold(
-      (failure) =>
-          state = AsyncValue.error(failure.message, StackTrace.current),
-      (user) => state = AsyncValue.data(user),
+    return result.fold(
+      (failure) {
+        state = AsyncValue.error(failure.message, StackTrace.current);
+        return failure.message;
+      },
+      (user) {
+        state = AsyncValue.data(user);
+        return null;
+      },
     );
   }
 

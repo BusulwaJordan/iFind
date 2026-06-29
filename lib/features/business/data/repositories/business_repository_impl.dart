@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:dartz/dartz.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:ifind/core/errors/failures.dart';
 import 'package:ifind/core/services/storage_service.dart';
 import 'package:ifind/features/business/data/datasources/business_remote_datasource.dart';
@@ -61,25 +61,25 @@ class BusinessRepositoryImpl implements BusinessRepository {
     String? phone,
     String? website,
     String? email,
-    File? logoFile,
-    File? coverFile,
+    XFile? logoFile,
+    XFile? coverFile,
   }) async {
     try {
       String? logoUrl;
       String? coverUrl;
 
       if (logoFile != null) {
-        logoUrl = await storageService.uploadFile(
+        logoUrl = await storageService.uploadXFile(
           bucket: 'business_images',
-          file: logoFile,
+          xFile: logoFile,
           path: 'logos/$ownerId',
         );
       }
 
       if (coverFile != null) {
-        coverUrl = await storageService.uploadFile(
+        coverUrl = await storageService.uploadXFile(
           bucket: 'business_images',
-          file: coverFile,
+          xFile: coverFile,
           path: 'covers/$ownerId',
         );
       }
@@ -135,25 +135,25 @@ class BusinessRepositoryImpl implements BusinessRepository {
     String? description,
     String? phone,
     String? address,
-    File? logoFile,
-    File? coverFile,
+    XFile? logoFile,
+    XFile? coverFile,
   }) async {
     try {
       String? logoUrl;
       String? coverUrl;
 
       if (logoFile != null) {
-        logoUrl = await storageService.uploadFile(
+        logoUrl = await storageService.uploadXFile(
           bucket: 'business_images',
-          file: logoFile,
+          xFile: logoFile,
           path: 'logos/$businessId',
         );
       }
 
       if (coverFile != null) {
-        coverUrl = await storageService.uploadFile(
+        coverUrl = await storageService.uploadXFile(
           bucket: 'business_images',
-          file: coverFile,
+          xFile: coverFile,
           path: 'covers/$businessId',
         );
       }

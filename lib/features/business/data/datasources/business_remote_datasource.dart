@@ -222,15 +222,33 @@ class BusinessRemoteDataSource {
     }
   }
 
-  /// Stream business by ID
-  Stream<Business?> watchBusiness(String id) {
-    return supabaseClient
+  /// Stream business by ID — falls back to a one-shot fetch when realtime fails
+  Stream<Business?> watchBusiness(String id) async* {
+    // Emit the latest REST snapshot immediately so the screen is never blank.
+    try {
+      final snap = await _selectBusinessById(id);
+      yield BusinessModel.fromJson(snap).toEntity();
+    } catch (_) {
+      yield null;
+    }
+
+    // Then layer on a live subscription for real-time updates.
+    // Swallow any realtime errors so the screen keeps showing the snapshot.
+    await for (final row in supabaseClient
         .from(ApiConstants.businessesTable)
         .stream(primaryKey: ['id'])
         .eq('id', id)
-        .map((data) => data.isEmpty
-            ? null
-            : BusinessModel.fromJson(data.first).toEntity());
+        .handleError((_) {})
+        .asyncMap((data) async {
+          if (data.isEmpty) return null;
+          try {
+            return BusinessModel.fromJson(data.first).toEntity();
+          } catch (_) {
+            return null;
+          }
+        })) {
+      if (row != null) yield row;
+    }
   }
 
   /// Stream businesses owned by user

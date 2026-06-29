@@ -62,13 +62,35 @@ ThemeData _buildTheme(Brightness brightness) {
   return ThemeData(
     useMaterial3: true,
     colorScheme: base,
+    scaffoldBackgroundColor: base.surface,
+    appBarTheme: AppBarTheme(
+      backgroundColor: base.surface,
+      foregroundColor: base.onSurface,
+      elevation: 0,
+      surfaceTintColor: Colors.transparent,
+    ),
+    cardTheme: CardThemeData(
+      color: base.surfaceContainerLow,
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+    listTileTheme: ListTileThemeData(
+      tileColor: base.surfaceContainerLow,
+      mouseCursor: WidgetStateMouseCursor.clickable,
+    ),
+    dividerTheme: DividerThemeData(color: base.outlineVariant),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: base.surfaceContainerHighest.withValues(alpha: 0.5),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+    ),
     elevatedButtonTheme: const ElevatedButtonThemeData(style: clickStyle),
     textButtonTheme: const TextButtonThemeData(style: clickStyle),
     outlinedButtonTheme: const OutlinedButtonThemeData(style: clickStyle),
     iconButtonTheme: const IconButtonThemeData(style: clickStyle),
-    listTileTheme: const ListTileThemeData(
-      mouseCursor: WidgetStateMouseCursor.clickable,
-    ),
   );
 }
 
