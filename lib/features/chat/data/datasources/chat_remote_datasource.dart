@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ifind/features/chat/data/models/chat_model.dart';
 import 'package:ifind/features/chat/domain/entities/chat.dart';
@@ -71,9 +72,6 @@ class ChatRemoteDataSource {
       'created_at': now,
       'updated_at': now,
       'last_message_at': now,
-      // The original columns are set to null for B2B chats
-      'customer_id': null,
-      'business_id': null,
     };
 
     final response = await supabaseClient
@@ -90,18 +88,24 @@ class ChatRemoteDataSource {
     required String businessId,
     required String partnerBusinessId,
   }) async {
-    final response = await supabaseClient
+    // Check direction A → B
+    final r1 = await supabaseClient
         .from('chats')
         .select()
-        .or(
-          'and(business_a_id.eq.$businessId,business_b_id.eq.$partnerBusinessId),'
-          'and(business_a_id.eq.$partnerBusinessId,business_b_id.eq.$businessId)'
-        )
+        .eq('business_a_id', businessId)
+        .eq('business_b_id', partnerBusinessId)
         .maybeSingle();
+    if (r1 != null) return ChatModel.fromJson(r1).toEntity();
 
-    if (response != null) {
-      return ChatModel.fromJson(response).toEntity();
-    }
+    // Check direction B → A
+    final r2 = await supabaseClient
+        .from('chats')
+        .select()
+        .eq('business_a_id', partnerBusinessId)
+        .eq('business_b_id', businessId)
+        .maybeSingle();
+    if (r2 != null) return ChatModel.fromJson(r2).toEntity();
+
     return null;
   }
 
@@ -119,6 +123,10 @@ class ChatRemoteDataSource {
         'sender_id': senderId,
         'content': content,
       });
+      await supabaseClient.from('chats').update({
+        'last_message': content,
+        'last_message_at': DateTime.now().toIso8601String(),
+      }).eq('id', chatId);
     } catch (e) {
       throw Exception('Failed to send message: $e');
     }
@@ -152,46 +160,123 @@ class ChatRemoteDataSource {
   /// Fetch user-specific chats (B2C + B2B)
   Future<List<Chat>> getMyChats(String userId) async {
     try {
-      // 1. Get businesses owned by this user
       final myBusinesses = await _getBusinessesOwnedBy(userId);
-      final businessIds = myBusinesses
-          .map((b) => (b['business_id'] ?? b['id']).toString())
+
+      // chats.business_id is UUID type (B2C) → use the UUID primary key
+      final businessUUIDs = myBusinesses
+          .map((b) => b['id']?.toString())
+          .whereType<String>()
           .toList();
+      // chats.business_a_id / business_b_id are TEXT type (B2B) → use custom string id
+      final businessCustomIds = myBusinesses
+          .map((b) => (b['business_id'] ?? b['id'])?.toString())
+          .whereType<String>()
+          .toList();
+      final myBizIds = businessCustomIds.toSet();
 
-      // 2. Build query: B2C chats where customer_id = userId OR business_id in my business IDs
-      //    OR B2B chats where business_a_id or business_b_id in my business IDs.
-      var query = supabaseClient.from('chats').select('*, businesses(name, logo_url), profiles:customer_id(full_name)');
-
-      List<String> filters = [];
-
-      // B2C: customer is me
-      filters.add('customer_id.eq.$userId');
-
-      // B2C: business is one of mine
-      if (businessIds.isNotEmpty) {
-        final bizFilter = businessIds.map((id) => 'business_id.eq.$id').join(',');
-        filters.add(bizFilter);
+      // Build OR filter — no embedded joins to avoid FK dependency issues
+      final filters = <String>['customer_id.eq.$userId'];
+      for (final uuid in businessUUIDs) {
+        filters.add('business_id.eq.$uuid');       // UUID column (B2C)
+      }
+      for (final customId in businessCustomIds) {
+        filters.add('business_a_id.eq.$customId'); // TEXT column (B2B)
+        filters.add('business_b_id.eq.$customId');
       }
 
-      // B2B: I am business_a or business_b
-      if (businessIds.isNotEmpty) {
-        final b2bFilterA = businessIds.map((id) => 'business_a_id.eq.$id').join(',');
-        final b2bFilterB = businessIds.map((id) => 'business_b_id.eq.$id').join(',');
-        if (b2bFilterA.isNotEmpty) filters.add(b2bFilterA);
-        if (b2bFilterB.isNotEmpty) filters.add(b2bFilterB);
-      }
-
-      // Combine with OR
-      final combinedFilter = filters.join(',');
-      final response = await query
-          .or(combinedFilter)
+      final response = await supabaseClient
+          .from('chats')
+          .select('*')
+          .or(filters.join(','))
           .order('last_message_at', ascending: false)
           .limit(50);
 
-      return (response as List)
-          .map((json) => ChatModel.fromSupabase(json, myId: userId).toEntity())
+      final chatEntities = (response as List)
+          .map((json) => ChatModel.fromJson(json).toEntity())
           .toList();
-    } catch (e) {
+
+      // B2C: chat.businessId is a UUID — look up by businesses.id
+      final b2cBizUUIDs = chatEntities
+          .where((c) => !c.isB2B && c.businessId != null)
+          .map((c) => c.businessId!)
+          .toSet();
+
+      // B2B: chat.businessAId/businessBId are TEXT (BIZ0122) — look up by businesses.business_id
+      final b2bPartnerCustomIds = chatEntities
+          .where((c) => c.isB2B)
+          .map((c) => myBizIds.contains(c.businessAId) ? c.businessBId : c.businessAId)
+          .whereType<String>()
+          .toSet();
+
+      // Customer IDs to fetch names for (when current user is the business owner)
+      final customerIdsToFetch = chatEntities
+          .where((c) => !c.isB2B && c.customerId != null && c.customerId != userId)
+          .map((c) => c.customerId!)
+          .toSet();
+
+      // Fetch B2C business info keyed by UUID
+      final b2cBizMap = <String, Map<String, dynamic>>{};
+      if (b2cBizUUIDs.isNotEmpty) {
+        final r = await supabaseClient
+            .from('businesses')
+            .select('id, name, logo_url')
+            .inFilter('id', b2cBizUUIDs.toList());
+        for (final b in (r as List)) {
+          b2cBizMap[b['id'] as String] = Map<String, dynamic>.from(b as Map);
+        }
+      }
+
+      // Fetch B2B partner business info keyed by custom business_id string
+      final b2bBizMap = <String, Map<String, dynamic>>{};
+      if (b2bPartnerCustomIds.isNotEmpty) {
+        final r = await supabaseClient
+            .from('businesses')
+            .select('business_id, name, logo_url')
+            .inFilter('business_id', b2bPartnerCustomIds.toList());
+        for (final b in (r as List)) {
+          b2bBizMap[b['business_id'] as String] =
+              Map<String, dynamic>.from(b as Map);
+        }
+      }
+
+      // Fetch customer names for business-owner view
+      final customerMap = <String, Map<String, dynamic>>{};
+      if (customerIdsToFetch.isNotEmpty) {
+        final r = await supabaseClient
+            .from('users')
+            .select('id, full_name, avatar_url')
+            .inFilter('id', customerIdsToFetch.toList());
+        for (final u in (r as List)) {
+          customerMap[u['id'] as String] =
+              Map<String, dynamic>.from(u as Map);
+        }
+      }
+
+      // Enrich each chat with resolved names/logos
+      return chatEntities.map((chat) {
+        if (chat.isB2B) {
+          final partnerBizId = myBizIds.contains(chat.businessAId)
+              ? chat.businessBId
+              : chat.businessAId;
+          final data = partnerBizId != null ? b2bBizMap[partnerBizId] : null;
+          return chat.copyWith(
+            partnerBusinessName: data?['name'] as String?,
+            partnerBusinessLogo: data?['logo_url'] as String?,
+          );
+        } else {
+          final bizData = chat.businessId != null ? b2cBizMap[chat.businessId!] : null;
+          final customerData =
+              chat.customerId != null ? customerMap[chat.customerId!] : null;
+          return chat.copyWith(
+            businessName: bizData?['name'] as String?,
+            businessLogoUrl: bizData?['logo_url'] as String?,
+            customerName: customerData?['full_name'] as String?,
+            customerAvatarUrl: customerData?['avatar_url'] as String?,
+          );
+        }
+      }).toList();
+    } catch (e, st) {
+      debugPrint('getMyChats error: $e\n$st');
       throw Exception('Failed to fetch chats: $e');
     }
   }
@@ -204,7 +289,7 @@ class ChatRemoteDataSource {
     try {
       final response = await supabaseClient
           .from('chats')
-          .select('*, profiles:customer_id(full_name, avatar_url)')
+          .select('*, users:customer_id(full_name, avatar_url)')
           .eq('business_id', businessId)
           .order('last_message_at', ascending: false)
           .limit(50);

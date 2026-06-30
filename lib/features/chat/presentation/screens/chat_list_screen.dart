@@ -153,10 +153,15 @@ class ChatListScreen extends ConsumerWidget {
                       itemCount: chats.length,
                       itemBuilder: (context, index) {
                         final chat = chats[index];
-                        final businessName =
-                            chat.businessName ?? 'Unknown Business';
-                        final initials = businessName.isNotEmpty
-                            ? businessName[0].toUpperCase()
+                        final isB2B = chat.isB2B;
+                        final displayName = isB2B
+                            ? (chat.partnerBusinessName ?? 'B2B Partner')
+                            : (chat.businessName ?? chat.customerName ?? 'Unknown');
+                        final displayLogo = isB2B
+                            ? chat.partnerBusinessLogo
+                            : chat.businessLogoUrl;
+                        final initials = displayName.isNotEmpty
+                            ? displayName[0].toUpperCase()
                             : 'B';
 
                         return Dismissible(
@@ -172,7 +177,7 @@ class ChatListScreen extends ConsumerWidget {
                                     style: GoogleFonts.outfit(
                                         fontWeight: FontWeight.bold)),
                                 content: Text(
-                                    'Remove your conversation with $businessName?',
+                                    'Remove your conversation with $displayName?',
                                     style: GoogleFonts.outfit()),
                                 actions: [
                                   TextButton(
@@ -214,7 +219,7 @@ class ChatListScreen extends ConsumerWidget {
                             if (context.mounted) {
                               AppToast.show(
                                   context,
-                                  'Chat with $businessName deleted',
+                                  'Chat with $displayName deleted',
                                   type: ToastType.info);
                             }
                           },
@@ -236,28 +241,69 @@ class ChatListScreen extends ConsumerWidget {
                                   horizontal: 16, vertical: 10),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(20)),
-                              leading: chat.businessLogoUrl != null
-                                  ? CircleAvatar(
-                                      radius: 26,
-                                      backgroundImage:
-                                          NetworkImage(chat.businessLogoUrl!),
-                                      backgroundColor: AppColors.primaryGreen
-                                          .withValues(alpha: 0.1),
-                                    )
-                                  : CircleAvatar(
-                                      radius: 26,
-                                      backgroundColor: AppColors.primaryGreen
-                                          .withValues(alpha: 0.12),
-                                      child: Text(initials,
-                                          style: GoogleFonts.outfit(
-                                              color: AppColors.primaryGreen,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16)),
+                              leading: Stack(
+                                children: [
+                                  displayLogo != null
+                                      ? CircleAvatar(
+                                          radius: 26,
+                                          backgroundImage:
+                                              NetworkImage(displayLogo),
+                                          backgroundColor: AppColors.primaryGreen
+                                              .withValues(alpha: 0.1),
+                                        )
+                                      : CircleAvatar(
+                                          radius: 26,
+                                          backgroundColor: AppColors.primaryGreen
+                                              .withValues(alpha: 0.12),
+                                          child: Text(initials,
+                                              style: GoogleFonts.outfit(
+                                                  color: AppColors.primaryGreen,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16)),
+                                        ),
+                                  if (isB2B)
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: const BoxDecoration(
+                                          color: AppColors.primaryGreen,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                            Icons.handshake_rounded,
+                                            color: Colors.white,
+                                            size: 10),
+                                      ),
                                     ),
-                              title: Text(businessName,
-                                  style: GoogleFonts.outfit(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15)),
+                                ],
+                              ),
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(displayName,
+                                        style: GoogleFonts.outfit(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15)),
+                                  ),
+                                  if (isB2B)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.primaryGreen
+                                            .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text('B2B',
+                                          style: GoogleFonts.outfit(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.primaryGreen)),
+                                    ),
+                                ],
+                              ),
                               subtitle: Padding(
                                 padding: const EdgeInsets.only(top: 3),
                                 child: Text(
@@ -292,7 +338,7 @@ class ChatListScreen extends ConsumerWidget {
                                   : null,
                               onTap: () => context.push('/chat', extra: {
                                 'chat': chat,
-                                'otherPartyName': businessName,
+                                'otherPartyName': displayName,
                               }),
                             ),
                           ).animate().fadeIn(delay: Duration(milliseconds: 60 * index)).slideY(begin: 0.1),

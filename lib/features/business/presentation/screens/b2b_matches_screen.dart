@@ -9,6 +9,7 @@ import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/b2b_provider.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
+import 'package:ifind/features/chat/data/datasources/chat_remote_datasource.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
 import 'package:ifind/features/chat/presentation/screens/chat_room_screen.dart';
 
@@ -100,7 +101,7 @@ class B2bMatchesScreen extends ConsumerWidget {
   }
 }
 
-class _B2bMatchCard extends ConsumerWidget {
+class _B2bMatchCard extends ConsumerStatefulWidget {
   final Business business;
   final Business partner;
 
@@ -110,10 +111,129 @@ class _B2bMatchCard extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_B2bMatchCard> createState() => _B2bMatchCardState();
+}
+
+class _B2bMatchCardState extends ConsumerState<_B2bMatchCard> {
+  bool _isConnecting = false;
+
+  Future<void> _onConnect() async {
+    final currentUser = ref.read(currentUserProvider);
+    if (currentUser == null) {
+      AppToast.show(context, 'Please log in to connect.', type: ToastType.warning);
+      return;
+    }
+
+    final introMessage = await _showIntroDialog();
+    if (introMessage == null) return; // user cancelled
+
+    setState(() => _isConnecting = true);
+    try {
+      final chat = await ref
+          .read(chatRemoteDataSourceProvider)
+          .getOrCreateB2BChat(
+            businessId: widget.business.id,
+            partnerBusinessId: widget.partner.id,
+          );
+
+      if (introMessage.isNotEmpty) {
+        await ref.read(chatRemoteDataSourceProvider).sendMessage(
+          chatId: chat.id,
+          senderId: currentUser.id,
+          content: introMessage,
+        );
+      }
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ChatRoomScreen(
+              chat: chat,
+              otherPartyName: widget.partner.name,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('B2B connect error: $e');
+      if (mounted) {
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
+      }
+    } finally {
+      if (mounted) setState(() => _isConnecting = false);
+    }
+  }
+
+  Future<String?> _showIntroDialog() async {
+    final controller = TextEditingController(
+      text:
+          'Hi! I\'m ${widget.business.name}. I think we could work well together — would you be open to connecting?',
+    );
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Connect with',
+              style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey[500]),
+            ),
+            Text(
+              widget.partner.name,
+              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Send an introduction message:',
+              style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: controller,
+              maxLines: 4,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: Colors.grey[50],
+                contentPadding: const EdgeInsets.all(12),
+              ),
+              style: GoogleFonts.outfit(fontSize: 14),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _darkGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: Text('Send & Connect', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final compatibilityAsync = ref.watch(
       b2bCompatibilityProvider(
-        (myBusiness: business, targetBusiness: partner),
+        (myBusiness: widget.business, targetBusiness: widget.partner),
       ),
     );
 
@@ -132,118 +252,123 @@ class _B2bMatchCard extends ConsumerWidget {
       ),
       child: Row(
         children: [
+          // Partner logo
+          Container(
+            width: 52,
+            height: 52,
+            margin: const EdgeInsets.only(right: 12),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _darkGreen.withValues(alpha: 0.1),
+              border: Border.all(color: _darkGreen.withValues(alpha: 0.2)),
+            ),
+            child: ClipOval(
+              child: widget.partner.logoUrl != null
+                  ? Image.network(
+                      widget.partner.logoUrl!,
+                      width: 52,
+                      height: 52,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Center(
+                        child: Text(
+                          widget.partner.name.substring(0, 1).toUpperCase(),
+                          style: GoogleFonts.outfit(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: _darkGreen,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        widget.partner.name.substring(0, 1).toUpperCase(),
+                        style: GoogleFonts.outfit(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: _darkGreen,
+                        ),
+                      ),
+                    ),
+            ),
+          ),
           // Partner info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  partner.name,
+                  widget.partner.name,
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.darkText,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
-                  partner.category.name,
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  widget.partner.category.name,
+                  style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey[600]),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Row(
                   children: [
-                    Icon(Icons.location_on, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 4),
+                    Icon(Icons.location_on, size: 13, color: Colors.grey[400]),
+                    const SizedBox(width: 3),
                     Text(
-                      partner.distance != null
-                          ? '${partner.distance!.toStringAsFixed(1)} km away'
-                          : 'Distance unknown',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      widget.partner.distance != null
+                          ? '${widget.partner.distance!.toStringAsFixed(1)} km'
+                          : 'Unknown',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                     ),
-                    const SizedBox(width: 12),
-                    Icon(Icons.star, size: 14, color: Colors.amber),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 10),
+                    Icon(Icons.handshake_outlined, size: 13, color: Colors.amber[700]),
+                    const SizedBox(width: 3),
                     compatibilityAsync.when(
                       data: (result) => Text(
                         '${(result.compatibilityScore * 100).toInt()}% match',
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                           color: _darkGreen,
                         ),
                       ),
                       loading: () => const SizedBox(
-                        width: 16,
-                        height: 16,
+                        width: 14,
+                        height: 14,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
-                      error: (e, _) => const Text(
-                        '?',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
+                      error: (_, __) => Text('—', style: TextStyle(fontSize: 11, color: Colors.grey[400])),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          // Connect button – now opens chat
-          ElevatedButton(
-            onPressed: () async {
-              final currentUser = ref.read(currentUserProvider);
-              if (currentUser == null) {
-                AppToast.show(
-                  context,
-                  'Please log in to connect.',
-                  type: ToastType.warning,
-                );
-                return;
-              }
-
-              try {
-                // Get or create a chat between the two businesses
-                final chat = await ref
-                    .read(chatRemoteDataSourceProvider)
-                    .getOrCreateB2BChat(
-                      businessId: business.id,
-                      partnerBusinessId: partner.id,
-                    );
-
-                if (context.mounted) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ChatRoomScreen(
-                        chat: chat,
-                        otherPartyName: partner.name,
-                        // You can optionally pass partner.id to distinguish B2B chats
-                      ),
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  AppToast.show(
-                    context,
-                    friendlyError(e),
-                    type: ToastType.error,
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _darkGreen,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          const SizedBox(width: 8),
+          // Connect button
+          SizedBox(
+            width: 90,
+            child: ElevatedButton(
+              onPressed: _isConnecting ? null : _onConnect,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _darkGreen,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: _darkGreen.withValues(alpha: 0.5),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
+              child: _isConnecting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(
+                      'Connect',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
             ),
-            child: const Text('Connect'),
           ),
         ],
       ),
