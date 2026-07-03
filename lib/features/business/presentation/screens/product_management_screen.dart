@@ -10,7 +10,8 @@ import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:ifind/features/products/presentation/providers/product_provider.dart';
 import 'package:ifind/features/products/domain/entities/product.dart';
-import 'package:ifind/features/business/presentation/widgets/add_product_dialog.dart';
+import 'package:ifind/features/products/presentation/screens/add_product_screen.dart';
+import 'package:ifind/features/products/presentation/screens/product_detail_screen.dart';
 import 'package:intl/intl.dart';
 
 class ProductManagementScreen extends ConsumerWidget {
@@ -55,13 +56,22 @@ class ProductManagementScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           'Manage Catalog',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.darkText),
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.deepGreen,
         elevation: 0,
+        flexibleSpace: const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.deepGreen, AppColors.primaryGreen],
+            ),
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.darkText),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -83,9 +93,15 @@ class ProductManagementScreen extends ConsumerWidget {
                         return _ProductListTile(
                           product: products[index],
                           onDelete: () => _deleteProduct(context, ref, products[index]),
-                          onEdit: () {
-                            AppToast.show(context, 'Edit coming soon!', type: ToastType.info);
-                          },
+                          onEdit: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AddProductScreen(
+                                businessId: businessId,
+                                existingProduct: products[index],
+                              ),
+                            ),
+                          ),
                         )
                             .animate()
                             .fadeIn(delay: (index * 80).ms)
@@ -99,9 +115,9 @@ class ProductManagementScreen extends ConsumerWidget {
         error: (e, s) => ErrorRetryWidget(message: friendlyError(e), onRetry: () => ref.invalidate(businessProductsProvider(businessId))),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showDialog(
-          context: context, 
-          builder: (_) => AddProductDialog(businessId: businessId)
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => AddProductScreen(businessId: businessId)),
         ),
         backgroundColor: AppColors.primaryGreen,
         icon: const Icon(Icons.add_rounded, color: Colors.white),
@@ -116,22 +132,35 @@ class ProductManagementScreen extends ConsumerWidget {
 
   Widget _buildSearchAndFilter() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.primaryGreen, Color(0xFFF8FAFB)],
+        ),
+      ),
       child: Row(
         children: [
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F7F8),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.search_rounded, color: Colors.grey, size: 20),
+                  const Icon(Icons.search_rounded, color: AppColors.primaryGreen, size: 20),
                   const SizedBox(width: 12),
-                  Text('Search catalog...', style: GoogleFonts.outfit(color: Colors.grey)),
+                  Text('Search catalog...', style: GoogleFonts.outfit(color: Colors.grey[600])),
                 ],
               ),
             ),
@@ -140,8 +169,15 @@ class ProductManagementScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.primaryGreen.withValues(alpha: 0.1),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: const Icon(Icons.tune_rounded, color: AppColors.primaryGreen, size: 20),
           ),
@@ -168,7 +204,6 @@ class _ProductListTile extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -180,7 +215,17 @@ class _ProductListTile extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => ProductDetailScreen(product: product)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(14),
@@ -222,43 +267,63 @@ class _ProductListTile extends StatelessWidget {
                     fontSize: 14,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: product.stockQuantity > 0 ? Colors.green : Colors.red,
-                        shape: BoxShape.circle,
-                      ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: (product.stockQuantity > 0 ? Colors.green : Colors.red)
+                        .withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    product.stockQuantity > 0
+                        ? '${product.stockQuantity} units in stock'
+                        : 'Out of stock',
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: product.stockQuantity > 0
+                          ? Colors.green.shade700
+                          : Colors.red.shade700,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${product.stockQuantity} units in stock',
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
           ),
           Column(
             children: [
-              IconButton(
-                icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
-                onPressed: onEdit,
+              GestureDetector(
+                onTap: onEdit,
+                child: Container(
+                  padding: const EdgeInsets.all(7),
+                  margin: const EdgeInsets.only(bottom: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.edit_outlined,
+                      size: 17, color: AppColors.primaryGreen),
+                ),
               ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, size: 20, color: Colors.redAccent),
-                onPressed: onDelete,
+              GestureDetector(
+                onTap: onDelete,
+                child: Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.delete_outline_rounded,
+                      size: 17, color: Colors.redAccent),
+                ),
               ),
             ],
           ),
         ],
+            ),
+          ),
+        ),
       ),
     );
   }

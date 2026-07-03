@@ -26,9 +26,28 @@ final messagesStreamProvider =
 
 /// Chats for a specific business (used by business owners in Inquiries screen)
 final businessChatsProvider =
-    FutureProvider.family<List<Chat>, String>((ref, businessId) async {
+    FutureProvider.family.autoDispose<List<Chat>, String>((ref, businessId) async {
   final user = ref.watch(currentUserProvider);
   if (user == null) return [];
   final dataSource = ref.watch(chatRemoteDataSourceProvider);
   return dataSource.getChatsForBusiness(businessId: businessId, ownerId: user.id);
+});
+
+/// Chats where the customer's message is still unanswered — the customer
+/// sent the most recent message and the business hasn't replied yet. Used
+/// for the Leads Dashboard "Contacts" section: a chat drops out of this list
+/// as soon as the business sends a reply.
+final unansweredContactsProvider =
+    FutureProvider.family.autoDispose<List<Chat>, String>((ref, businessId) async {
+  final chats = await ref.watch(businessChatsProvider(businessId).future);
+  if (chats.isEmpty) return [];
+
+  final dataSource = ref.watch(chatRemoteDataSourceProvider);
+  final lastSenders =
+      await dataSource.getLastMessageSenders(chatIds: chats.map((c) => c.id).toList());
+
+  return chats.where((chat) {
+    final lastSenderId = lastSenders[chat.id];
+    return lastSenderId != null && lastSenderId == chat.customerId;
+  }).toList();
 });

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ifind/core/providers/ai_providers.dart';
 import 'package:ifind/core/services/proximity_notification_service.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
-import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 
 final proximityNotificationServiceProvider =
@@ -39,7 +38,6 @@ final proximityNotificationWatcherProvider = StreamProvider<void>((ref) {
     await service.checkAndNotify(
       userId: user.id,
       myBusinessId: business.id,
-      myCategory: business.category.storageValue,
     );
     if (!controller.isClosed) controller.add(null);
   }

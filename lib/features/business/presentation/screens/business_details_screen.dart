@@ -17,7 +17,6 @@ import 'package:ifind/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:ifind/features/reviews/presentation/providers/review_provider.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/auth/domain/entities/user.dart';
-import 'package:ifind/core/services/b2b_service.dart';
 import 'package:ifind/core/providers/ai_providers.dart';
 import 'package:ifind/core/services/interaction_service.dart';
 import 'package:ifind/core/utils/distance_calculator.dart';
@@ -39,8 +38,11 @@ const _kGradTop    = Color(0xFF003D2B);
 const _kGradMid    = Color(0xFF006241);
 const _kGradBottom = Color(0xFF0B7A5A);
 
+// autoDispose: resets each time the screen is left and re-entered, so a
+// repeat visit by the same user logs a new profile view instead of being
+// suppressed for the rest of the app session.
 final _hasLoggedProfileViewProvider =
-    StateProvider.family<bool, String>((ref, businessId) => false);
+    StateProvider.family.autoDispose<bool, String>((ref, businessId) => false);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main screen
@@ -67,11 +69,6 @@ class BusinessDetailScreen extends ConsumerWidget {
       final msg =
           '[MEDIA_INQUIRY]|${item.mediaType.name}|${item.mediaUrl}|Interested in this ${item.mediaType.name}: ${item.caption ?? 'item'}';
       await ds.sendMessage(chatId: chat.id, senderId: user.id, content: msg);
-      ref.read(interactionServiceProvider).logInteraction(
-            userId: user.id,
-            businessId: business.id,
-            type: InteractionType.inquirySent,
-          );
       if (context.mounted) {
         context.push('/chat', extra: {'chat': chat, 'otherPartyName': business.name});
       }
@@ -1034,10 +1031,10 @@ class _PortfolioTab extends ConsumerWidget {
           child: GridView.builder(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 140),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.82,
+              crossAxisCount: 4,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 0.7,
             ),
             itemCount: items.length,
             itemBuilder: (context, index) =>
@@ -1161,45 +1158,31 @@ class _PortfolioCard extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
             child: Row(
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        item.caption ?? 'Showcase',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.outfit(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.darkText,
-                        ),
-                      ),
-                      Text(
-                        item.mediaType == MediaType.video
-                            ? 'Video Showcase'
-                            : 'Product Post',
-                        style: GoogleFonts.outfit(
-                          fontSize: 10,
-                          color: Colors.grey.shade500,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    item.caption ?? 'Showcase',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.darkText,
+                    ),
                   ),
                 ),
                 GestureDetector(
                   onTap: () => onInquire(item),
                   child: Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
                       color: AppColors.primaryGreen.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.send_rounded,
-                        color: AppColors.primaryGreen, size: 14),
+                        color: AppColors.primaryGreen, size: 11),
                   ),
                 ),
               ],
@@ -1225,10 +1208,14 @@ class _ReviewsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reviewsAsync = ref.watch(businessReviewsProvider(businessId));
+    final currentUser = ref.watch(currentUserProvider);
+    final myBusinesses = ref.watch(myBusinessesProvider(currentUser?.id ?? '')).value ?? [];
+    final isOwner = myBusinesses.any((b) => b.id == businessId);
 
     return Column(
       children: [
         // Write review CTA
+        if (!isOwner)
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: Container(
@@ -1510,13 +1497,6 @@ class _BottomBar extends ConsumerWidget {
                                 .getOrCreateChat(
                                   customerId: user.id,
                                   businessId: business.id,
-                                );
-                            ref
-                                .read(interactionServiceProvider)
-                                .logInteraction(
-                                  userId: user.id,
-                                  businessId: business.id,
-                                  type: InteractionType.inquirySent,
                                 );
                             if (context.mounted) {
                               context.push('/chat', extra: {

@@ -9,7 +9,6 @@ import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/b2b_provider.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
-import 'package:ifind/features/chat/data/datasources/chat_remote_datasource.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
 import 'package:ifind/features/chat/presentation/screens/chat_room_screen.dart';
 
@@ -59,7 +58,7 @@ class B2bMatchesScreen extends ConsumerWidget {
             return const Center(child: Text('No business linked to your account.'));
           }
 
-          final candidatesAsync = ref.watch(b2bPartnerCandidatesProvider(business));
+          final candidatesAsync = ref.watch(b2bPartnerCandidatesProvider(business.id));
 
           return candidatesAsync.when(
             data: (candidates) {
@@ -73,7 +72,7 @@ class B2bMatchesScreen extends ConsumerWidget {
 
               return RefreshIndicator(
                 onRefresh: () async {
-                  ref.invalidate(b2bPartnerCandidatesProvider(business));
+                  ref.invalidate(b2bPartnerCandidatesProvider(business.id));
                 },
                 color: _darkGreen,
                 child: ListView.separated(
@@ -81,10 +80,11 @@ class B2bMatchesScreen extends ConsumerWidget {
                   itemCount: candidates.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 16),
                   itemBuilder: (context, index) {
-                    final partner = candidates[index];
+                    final candidate = candidates[index];
                     return _B2bMatchCard(
                       business: business,
-                      partner: partner,
+                      partner: candidate.business,
+                      compatibilityScore: candidate.compatibilityScore,
                     );
                   },
                 ),
@@ -104,10 +104,12 @@ class B2bMatchesScreen extends ConsumerWidget {
 class _B2bMatchCard extends ConsumerStatefulWidget {
   final Business business;
   final Business partner;
+  final double compatibilityScore;
 
   const _B2bMatchCard({
     required this.business,
     required this.partner,
+    required this.compatibilityScore,
   });
 
   @override
@@ -143,6 +145,8 @@ class _B2bMatchCardState extends ConsumerState<_B2bMatchCard> {
           content: introMessage,
         );
       }
+
+      ref.invalidate(b2bPartnerCandidatesProvider(widget.business.id));
 
       if (mounted) {
         Navigator.push(
@@ -231,12 +235,6 @@ class _B2bMatchCardState extends ConsumerState<_B2bMatchCard> {
 
   @override
   Widget build(BuildContext context) {
-    final compatibilityAsync = ref.watch(
-      b2bCompatibilityProvider(
-        (myBusiness: widget.business, targetBusiness: widget.partner),
-      ),
-    );
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -324,21 +322,13 @@ class _B2bMatchCardState extends ConsumerState<_B2bMatchCard> {
                     const SizedBox(width: 10),
                     Icon(Icons.handshake_outlined, size: 13, color: Colors.amber[700]),
                     const SizedBox(width: 3),
-                    compatibilityAsync.when(
-                      data: (result) => Text(
-                        '${(result.compatibilityScore * 100).toInt()}% match',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: _darkGreen,
-                        ),
+                    Text(
+                      '${(widget.compatibilityScore * 100).toInt()}% match',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: _darkGreen,
                       ),
-                      loading: () => const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      error: (_, __) => Text('—', style: TextStyle(fontSize: 11, color: Colors.grey[400])),
                     ),
                   ],
                 ),

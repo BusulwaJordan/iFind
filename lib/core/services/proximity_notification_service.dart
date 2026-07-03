@@ -37,7 +37,6 @@ class ProximityNotificationService {
   Future<void> checkAndNotify({
     required String userId,
     required String myBusinessId,
-    required String myCategory,
   }) async {
     try {
       final permission = await Geolocator.checkPermission();
@@ -55,6 +54,13 @@ class ProximityNotificationService {
         longitude: position.longitude,
         radiusKm: _radiusKm,
       );
+      if (nearby.isEmpty) return;
+
+      // One call ranks every business against myBusinessId — cheaper than a
+      // pairwise request per nearby business, and matches the score shown
+      // elsewhere in the app for the same pairing.
+      final recommendations = await _b2bService.getRecommendations(myBusinessId, topN: 100);
+      final scoreByBusinessId = {for (final r in recommendations) r.businessId: r.finalScore};
 
       for (final biz in nearby) {
         final targetId = biz['id'] as String?;
@@ -64,19 +70,12 @@ class ProximityNotificationService {
         final key = '${myBusinessId}_$targetId';
         if (_notified.contains(key)) continue;
 
-        final targetCategory = biz['category'] as String? ?? myCategory;
+        final score = scoreByBusinessId[targetId];
+        if (score == null || score < _scoreThreshold) continue;
+
         final rawDistanceM = (biz['distance_m'] as num?)?.toDouble() ?? 500.0;
         final distanceKm = rawDistanceM / 1000.0;
         final distanceLabel = '${distanceKm.toStringAsFixed(1)} km away';
-
-        final result = await _b2bService.getCompatibilityScore(
-          categoryA: myCategory,
-          categoryB: targetCategory,
-          distanceKm: distanceKm,
-        );
-
-        if (result.compatibilityScore < _scoreThreshold) continue;
-
         final bizName = biz['name'] as String? ?? 'A nearby business';
 
         await _writeNotification(
@@ -84,13 +83,13 @@ class ProximityNotificationService {
           businessId: myBusinessId,
           targetBusinessId: targetId,
           targetName: bizName,
-          score: result.compatibilityScore,
+          score: score,
           distanceLabel: distanceLabel,
         );
 
         _notified.add(key);
         debugPrint(
-            'ProximityNotification: notified for $bizName (${result.percentageLabel})');
+            'ProximityNotification: notified for $bizName (${(score * 100).round()}% match)');
       }
     } catch (e) {
       debugPrint('ProximityNotificationService error: $e');

@@ -156,10 +156,10 @@ class ChatListScreen extends ConsumerWidget {
                         final isB2B = chat.isB2B;
                         final displayName = isB2B
                             ? (chat.partnerBusinessName ?? 'B2B Partner')
-                            : (chat.businessName ?? chat.customerName ?? 'Unknown');
+                            : (chat.businessName ?? chat.customerName ?? 'Customer');
                         final displayLogo = isB2B
                             ? chat.partnerBusinessLogo
-                            : chat.businessLogoUrl;
+                            : (chat.businessLogoUrl ?? chat.customerAvatarUrl);
                         final initials = displayName.isNotEmpty
                             ? displayName[0].toUpperCase()
                             : 'B';
