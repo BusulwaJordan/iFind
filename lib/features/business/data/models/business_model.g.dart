@@ -57,6 +57,7 @@ const _$BusinessCategoryEnumMap = {
   BusinessCategory.service: 'service',
   BusinessCategory.food: 'food',
   BusinessCategory.fashion: 'fashion',
+  BusinessCategory.footwear: 'footwear',
   BusinessCategory.electronics: 'electronics',
   BusinessCategory.home: 'home',
   BusinessCategory.beauty: 'beauty',
@@ -71,5 +72,9 @@ const _$BusinessCategoryEnumMap = {
   BusinessCategory.realEstate: 'real_estate',
   BusinessCategory.pets: 'pets',
   BusinessCategory.finance: 'finance',
+  BusinessCategory.agriculture: 'agriculture',
+  BusinessCategory.wholesale: 'wholesale',
+  BusinessCategory.manufacturing: 'manufacturing',
+  BusinessCategory.construction: 'construction',
   BusinessCategory.other: 'other',
 };

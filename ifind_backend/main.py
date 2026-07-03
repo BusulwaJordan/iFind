@@ -52,12 +52,17 @@ businesses['name'] = businesses['name'].fillna('Unknown')
 # lib/features/business/domain/entities/business.dart) fixes both.
 _CATEGORY_KEYWORD_RULES = [
     (('beauty', 'wellness'), 'beauty'),
+    (('footwear', 'shoe'), 'footwear'),
     (('electronics',), 'electronics'),
     (('fashion', 'clothing'), 'fashion'),
     (('food', 'restaurant', 'beverage', 'catering'), 'food'),
     (('education', 'training'), 'education'),
     (('health', 'pharmacy', 'medical', 'hospital'), 'health'),
     (('finance', 'financial'), 'finance'),
+    (('agriculture', 'farm'), 'agriculture'),
+    (('wholesale', 'distribution'), 'wholesale'),
+    (('manufacturing', 'production'), 'manufacturing'),
+    (('construction', 'hardware'), 'construction'),
     (('retail',), 'retail'),
     (('service', 'transport', 'logistics', 'it & software'), 'service'),
     (('sports', 'fitness'), 'sports'),
@@ -72,13 +77,17 @@ _CATEGORY_KEYWORD_RULES = [
 ]
 _CATEGORY_EXACT_FALLBACK = {
     'retail': 'retail', 'service': 'service', 'services': 'service',
-    'food': 'food', 'fashion': 'fashion', 'electronics': 'electronics',
+    'food': 'food', 'fashion': 'fashion', 'footwear': 'footwear', 'shoes': 'footwear',
+    'electronics': 'electronics',
     'home': 'home', 'beauty': 'beauty', 'automotive': 'automotive',
     'health': 'health', 'sports': 'sports', 'kids': 'kids',
     'education': 'education', 'entertainment': 'entertainment', 'events': 'entertainment',
     'arcade': 'arcade', 'travel': 'travel',
     'real_estate': 'real_estate', 'realestate': 'real_estate', 'properties': 'real_estate',
     'pets': 'pets', 'finance': 'finance',
+    'agriculture': 'agriculture', 'farming': 'agriculture',
+    'wholesale': 'wholesale', 'manufacturing': 'manufacturing',
+    'construction': 'construction', 'hardware': 'construction',
 }
 
 def normalize_category(raw):

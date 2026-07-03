@@ -7,6 +7,7 @@ enum BusinessCategory {
   service,
   food,
   fashion,
+  footwear,
   electronics,
   home,
   beauty,
@@ -22,6 +23,10 @@ enum BusinessCategory {
   realEstate,
   pets,
   finance,
+  agriculture,
+  wholesale,
+  manufacturing,
+  construction,
   other,
 }
 
@@ -45,6 +50,9 @@ extension BusinessCategoryStorage on BusinessCategory {
     if (normalized.contains('electronics')) {
       return BusinessCategory.electronics;
     }
+    if (normalized.contains('footwear') || normalized.contains('shoe')) {
+      return BusinessCategory.footwear;
+    }
     if (normalized.contains('fashion') || normalized.contains('clothing')) {
       return BusinessCategory.fashion;
     }
@@ -65,6 +73,18 @@ extension BusinessCategoryStorage on BusinessCategory {
     }
     if (normalized.contains('finance') || normalized.contains('financial')) {
       return BusinessCategory.finance;
+    }
+    if (normalized.contains('agriculture') || normalized.contains('farm')) {
+      return BusinessCategory.agriculture;
+    }
+    if (normalized.contains('wholesale') || normalized.contains('distribution')) {
+      return BusinessCategory.wholesale;
+    }
+    if (normalized.contains('manufacturing') || normalized.contains('production')) {
+      return BusinessCategory.manufacturing;
+    }
+    if (normalized.contains('construction') || normalized.contains('hardware')) {
+      return BusinessCategory.construction;
     }
     if (normalized.contains('retail')) {
       return BusinessCategory.retail;
@@ -118,6 +138,9 @@ extension BusinessCategoryStorage on BusinessCategory {
         return BusinessCategory.food;
       case 'fashion':
         return BusinessCategory.fashion;
+      case 'footwear':
+      case 'shoes':
+        return BusinessCategory.footwear;
       case 'electronics':
         return BusinessCategory.electronics;
       case 'home':
@@ -149,6 +172,16 @@ extension BusinessCategoryStorage on BusinessCategory {
         return BusinessCategory.pets;
       case 'finance':
         return BusinessCategory.finance;
+      case 'agriculture':
+      case 'farming':
+        return BusinessCategory.agriculture;
+      case 'wholesale':
+        return BusinessCategory.wholesale;
+      case 'manufacturing':
+        return BusinessCategory.manufacturing;
+      case 'construction':
+      case 'hardware':
+        return BusinessCategory.construction;
       default:
         return BusinessCategory.other;
     }
