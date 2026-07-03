@@ -29,6 +29,17 @@ interactions = pd.DataFrame(supabase.table('interactions').select('*').execute()
 connections = pd.DataFrame(supabase.table('category_connections').select('*').execute().data)
 print(f"Loaded {len(businesses)} businesses, {len(users)} users, {len(interactions)} interactions, {len(connections)} connections")
 
+# Clean businesses data: NaN (from NULL DB values) isn't valid JSON and breaks
+# both distance calculations and response serialization.
+businesses['avg_rating'] = pd.to_numeric(businesses.get('avg_rating'), errors='coerce').fillna(0)
+businesses['latitude'] = pd.to_numeric(businesses.get('latitude'), errors='coerce')
+businesses['longitude'] = pd.to_numeric(businesses.get('longitude'), errors='coerce')
+businesses = businesses.dropna(subset=['latitude', 'longitude']).reset_index(drop=True)
+businesses['neighbourhood'] = businesses['neighbourhood'].fillna('')
+businesses['category'] = businesses['category'].fillna('')
+businesses['name'] = businesses['name'].fillna('Unknown')
+print(f"After cleaning: {len(businesses)} businesses with valid coordinates")
+
 # ---------- Final Hybrid Recommendation Function (unchanged) ----------
 def final_hybrid_recommend(business_id, businesses_df, connections_df, interactions_df, top_n=10, max_distance=5.0):
     source = businesses_df[businesses_df['business_id'] == business_id].iloc[0]
