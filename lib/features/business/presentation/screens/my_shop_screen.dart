@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/utils/error_utils.dart';
@@ -348,9 +349,10 @@ class MyShopScreen extends ConsumerWidget {
                 ),
               ),
 
-              // Menu button — always visible at top-left
+              // Menu button — sits below the back button in the AppBar's
+              // leading slot so the two don't stack on top of each other.
               Positioned(
-                top: 0,
+                top: 60,
                 left: 0,
                 child: SafeArea(
                   child: Builder(
@@ -455,6 +457,24 @@ class MyShopScreen extends ConsumerWidget {
       backgroundColor: AppColors.deepGreen,
       elevation: 0,
       automaticallyImplyLeading: false,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 8),
+        child: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.arrow_back_rounded,
+                color: Colors.white, size: 20),
+          ),
+          // My Shop is a bottom-nav tab (not pushed on top of another
+          // screen), so there's nothing on the Navigator stack to pop back
+          // to — route to the dashboard tab instead.
+          onPressed: () => context.go('/'),
+        ),
+      ),
       actions: [
         Padding(
           padding: const EdgeInsets.only(right: 8),

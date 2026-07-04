@@ -46,17 +46,37 @@ class ChatRemoteDataSource {
       }
 
       // Create new
-      final response = await supabaseClient
-          .from('chats')
-          .insert({
-            'customer_id': customerId,
-            'business_id': businessId,
-            'is_b2b': false,
-          })
-          .select()
-          .single();
+      try {
+        final response = await supabaseClient
+            .from('chats')
+            .insert({
+              'customer_id': customerId,
+              'business_id': businessId,
+              'is_b2b': false,
+            })
+            .select()
+            .single();
 
-      return ChatModel.fromJson(response).toEntity();
+        return ChatModel.fromJson(response).toEntity();
+      } on PostgrestException catch (e) {
+        // Unique-violation (23505) means a concurrent call (e.g. a fast
+        // double-tap on "Message") already inserted this exact
+        // (customer_id, business_id) pair between our SELECT above and this
+        // INSERT — re-fetch and reuse it instead of erroring out.
+        if (e.code == '23505') {
+          final retry = await supabaseClient
+              .from('chats')
+              .select()
+              .eq('customer_id', customerId)
+              .eq('business_id', businessId)
+              .order('created_at', ascending: true)
+              .limit(1);
+          if (retry.isNotEmpty) {
+            return ChatModel.fromJson(retry.first).toEntity();
+          }
+        }
+        rethrow;
+      }
     } catch (e) {
       debugPrint('getOrCreateChat error: customerId=$customerId businessId=$businessId error=$e');
       throw Exception('Failed to get/create chat: $e');
@@ -102,13 +122,27 @@ class ChatRemoteDataSource {
 
     debugPrint('getOrCreateB2BChat: no existing chat found, creating new chat id=$chatId');
 
-    final response = await supabaseClient
-        .from('chats')
-        .insert(data)
-        .select()
-        .single();
+    try {
+      final response = await supabaseClient
+          .from('chats')
+          .insert(data)
+          .select()
+          .single();
 
-    return ChatModel.fromJson(response).toEntity();
+      return ChatModel.fromJson(response).toEntity();
+    } on PostgrestException catch (e) {
+      // Unique-violation (23505) means a concurrent call already inserted
+      // this business pair between our existence check and this insert —
+      // re-fetch and reuse it instead of erroring out.
+      if (e.code == '23505') {
+        final retry = await _findExistingB2BChat(
+          businessId: businessId,
+          partnerBusinessId: partnerBusinessId,
+        );
+        if (retry != null) return retry;
+      }
+      rethrow;
+    }
   }
 
   /// Helper to find an existing B2B chat (both directions)
