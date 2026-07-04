@@ -35,6 +35,8 @@ import 'package:ifind/features/inquiries/presentation/screens/inquiries_screen.d
 import 'package:ifind/features/auth/domain/entities/user.dart';
 import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/features/business/presentation/screens/b2b_matches_screen.dart';
+import 'package:ifind/features/business/presentation/providers/business_provider.dart';
+import 'package:ifind/features/business/presentation/screens/shop_profile_screen.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -46,6 +48,8 @@ class _RouterRefreshNotifier extends ChangeNotifier {
     ref.listen<bool>(onboardingCompleteProvider, (_, __) => notifyListeners());
     ref.listen<PendingRegistration?>(
         pendingRegistrationProvider, (_, __) => notifyListeners());
+    ref.listen<AsyncValue<bool>>(
+        ownerHasShopProvider, (_, __) => notifyListeners());
   }
 }
 
@@ -98,6 +102,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         final onboardingComplete = ref.read(onboardingCompleteProvider);
         if (!onboardingComplete) return '/onboarding';
         return '/login';
+      }
+
+      // Business owners must set up their shop before accessing anything else.
+      if (currentUser.role == UserRole.businessOwner &&
+          loc != '/setup-shop') {
+        final shopStatus = ref.read(ownerHasShopProvider);
+        if (!shopStatus.isLoading && shopStatus.valueOrNull == false) {
+          return '/setup-shop';
+        }
       }
 
       return null;
@@ -205,10 +218,26 @@ final routerProvider = Provider<GoRouter>((ref) {
           return BusinessDetailScreen(business: business);
         },
       ),
+      // Onboarding lock — business owners without a shop land here first
+      GoRoute(
+        path: '/setup-shop',
+        builder: (context, state) =>
+            const CreateBusinessScreen(isSetupMode: true),
+      ),
       GoRoute(
         path: '/create-business',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const CreateBusinessScreen(),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return CreateBusinessScreen(
+            business: extra?['business'] as Business?,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/shop-profile',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ShopProfileScreen(),
       ),
       GoRoute(
         path: '/chat',

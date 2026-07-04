@@ -25,6 +25,14 @@ class AppDrawer extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
+                if (user?.role == UserRole.businessOwner) ...[
+                  _DrawerItem(
+                    icon: Icons.storefront_rounded,
+                    label: 'My Shop Profile',
+                    onTap: () => _push(context, '/shop-profile'),
+                  ),
+                  const Divider(height: 16, indent: 16, endIndent: 16),
+                ],
                 _DrawerItem(
                   icon: Icons.auto_awesome_rounded,
                   label: 'For You',
