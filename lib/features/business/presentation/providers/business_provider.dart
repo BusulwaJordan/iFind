@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ifind/features/auth/domain/entities/user.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/core/services/storage_service.dart';
 import 'package:ifind/features/business/data/datasources/business_remote_datasource.dart';
@@ -187,4 +188,19 @@ final myBusinessesStreamProvider =
     StreamProvider.family<List<Business>, String>((ref, ownerId) {
   final repository = ref.watch(businessRepositoryProvider);
   return repository.watchMyBusinesses(ownerId);
+});
+
+/// Returns whether the current business owner has at least one shop set up.
+/// Non-business-owners always return data(true) so the router guard is a no-op for them.
+final ownerHasShopProvider = Provider<AsyncValue<bool>>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null || user.role != UserRole.businessOwner) {
+    return const AsyncValue.data(true);
+  }
+  final businessesAsync = ref.watch(myBusinessesStreamProvider(user.id));
+  return businessesAsync.when(
+    data: (businesses) => AsyncValue.data(businesses.isNotEmpty),
+    loading: () => const AsyncValue.loading(),
+    error: (_, __) => const AsyncValue.data(true), // fail open — don't block on error
+  );
 });

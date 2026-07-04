@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:dartz/dartz.dart';
 import 'package:ifind/core/errors/failures.dart';
 import 'package:geolocator/geolocator.dart';
@@ -105,8 +106,11 @@ final createBusinessProvider =
 
 class CreateBusinessScreen extends ConsumerStatefulWidget {
   final Business? business;
+  /// When true the back button is hidden and success navigates to the dashboard,
+  /// locking new business owners into completing their shop setup.
+  final bool isSetupMode;
 
-  const CreateBusinessScreen({super.key, this.business});
+  const CreateBusinessScreen({super.key, this.business, this.isSetupMode = false});
 
   @override
   ConsumerState<CreateBusinessScreen> createState() =>
@@ -285,6 +289,16 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
               widget.business == null ? 'Shop created successfully!' : 'Shop updated successfully!',
               type: ToastType.success,
             );
+
+            // Setup mode: defer navigation one frame so ownerHasShopProvider
+            // enters loading state before the redirect logic runs.
+            if (widget.isSetupMode) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) context.go('/');
+              });
+              return;
+            }
+
             if (widget.business == null &&
                 ref
                     .read(tutorialProvider)
@@ -526,18 +540,26 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
               expandedHeight: 260,
               pinned: true,
               backgroundColor: AppColors.deepGreen,
-              leading: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: CircleAvatar(
-                  backgroundColor: Colors.white.withValues(alpha: 0.2),
-                  child: IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ),
-              ),
+              automaticallyImplyLeading: false,
+              leading: widget.isSetupMode
+                  ? null
+                  : Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: CircleAvatar(
+                        backgroundColor: Colors.white.withValues(alpha: 0.2),
+                        child: IconButton(
+                          icon: const Icon(Icons.arrow_back,
+                              color: Colors.white, size: 20),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ),
+                    ),
               title: Text(
-                widget.business == null ? 'Create Your Shop' : 'Edit Shop',
+                widget.isSetupMode
+                    ? 'Set Up Your Shop'
+                    : widget.business == null
+                        ? 'Create Your Shop'
+                        : 'Edit Shop',
                 style: GoogleFonts.outfit(
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -579,6 +601,35 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (widget.isSetupMode) ...[
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: AppColors.primaryGreen.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.info_outline_rounded,
+                                color: AppColors.primaryGreen, size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Complete your shop profile to start receiving customers. This step is required before accessing your dashboard.',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  color: AppColors.primaryGreen,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     // Section 1: Business Identity
                     _sectionCard(
                       title: 'Business Identity',
