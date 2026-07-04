@@ -708,52 +708,33 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(
-                    height: 158,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: List.generate(buckets.length, (i) {
-                        final barHeight = (values[i] / maxValue) * 100;
-
-                        return Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text(
-                                '${values[i]}',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.darkText,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Container(
-                                width: 20,
-                                height: barHeight.clamp(4.0, 100.0),
-                                decoration: const BoxDecoration(
-                                  color: darkGreen,
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(5),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Container(
-                                  height: 1.5, color: Colors.grey.shade300),
-                              const SizedBox(height: 6),
-                              Text(
-                                buckets[i].label,
-                                style: GoogleFonts.outfit(
-                                  fontSize: 10,
-                                  color: Colors.grey[500],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
+                    height: 140,
+                    child: CustomPaint(
+                      painter: _LineChartPainter(
+                        values: values,
+                        maxValue: maxValue,
+                        color: darkGreen,
+                      ),
+                      size: Size.infinite,
                     ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(height: 1.5, color: Colors.grey.shade300),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: List.generate(buckets.length, (i) {
+                      return Expanded(
+                        child: Text(
+                          buckets[i].label,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.outfit(
+                            fontSize: 10,
+                            color: Colors.grey[500],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      );
+                    }),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -1071,5 +1052,86 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         );
       },
     );
+  }
+}
+
+// ─── Performance chart line painter ──────────────────────────────────
+class _LineChartPainter extends CustomPainter {
+  final List<int> values;
+  final double maxValue;
+  final Color color;
+
+  static const double _topPadding = 16;
+  static const double _bottomPadding = 6;
+
+  const _LineChartPainter({
+    required this.values,
+    required this.maxValue,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.isEmpty) return;
+
+    final plotHeight = size.height - _topPadding - _bottomPadding;
+    final points = List.generate(values.length, (i) {
+      final dx = (i + 0.5) * (size.width / values.length);
+      final dy = _topPadding + (1 - values[i] / maxValue) * plotHeight;
+      return Offset(dx, dy);
+    });
+
+    // Recessive gridlines so magnitude is readable without a number on
+    // every point.
+    final gridPaint = Paint()
+      ..color = Colors.grey.shade200
+      ..strokeWidth = 1;
+    for (final fraction in [0.0, 0.5, 1.0]) {
+      final y = _topPadding + plotHeight * fraction;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    final linePath = Path()..moveTo(points.first.dx, points.first.dy);
+    for (final point in points.skip(1)) {
+      linePath.lineTo(point.dx, point.dy);
+    }
+
+    // Gradient fill under the line.
+    final fillPath = Path.from(linePath)
+      ..lineTo(points.last.dx, size.height)
+      ..lineTo(points.first.dx, size.height)
+      ..close();
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [color.withValues(alpha: 0.22), color.withValues(alpha: 0.0)],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+    canvas.drawPath(fillPath, fillPaint);
+
+    // Line stroke.
+    final linePaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(linePath, linePaint);
+
+    // Data point markers (white ring + solid center) so they pop against
+    // both the line and the fill.
+    final markerRing = Paint()..color = Colors.white;
+    final markerCenter = Paint()..color = color;
+    for (final point in points) {
+      canvas.drawCircle(point, 6, markerRing);
+      canvas.drawCircle(point, 4, markerCenter);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LineChartPainter oldDelegate) {
+    return oldDelegate.values != values ||
+        oldDelegate.maxValue != maxValue ||
+        oldDelegate.color != color;
   }
 }
