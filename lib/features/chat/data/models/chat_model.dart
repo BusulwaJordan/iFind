@@ -109,6 +109,7 @@ class ChatModel with _$ChatModel {
 
   const ChatModel._();
 
+  @override
   Map<String, dynamic> toJson() {
     return {
       'id': id,

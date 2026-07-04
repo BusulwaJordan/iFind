@@ -237,7 +237,7 @@ class ReviewsScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                  const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
                   const SizedBox(width: 8),
                   Expanded(
                     child: ClipRRect(

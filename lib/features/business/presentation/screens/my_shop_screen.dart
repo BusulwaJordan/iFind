@@ -394,7 +394,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
       slivers: [
         SliverAppBar(
           pinned: true,
-          expandedHeight: topPad + kToolbarHeight + 232.0,
+          expandedHeight: topPad + kToolbarHeight + 272.0,
           backgroundColor: AppColors.deepGreen,
           elevation: 0,
           surfaceTintColor: Colors.transparent,
@@ -513,11 +513,21 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Background shop image
-        Image.asset(
-          'assets/images/Color Gradient T-shirts Display.png',
-          fit: BoxFit.cover,
-        ),
+        // Cover photo (user-uploaded) → default asset fallback
+        if (business.coverImageUrl != null)
+          Image.network(
+            business.coverImageUrl!,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Image.asset(
+              'assets/images/Color Gradient T-shirts Display.png',
+              fit: BoxFit.cover,
+            ),
+          )
+        else
+          Image.asset(
+            'assets/images/Color Gradient T-shirts Display.png',
+            fit: BoxFit.cover,
+          ),
         // Green gradient overlay — same pattern as login page
         Container(
           decoration: BoxDecoration(
@@ -1076,7 +1086,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
             ],
           ),
           const SizedBox(height: 12),
-          _CheckItem(done: true, label: 'Add Shop Logo'),
+          const _CheckItem(done: true, label: 'Add Shop Logo'),
           _CheckItem(
               done: business.description.length >= 20,
               label: 'Add Business Description'),
