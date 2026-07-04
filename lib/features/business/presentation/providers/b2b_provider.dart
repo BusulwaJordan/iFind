@@ -1,76 +1,121 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ifind/core/providers/ai_providers.dart';
-import 'package:ifind/core/services/b2b_service.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
-import 'dart:math';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// A B2B candidate paired with how compatible the hybrid model considers it —
+/// the same score shown as a percentage on the match card, so the list order
+/// always matches what's displayed.
+class B2bMatchCandidate {
+  final Business business;
+  final double compatibilityScore;
+  const B2bMatchCandidate({required this.business, required this.compatibilityScore});
+}
+
+// Below this, the model considers the pairing "Poor Compatibility" (see
+// B2bRecommendation.label) — not a real partnership candidate.
+const _kMinViableCompatibility = 0.25;
+
+/// The number of ranked candidates to pull from the hybrid backend before
+/// applying local filters (verified / not-connected / not-self-owned). Kept
+/// well above the 10 we ultimately show since filtering can drop entries.
+const _kBackendTopN = 50;
+
+/// Nearby, verified, not-already-connected businesses that the hybrid
+/// recommendation backend (rule-based + content-based + collaborative
+/// filtering, see `ifind_backend/main.py`) considers plausible partners for
+/// [businessId], ranked highest-compatibility first. Keyed by the business's
+/// stable text id so every screen that shows B2B matches for a business gets
+/// the exact same list, instead of each call site independently computing
+/// its own.
 final b2bPartnerCandidatesProvider =
-    FutureProvider.family<List<Business>, Business>((ref, business) async {
+    FutureProvider.family<List<B2bMatchCandidate>, String>((ref, businessId) async {
+  final business = await ref.watch(businessProvider(businessId).future);
+  if (business == null) return [];
+
+  final service = ref.watch(b2bServiceProvider);
+  final supabase = Supabase.instance.client;
+
+  final recommendations = await service.getRecommendations(businessId, topN: _kBackendTopN);
+  if (recommendations.isEmpty) return [];
+
+  final chatsResp = await supabase
+      .from('chats')
+      .select('business_a_id, business_b_id')
+      .eq('is_b2b', true)
+      .or('business_a_id.eq.${business.id},business_b_id.eq.${business.id}') as List;
+
+  final connectedIds = <String>{};
+  for (final c in chatsResp) {
+    final aId = c['business_a_id'] as String?;
+    final bId = c['business_b_id'] as String?;
+    if (aId != null && aId != business.id) connectedIds.add(aId);
+    if (bId != null && bId != business.id) connectedIds.add(bId);
+  }
+
   final repository = ref.watch(businessRepositoryProvider);
-  final result = await repository.getNearbyBusinesses(
-    latitude: business.latitude,
-    longitude: business.longitude,
-    radiusKm: 30,
-  );
+  final candidates = <B2bMatchCandidate>[];
 
-  return result.fold(
-    (failure) => <Business>[],
-    (businesses) {
-      final candidates = businesses
-          .where((candidate) =>
-              candidate.id != business.id &&
-              candidate.ownerId != business.ownerId &&
-              candidate.isVerified)
-          .toList();
+  for (final rec in recommendations) {
+    if (rec.finalScore <= _kMinViableCompatibility) continue;
+    if (connectedIds.contains(rec.businessId)) continue;
 
-      candidates.sort((a, b) {
-        final distanceCompare = (a.distance ?? double.infinity)
-            .compareTo(b.distance ?? double.infinity);
-        if (distanceCompare != 0) return distanceCompare;
-        final ratingCompare = b.rating.compareTo(a.rating);
-        if (ratingCompare != 0) return ratingCompare;
-        return b.reviewCount.compareTo(a.reviewCount);
-      });
+    final candidateResult = await repository.getBusinessById(rec.businessId);
+    final candidate = candidateResult.fold((failure) => null, (b) => b);
+    if (candidate == null) continue;
+    if (candidate.id == business.id) continue;
+    if (candidate.ownerId == business.ownerId) continue;
+    if (!candidate.isVerified) continue;
 
-      return candidates.take(10).toList();
-    },
-  );
+    candidates.add(B2bMatchCandidate(business: candidate, compatibilityScore: rec.finalScore));
+  }
+
+  // The backend already returns results sorted by final_score descending;
+  // re-sort defensively since local filtering doesn't change order but keeps
+  // this provider's contract self-evident.
+  candidates.sort((a, b) => b.compatibilityScore.compareTo(a.compatibilityScore));
+
+  return candidates.take(10).toList();
 });
 
 /// Provider that computes B2B compatibility between the currently-viewed
-/// business [targetBusiness] and the current user's own business [myBusiness].
-///
-/// Uses the custom Random Forest model via the `b2b-match` Edge Function.
+/// business [targetBusiness] and the current user's own business [myBusiness],
+/// by looking up [targetBusiness] within [myBusiness]'s ranked recommendation
+/// list from the hybrid backend.
 final b2bCompatibilityProvider = FutureProvider.family<B2bCompatibilityResult,
     ({Business myBusiness, Business targetBusiness})>((ref, args) async {
   final service = ref.watch(b2bServiceProvider);
 
-  // Calculate distance between the two businesses
-  final distanceKm = _haversineDistanceKm(
-    args.myBusiness.latitude,
-    args.myBusiness.longitude,
-    args.targetBusiness.latitude,
-    args.targetBusiness.longitude,
-  );
+  final recommendations =
+      await service.getRecommendations(args.myBusiness.id, topN: _kBackendTopN);
 
-  return service.getCompatibilityScore(
-    categoryA: args.myBusiness.category.name,
-    categoryB: args.targetBusiness.category.name,
-    distanceKm: distanceKm,
-  );
+  for (final rec in recommendations) {
+    if (rec.businessId == args.targetBusiness.id) {
+      return B2bCompatibilityResult(score: rec.finalScore);
+    }
+  }
+
+  // Not among the ranked candidates (e.g. beyond the backend's max
+  // distance, or no meaningful category/content overlap) — treat as no
+  // compatibility rather than guessing.
+  return const B2bCompatibilityResult(score: 0.0);
 });
 
-/// Haversine formula — great-circle distance between two lat/lng points (km).
-double _haversineDistanceKm(
-    double lat1, double lon1, double lat2, double lon2) {
-  const r = 6371.0; // Earth radius in km
-  final dLat = _deg2rad(lat2 - lat1);
-  final dLon = _deg2rad(lon2 - lon1);
-  final a = sin(dLat / 2) * sin(dLat / 2) +
-      cos(_deg2rad(lat1)) * cos(_deg2rad(lat2)) * sin(dLon / 2) * sin(dLon / 2);
-  final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-  return r * c;
-}
+/// Thin result wrapper so callers (e.g. [_B2bCompatibilityCard]) keep using
+/// the same score + label shape they did under the old Random Forest model.
+class B2bCompatibilityResult {
+  final double score;
+  const B2bCompatibilityResult({required this.score});
 
-double _deg2rad(double deg) => deg * (pi / 180);
+  double get compatibilityScore => score;
+
+  String get label {
+    if (score >= 0.75) return 'High Compatibility';
+    if (score >= 0.50) return 'Moderate Compatibility';
+    if (score >= 0.25) return 'Low Compatibility';
+    return 'Poor Compatibility';
+  }
+
+  String get percentageLabel => '${(score * 100).round()}% match';
+}

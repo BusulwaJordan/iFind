@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 
 /// Interaction types matching the training dataset and database CHECK constraint.
 enum InteractionType {
@@ -43,22 +44,15 @@ class InteractionService {
     required String userId,
     required String businessId,
     required InteractionType type,
-    String? sessionId,
-    int? durationSeconds,
   }) async {
     try {
-      debugPrint(
-          'InteractionService: Logging ${type.dbValue} for user $userId on business $businessId...');
-
       await _client.from('interactions').insert({
+        'interaction_id': const Uuid().v4(),
         'user_id': userId,
         'business_id': businessId,
         'interaction_type': type.dbValue,
-        if (sessionId != null) 'session_id': sessionId,
-        if (durationSeconds != null) 'duration_seconds': durationSeconds,
+        'timestamp': DateTime.now().toIso8601String(),
       });
-
-      debugPrint('InteractionService: Successfully logged ${type.dbValue}.');
     } catch (e) {
       // Graceful failure — do not throw to avoid crashing/blocking the user interface
       debugPrint('InteractionService Error: Failed to log interaction: $e');

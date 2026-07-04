@@ -6,6 +6,7 @@ import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/widgets/empty_state_widget.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
+import 'package:ifind/features/business/presentation/providers/b2b_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
 import 'package:ifind/features/chat/presentation/screens/chat_room_screen.dart';
@@ -15,51 +16,12 @@ import 'package:ifind/features/needs/presentation/providers/need_provider.dart';
 import 'package:ifind/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:ifind/features/notifications/presentation/widgets/notification_badge.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import 'dart:ui';
-import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:ifind/features/business/presentation/screens/b2b_matches_screen.dart';
 import 'package:ifind/features/settings/presentation/screens/settings_screen.dart';
 import 'package:ifind/features/products/presentation/screens/add_product_screen.dart';
 import 'package:ifind/features/auth/presentation/screens/analytics_screen.dart';
 import 'package:ifind/features/reviews/presentation/screens/reviews_screen.dart';
 import 'package:ifind/core/widgets/app_drawer.dart';
-
-// ---------- Provider for Dashboard Stats ----------
-final dashboardStatsProvider = FutureProvider.family<Map<String, int>, String>((ref, businessId) async {
-  final supabase = ref.watch(supabaseClientProvider);
-
-  // Each query is wrapped independently — a missing table or RLS block
-  // returns 0 instead of crashing the whole provider.
-  int views = 0, inquiries = 0, matches = 0;
-
-  try {
-    final r = await supabase
-        .from('interactions')
-        .select('id')
-        .eq('business_id', businessId)
-        .eq('interaction_type', 'profile_view');
-    views = (r as List).length;
-  } catch (_) {}
-
-  try {
-    final r = await supabase
-        .from('interactions')
-        .select('id')
-        .eq('business_id', businessId)
-        .eq('interaction_type', 'inquiry_sent');
-    inquiries = (r as List).length;
-  } catch (_) {}
-
-  try {
-    final r = await supabase
-        .from('b2b_matches')
-        .select('id')
-        .or('business_a_id.eq.$businessId,business_b_id.eq.$businessId');
-    matches = (r as List).length;
-  } catch (_) {}
-
-  return {'views': views, 'inquiries': inquiries, 'matches': matches};
-});
 
 // ---------- The Screen ----------
 class LeadsDashboardScreen extends ConsumerStatefulWidget {
@@ -83,10 +45,10 @@ class _LeadsDashboardScreenState extends ConsumerState<LeadsDashboardScreen> {
         ? const AsyncValue<List<Need>>.data([])
         : ref.watch(businessLeadsProvider(business));
     final statsAsync = businessId != null
-        ? ref.watch(dashboardStatsProvider(businessId))
+        ? ref.watch(analyticsDataProvider(businessId))
         : const AsyncValue<Map<String, int>>.data({});
     final chatsAsync = businessId != null
-        ? ref.watch(businessChatsProvider(businessId))
+        ? ref.watch(unansweredContactsProvider(businessId))
         : const AsyncValue<List>.data([]);
 
     return Scaffold(
@@ -151,7 +113,9 @@ class _LeadsDashboardScreenState extends ConsumerState<LeadsDashboardScreen> {
               ref.invalidate(myBusinessesStreamProvider(user?.id ?? ''));
               if (business != null) {
                 ref.invalidate(businessLeadsProvider(business));
-                ref.invalidate(dashboardStatsProvider(businessId!));
+                ref.invalidate(analyticsDataProvider(businessId!));
+                ref.invalidate(b2bPartnerCandidatesProvider(businessId));
+                ref.invalidate(unansweredContactsProvider(businessId));
               }
             },
             child: CustomScrollView(
@@ -164,7 +128,7 @@ class _LeadsDashboardScreenState extends ConsumerState<LeadsDashboardScreen> {
                       children: [
                         if (business != null) ...[
                           Text(
-                            'Welcome back, ${user?.fullName?.split(' ').first ?? 'Owner'}! 👋',
+                            'Welcome back, ${user?.fullName.split(' ').first ?? 'Owner'}! 👋',
                             style: GoogleFonts.outfit(
                               fontSize: 26,
                               fontWeight: FontWeight.bold,
@@ -201,7 +165,7 @@ class _LeadsDashboardScreenState extends ConsumerState<LeadsDashboardScreen> {
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: _buildStatsSection(context, ref, statsAsync),
+                      child: _buildStatsSection(context, ref, statsAsync, business),
                     ),
                   ),
                   const SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -495,9 +459,17 @@ class _LeadsDashboardScreenState extends ConsumerState<LeadsDashboardScreen> {
   }
 
   // ---- Stats Section (white cards with dark green accents) ----
-  Widget _buildStatsSection(BuildContext context, WidgetRef ref, AsyncValue<Map<String, int>> statsAsync) {
+  Widget _buildStatsSection(BuildContext context, WidgetRef ref,
+      AsyncValue<Map<String, int>> statsAsync, Business business) {
+    final candidatesAsync = ref.watch(b2bPartnerCandidatesProvider(business.id));
+
     return statsAsync.when(
       data: (stats) {
+        final postsReceived =
+            ref.watch(businessPostsReceivedProvider(business.id)).valueOrNull ?? 0;
+        final contacts =
+            ref.watch(businessContactsProvider(business.id)).valueOrNull ?? 0;
+
         final statItems = [
           {
             'label': 'Profile Views',
@@ -505,72 +477,81 @@ class _LeadsDashboardScreenState extends ConsumerState<LeadsDashboardScreen> {
             'icon': Icons.visibility_rounded,
           },
           {
-            'label': 'Inquiries',
-            'value': stats['inquiries'] ?? 0,
-            'icon': Icons.chat_bubble_outline_rounded,
+            'label': 'Posts Received',
+            'value': postsReceived,
+            'icon': Icons.campaign_rounded,
+          },
+          {
+            'label': 'Contacts',
+            'value': contacts,
+            'icon': Icons.person_add_alt_1_rounded,
           },
           {
             'label': 'B2B Matches',
-            'value': stats['matches'] ?? 0,
+            'value': candidatesAsync.valueOrNull?.length ?? 0,
             'icon': Icons.handshake_rounded,
           },
         ];
 
-        return Row(
-          children: statItems.map((item) {
-            return Expanded(
-              child: Container(
-                margin: const EdgeInsets.only(right: 10),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200, width: 1),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: statItems.map((item) {
+              return SizedBox(
+                width: 140,
+                child: Container(
+                  margin: const EdgeInsets.only(right: 10),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200, width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: darkGreen.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          item['icon'] as IconData,
+                          color: darkGreen,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        item['value'].toString(),
+                        style: GoogleFonts.outfit(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.darkText,
+                        ),
+                      ),
+                      Text(
+                        item['label'] as String,
+                        style: GoogleFonts.outfit(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: darkGreen.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        item['icon'] as IconData,
-                        color: darkGreen,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      item['value'].toString(),
-                      style: GoogleFonts.outfit(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.darkText,
-                      ),
-                    ),
-                    Text(
-                      item['label'] as String,
-                      style: GoogleFonts.outfit(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
+              );
+            }).toList(),
+          ),
         );
       },
       loading: () => const Center(
@@ -833,6 +814,8 @@ class _LeadCard extends ConsumerWidget {
                           customerId: need.userId,
                           businessId: business.id,
                         );
+
+                    ref.invalidate(businessLeadsProvider(business));
 
                     if (context.mounted) {
                       Navigator.push(

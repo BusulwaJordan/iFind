@@ -1,22 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/widgets/ifind_loader.dart';
-import 'package:ifind/core/services/b2b_service.dart';
 import 'package:ifind/core/utils/distance_calculator.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
-import 'package:ifind/features/business/presentation/providers/b2b_provider.dart';
 import 'package:ifind/features/business/presentation/screens/create_business_screen.dart';
-import 'package:ifind/features/business/presentation/screens/leads_dashboard.dart';
 import 'package:ifind/features/business/presentation/screens/shop_gallery_screen.dart';
 import 'package:ifind/features/business/presentation/screens/product_management_screen.dart';
-import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
-import 'package:ifind/features/chat/presentation/screens/chat_room_screen.dart';
 import 'package:ifind/core/widgets/empty_state_widget.dart';
 import 'package:ifind/features/needs/presentation/providers/need_provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -195,8 +191,6 @@ Future<List<Map<String, dynamic>>> _safeList(
 class MyShopScreen extends ConsumerWidget {
   const MyShopScreen({super.key});
 
-  static final _partnerSectionKey = GlobalKey();
-
   Future<void> _deleteShop(
       BuildContext context, WidgetRef ref, String businessId) async {
     final confirmed = await showDialog<bool>(
@@ -318,8 +312,6 @@ class MyShopScreen extends ConsumerWidget {
                             const SizedBox(height: 32),
                             _buildReviewsSection(context, business.id),
                             const SizedBox(height: 32),
-                            _buildPartnerRecommendations(context, business),
-                            const SizedBox(height: 32),
                             Row(
                               children: [
                                 Container(
@@ -357,9 +349,10 @@ class MyShopScreen extends ConsumerWidget {
                 ),
               ),
 
-              // Menu button — always visible at top-left
+              // Menu button — sits below the back button in the AppBar's
+              // leading slot so the two don't stack on top of each other.
               Positioned(
-                top: 0,
+                top: 60,
                 left: 0,
                 child: SafeArea(
                   child: Builder(
@@ -464,6 +457,24 @@ class MyShopScreen extends ConsumerWidget {
       backgroundColor: AppColors.deepGreen,
       elevation: 0,
       automaticallyImplyLeading: false,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 8),
+        child: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white24,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.arrow_back_rounded,
+                color: Colors.white, size: 20),
+          ),
+          // My Shop is a bottom-nav tab (not pushed on top of another
+          // screen), so there's nothing on the Navigator stack to pop back
+          // to — route to the dashboard tab instead.
+          onPressed: () => context.go('/'),
+        ),
+      ),
       actions: [
         Padding(
           padding: const EdgeInsets.only(right: 8),
@@ -611,7 +622,14 @@ class MyShopScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 24),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primaryGreen.withValues(alpha: 0.08),
+            Theme.of(context).colorScheme.surface,
+          ],
+        ),
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
@@ -690,7 +708,14 @@ class MyShopScreen extends ConsumerWidget {
             return Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFFEC4899).withValues(alpha: 0.06),
+                    Theme.of(context).colorScheme.surface,
+                  ],
+                ),
                 borderRadius: BorderRadius.circular(30),
                 boxShadow: [
                   BoxShadow(
@@ -906,19 +931,10 @@ class MyShopScreen extends ConsumerWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
-      mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
-      childAspectRatio: 1.05,
+      mainAxisSpacing: 7,
+      crossAxisSpacing: 7,
+      childAspectRatio: 1.45,
       children: [
-        _buildManageCard(
-          context,
-          'Customer Inquiries',
-          'Messages & Actions',
-          Icons.bubble_chart_rounded,
-          const Color(0xFF6366F1),
-          () => Navigator.push(context,
-              MaterialPageRoute(builder: (_) => const LeadsDashboardScreen())),
-        ),
         _buildManageCard(
           context,
           'Inventory',
@@ -963,11 +979,15 @@ class MyShopScreen extends ConsumerWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.primaryGreen, AppColors.secondaryGreen],
+            ),
             borderRadius: BorderRadius.circular(30),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: AppColors.primaryGreen.withValues(alpha: 0.3),
                 blurRadius: 24,
                 offset: const Offset(0, 12),
               ),
@@ -981,12 +1001,12 @@ class MyShopScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.primaryGreen.withValues(alpha: 0.12),
+                      color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Icon(
                       Icons.analytics_rounded,
-                      color: AppColors.primaryGreen,
+                      color: Colors.white,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -999,21 +1019,21 @@ class MyShopScreen extends ConsumerWidget {
                           style: GoogleFonts.outfit(
                             fontSize: 20,
                             fontWeight: FontWeight.w900,
-                            color: AppColors.darkText,
+                            color: Colors.white,
                           ),
                         ),
                         Text(
                           'Live shop performance and customer demand',
                           style: GoogleFonts.outfit(
                             fontSize: 12,
-                            color: Colors.grey[600],
+                            color: Colors.white.withValues(alpha: 0.75),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  _LiveStatusPill(updatedAt: analytics.updatedAt),
+                  _LiveStatusPill(updatedAt: analytics.updatedAt, light: true),
                 ],
               ),
               const SizedBox(height: 20),
@@ -1074,59 +1094,83 @@ class MyShopScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.35,
-                children: [
-                  _AnalyticsMetricCard(
-                    label: 'Reach',
-                    value: analytics.reach.toString(),
-                    detail:
-                        '${analytics.profileViews} views, ${analytics.saved} saves',
-                    icon: Icons.visibility_rounded,
-                    color: const Color(0xFF6366F1),
-                  ),
-                  _AnalyticsMetricCard(
-                    label: 'Inquiries',
-                    value: analytics.inquiries.toString(),
-                    detail: '${analytics.conversations} active chats',
-                    icon: Icons.forum_rounded,
-                    color: const Color(0xFF0EA5E9),
-                  ),
-                  _AnalyticsMetricCard(
-                    label: 'Open Leads',
-                    value: analytics.activeLeads.toString(),
-                    detail: 'Nearby matching needs',
-                    icon: Icons.local_activity_rounded,
-                    color: const Color(0xFF10B981),
-                  ),
-                  _AnalyticsMetricCard(
-                    label: 'Inventory',
-                    value:
-                        '${analytics.availableProducts}/${analytics.products}',
-                    detail: '${analytics.lowStockProducts} low stock',
-                    icon: Icons.inventory_2_rounded,
-                    color: const Color(0xFFF59E0B),
-                  ),
-                  _AnalyticsMetricCard(
-                    label: 'Showcase',
-                    value: analytics.portfolioItems.toString(),
-                    detail: 'Gallery posts',
-                    icon: Icons.auto_awesome_motion_rounded,
-                    color: const Color(0xFFEC4899),
-                  ),
-                  _AnalyticsMetricCard(
-                    label: 'Rating',
-                    value: analytics.rating.toStringAsFixed(1),
-                    detail: '${analytics.reviews} reviews',
-                    icon: Icons.star_rounded,
-                    color: const Color(0xFFF97316),
-                  ),
-                ],
+              Builder(
+                builder: (context) {
+                  final metricCards = [
+                    _AnalyticsMetricCard(
+                      label: 'Reach',
+                      value: analytics.reach.toString(),
+                      detail:
+                          '${analytics.profileViews} views, ${analytics.saved} saves',
+                      icon: Icons.visibility_rounded,
+                      color: const Color(0xFF6366F1),
+                    ),
+                    _AnalyticsMetricCard(
+                      label: 'Inquiries',
+                      value: analytics.inquiries.toString(),
+                      detail: '${analytics.conversations} active chats',
+                      icon: Icons.forum_rounded,
+                      color: const Color(0xFF0EA5E9),
+                    ),
+                    _AnalyticsMetricCard(
+                      label: 'Open Leads',
+                      value: analytics.activeLeads.toString(),
+                      detail: 'Nearby matching needs',
+                      icon: Icons.local_activity_rounded,
+                      color: const Color(0xFF10B981),
+                    ),
+                    _AnalyticsMetricCard(
+                      label: 'Inventory',
+                      value:
+                          '${analytics.availableProducts}/${analytics.products}',
+                      detail: '${analytics.lowStockProducts} low stock',
+                      icon: Icons.inventory_2_rounded,
+                      color: const Color(0xFFF59E0B),
+                    ),
+                    _AnalyticsMetricCard(
+                      label: 'Showcase',
+                      value: analytics.portfolioItems.toString(),
+                      detail: 'Gallery posts',
+                      icon: Icons.auto_awesome_motion_rounded,
+                      color: const Color(0xFFEC4899),
+                    ),
+                    _AnalyticsMetricCard(
+                      label: 'Rating',
+                      value: analytics.rating.toStringAsFixed(1),
+                      detail: '${analytics.reviews} reviews',
+                      icon: Icons.star_rounded,
+                      color: const Color(0xFFF97316),
+                    ),
+                  ];
+
+                  const spacing = 6.0;
+                  return LayoutBuilder(
+                    builder: (context, constraints) {
+                      final tileWidth = (constraints.maxWidth - spacing * 3) / 4;
+                      return Column(
+                        children: [
+                          Row(
+                            children: [
+                              for (var i = 0; i < 4; i++) ...[
+                                if (i > 0) const SizedBox(width: spacing),
+                                SizedBox(width: tileWidth, child: metricCards[i]),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: spacing),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(width: tileWidth, child: metricCards[4]),
+                              const SizedBox(width: spacing),
+                              SizedBox(width: tileWidth, child: metricCards[5]),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
               ),
             ],
           ),
@@ -1154,160 +1198,19 @@ class MyShopScreen extends ConsumerWidget {
     return 'Your shop has healthy signals. Keep replying fast and updating inventory.';
   }
 
-  Widget _buildPartnerRecommendations(BuildContext context, Business business) {
-    return Consumer(
-      builder: (context, ref, child) {
-        final partnersAsync = ref.watch(b2bPartnerCandidatesProvider(business));
-        final user = ref.watch(currentUserProvider);
-
-        return Container(
-          key: _partnerSectionKey,
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 24,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 4,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryGreen,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'B2B Partner Matches',
-                      style: GoogleFonts.outfit(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.darkText,
-                      ),
-                    ),
-                  ),
-                  const Icon(Icons.near_me_rounded,
-                      color: AppColors.primaryGreen, size: 20),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Best nearby businesses for supply, referral, and service partnerships.',
-                style: GoogleFonts.outfit(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 16),
-              partnersAsync.when(
-                data: (partners) {
-                  final candidates = partners.take(5).toList();
-
-                  if (candidates.isEmpty) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      child: Center(
-                        child: Text(
-                          'As more verified businesses join nearby, your strongest partner matches will appear here.',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.outfit(
-                            fontSize: 13,
-                            color: Colors.grey[500],
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-
-                  return Column(
-                    children: candidates.map((partner) {
-                      final matchAsync = ref.watch(
-                        b2bCompatibilityProvider((
-                          myBusiness: business,
-                          targetBusiness: partner,
-                        )),
-                      );
-
-                      return _PartnerMatchTile(
-                        partner: partner,
-                        matchAsync: matchAsync,
-                        onMessage: user == null
-                            ? null
-                            : () async {
-                                try {
-                                  final chat = await ref
-                                      .read(chatRemoteDataSourceProvider)
-                                      .getOrCreateChat(
-                                        customerId: user.id,
-                                        businessId: partner.id,
-                                      );
-
-                                  if (context.mounted) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => ChatRoomScreen(
-                                          chat: chat,
-                                          otherPartyName: partner.name,
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                } catch (e) {
-                                  if (context.mounted) {
-                                    AppToast.show(context, friendlyError(e), type: ToastType.error);
-                                  }
-                                }
-                              },
-                      );
-                    }).toList(),
-                  );
-                },
-                loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 18),
-                  child: Center(child: IFindLoaderInline(size: 50)),
-                ),
-                error: (e, s) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  child: Text(
-                    'Unable to load partner matches right now.',
-                    style: GoogleFonts.outfit(color: Colors.grey[600]),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.08);
-      },
-    );
-  }
 
   Widget _buildManageCard(BuildContext context, String title, String subtitle,
       IconData icon, Color color, VoidCallback onTap) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(28),
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
         boxShadow: [
           BoxShadow(
             color: color.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           )
         ],
       ),
@@ -1315,35 +1218,42 @@ class MyShopScreen extends ConsumerWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(14),
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(5),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: color, size: 28),
+                  child: Icon(icon, color: color, size: 32),
                 ),
-                const Spacer(),
+                const SizedBox(height: 5),
                 Text(
                   title,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
                     color: AppColors.darkText,
                     height: 1.1,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   subtitle,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.outfit(
-                    fontSize: 11,
+                    fontSize: 14,
                     color: Colors.grey[500],
                     fontWeight: FontWeight.w500,
                   ),
@@ -1362,22 +1272,32 @@ class MyShopScreen extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.deepGreen, Color(0xFF0A5C36)],
+        ),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.red.withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.deepGreen.withValues(alpha: 0.25),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.shield_outlined, color: Colors.grey, size: 20),
+              const Icon(Icons.shield_rounded, color: Colors.white, size: 20),
               const SizedBox(width: 8),
               Text(
                 'Account Security',
                 style: GoogleFonts.outfit(
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey[600],
+                  color: Colors.white,
                   fontSize: 13,
                 ),
               ),
@@ -1394,14 +1314,14 @@ class MyShopScreen extends ConsumerWidget {
                       'Retire Digital Shop',
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.w900,
-                        color: AppColors.darkText,
+                        color: Colors.white,
                         fontSize: 16,
                       ),
                     ),
                     Text(
                       'This will permanently unlist your business.',
                       style: GoogleFonts.outfit(
-                          fontSize: 12, color: Colors.grey[500]),
+                          fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
                     ),
                   ],
                 ),
@@ -1409,18 +1329,18 @@ class MyShopScreen extends ConsumerWidget {
               ElevatedButton(
                 onPressed: () => _deleteShop(context, ref, businessId),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.withValues(alpha: 0.1),
+                  backgroundColor: Colors.white,
                   foregroundColor: Colors.red,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(14)),
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 ),
                 child: Text(
                   'Unlist',
                   style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w900, fontSize: 13),
+                      fontWeight: FontWeight.w900, fontSize: 16),
                 ),
               ),
             ],
@@ -1431,125 +1351,21 @@ class MyShopScreen extends ConsumerWidget {
   }
 }
 
-class _PartnerMatchTile extends StatelessWidget {
-  final Business partner;
-  final AsyncValue<B2bCompatibilityResult> matchAsync;
-  final VoidCallback? onMessage;
-
-  const _PartnerMatchTile({
-    required this.partner,
-    required this.matchAsync,
-    required this.onMessage,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final distanceLabel = partner.distance == null
-        ? 'Nearby'
-        : '${partner.distance!.toStringAsFixed(1)} km';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFB),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.12)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            height: 46,
-            width: 46,
-            decoration: BoxDecoration(
-              color: AppColors.primaryGreen.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(
-              Icons.storefront_rounded,
-              color: AppColors.primaryGreen,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  partner.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkText,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  '${partner.category.name.toUpperCase()} • $distanceLabel',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.outfit(
-                    fontSize: 11,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                matchAsync.when(
-                  data: (match) {
-                    final percent = (match.compatibilityScore * 100).round();
-                    return Text(
-                      '$percent% partner fit',
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryGreen,
-                      ),
-                    );
-                  },
-                  loading: () => Text(
-                    'Checking partner fit...',
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                  error: (_, __) => Text(
-                    'Recommended nearby',
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip: 'Message partner',
-            onPressed: onMessage,
-            icon: const Icon(Icons.forum_rounded),
-            color: AppColors.primaryGreen,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _LiveStatusPill extends StatelessWidget {
   final DateTime updatedAt;
+  final bool light;
 
-  const _LiveStatusPill({required this.updatedAt});
+  const _LiveStatusPill({required this.updatedAt, this.light = false});
 
   @override
   Widget build(BuildContext context) {
+    final fgColor = light ? Colors.white : AppColors.primaryGreen;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: AppColors.primaryGreen.withValues(alpha: 0.1),
+        color: light
+            ? Colors.white.withValues(alpha: 0.15)
+            : AppColors.primaryGreen.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -1558,8 +1374,8 @@ class _LiveStatusPill extends StatelessWidget {
           Container(
             width: 7,
             height: 7,
-            decoration: const BoxDecoration(
-              color: AppColors.primaryGreen,
+            decoration: BoxDecoration(
+              color: fgColor,
               shape: BoxShape.circle,
             ),
           ),
@@ -1569,7 +1385,7 @@ class _LiveStatusPill extends StatelessWidget {
             style: GoogleFonts.outfit(
               fontSize: 11,
               fontWeight: FontWeight.bold,
-              color: AppColors.primaryGreen,
+              color: fgColor,
             ),
           ),
         ],
@@ -1596,24 +1412,31 @@ class _AnalyticsMetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFB),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.12)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: color, size: 18),
+                child: Icon(icon, color: color, size: 14),
               ),
               const Spacer(),
               Text(
@@ -1621,20 +1444,20 @@ class _AnalyticsMetricCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.outfit(
-                  fontSize: 22,
+                  fontSize: 16,
                   fontWeight: FontWeight.w900,
                   color: AppColors.darkText,
                 ),
               ),
             ],
           ),
-          const Spacer(),
+          const SizedBox(height: 7),
           Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.outfit(
-              fontSize: 13,
+              fontSize: 11,
               fontWeight: FontWeight.bold,
               color: AppColors.darkText,
             ),
@@ -1645,7 +1468,7 @@ class _AnalyticsMetricCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.outfit(
-              fontSize: 10,
+              fontSize: 9,
               color: Colors.grey[500],
               fontWeight: FontWeight.w600,
             ),

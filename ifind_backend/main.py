@@ -38,28 +38,93 @@ businesses = businesses.dropna(subset=['latitude', 'longitude']).reset_index(dro
 businesses['neighbourhood'] = businesses['neighbourhood'].fillna('')
 businesses['category'] = businesses['category'].fillna('')
 businesses['name'] = businesses['name'].fillna('Unknown')
+
+# Businesses created through the app store `category` as the app's plain
+# enum value (e.g. "retail", "fashion"), while the seeded demo dataset uses
+# descriptive strings (e.g. "Retail - Clothing & Fashion"). Left raw, these
+# two vocabularies barely overlap in TF-IDF and never overlap in
+# category_connections, so real businesses got near-random rule/content
+# scores (e.g. a shoe shop matching "Retail - Electronics" over "Retail -
+# Clothing & Fashion" purely because "Electronics" is a shorter string).
+# Normalizing every category — both business categories and the
+# category_connections pairs — onto the app's canonical category set (same
+# fuzzy matching as BusinessCategoryStorage.fromStorageValue in
+# lib/features/business/domain/entities/business.dart) fixes both.
+_CATEGORY_KEYWORD_RULES = [
+    (('beauty', 'wellness'), 'beauty'),
+    (('footwear', 'shoe'), 'footwear'),
+    (('electronics',), 'electronics'),
+    (('fashion', 'clothing'), 'fashion'),
+    (('food', 'restaurant', 'beverage', 'catering'), 'food'),
+    (('education', 'training'), 'education'),
+    (('health', 'pharmacy', 'medical', 'hospital'), 'health'),
+    (('finance', 'financial'), 'finance'),
+    (('agriculture', 'farm'), 'agriculture'),
+    (('wholesale', 'distribution'), 'wholesale'),
+    (('manufacturing', 'production'), 'manufacturing'),
+    (('construction', 'hardware'), 'construction'),
+    (('retail',), 'retail'),
+    (('service', 'transport', 'logistics', 'it & software'), 'service'),
+    (('sports', 'fitness'), 'sports'),
+    (('kids', 'child'), 'kids'),
+    (('entertainment', 'event'), 'entertainment'),
+    (('arcade',), 'arcade'),
+    (('travel', 'flight'), 'travel'),
+    (('real_estate', 'realestate', 'properties', 'apartment'), 'real_estate'),
+    (('pets', 'dog', 'cat'), 'pets'),
+    (('home',), 'home'),
+    (('automotive', 'car'), 'automotive'),
+]
+_CATEGORY_EXACT_FALLBACK = {
+    'retail': 'retail', 'service': 'service', 'services': 'service',
+    'food': 'food', 'fashion': 'fashion', 'footwear': 'footwear', 'shoes': 'footwear',
+    'electronics': 'electronics',
+    'home': 'home', 'beauty': 'beauty', 'automotive': 'automotive',
+    'health': 'health', 'sports': 'sports', 'kids': 'kids',
+    'education': 'education', 'entertainment': 'entertainment', 'events': 'entertainment',
+    'arcade': 'arcade', 'travel': 'travel',
+    'real_estate': 'real_estate', 'realestate': 'real_estate', 'properties': 'real_estate',
+    'pets': 'pets', 'finance': 'finance',
+    'agriculture': 'agriculture', 'farming': 'agriculture',
+    'wholesale': 'wholesale', 'manufacturing': 'manufacturing',
+    'construction': 'construction', 'hardware': 'construction',
+}
+
+def normalize_category(raw):
+    normalized = (raw or '').strip().lower()
+    for keywords, canonical in _CATEGORY_KEYWORD_RULES:
+        if any(k in normalized for k in keywords):
+            return canonical
+    return _CATEGORY_EXACT_FALLBACK.get(normalized, 'other')
+
+businesses['category_norm'] = businesses['category'].apply(normalize_category)
+connections['category_a_norm'] = connections['category_a'].apply(normalize_category)
+connections['category_b_norm'] = connections['category_b'].apply(normalize_category)
 print(f"After cleaning: {len(businesses)} businesses with valid coordinates")
 
-# ---------- Final Hybrid Recommendation Function (unchanged) ----------
+# ---------- Final Hybrid Recommendation Function ----------
 def final_hybrid_recommend(business_id, businesses_df, connections_df, interactions_df, top_n=10, max_distance=5.0):
     source = businesses_df[businesses_df['business_id'] == business_id].iloc[0]
     all_businesses = businesses_df[businesses_df['business_id'] != business_id].copy()
-    
-    # Rule-based scores
-    compatible = connections_df[connections_df['category_a'] == source['category']]
+
+    # Rule-based scores — matched on normalized category so real (app-enum)
+    # and seeded (descriptive) businesses share the same vocabulary.
+    compatible = connections_df[connections_df['category_a_norm'] == source['category_norm']]
     rule_scores = {}
     if len(compatible) > 0:
         source_coords = (source['latitude'], source['longitude'])
         for _, biz in all_businesses.iterrows():
-            if biz['category'] in compatible['category_b'].values:
+            if biz['category_norm'] in compatible['category_b_norm'].values:
                 biz_coords = (biz['latitude'], biz['longitude'])
                 distance = geodesic(source_coords, biz_coords).km
                 if distance <= max_distance:
                     rule_scores[biz['business_id']] = round(1 - (distance / max_distance), 3)
-    
-    # Content-based scores
+
+    # Content-based scores — normalized category keeps every business's
+    # description to one comparable category token instead of raw strings
+    # whose differing word counts skewed cosine similarity.
     businesses_copy = businesses_df.copy()
-    businesses_copy['description'] = businesses_copy['category'] + ' ' + businesses_copy['neighbourhood']
+    businesses_copy['description'] = businesses_copy['category_norm'] + ' ' + businesses_copy['neighbourhood']
     vectorizer = TfidfVectorizer()
     tfidf_matrix = vectorizer.fit_transform(businesses_copy['description'])
     similarity_matrix = cosine_similarity(tfidf_matrix)

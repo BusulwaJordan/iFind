@@ -42,7 +42,7 @@ class ChatModel with _$ChatModel {
     }
 
     // Extract profile data (for B2C: the customer profile)
-    final profileData = json['profiles'];
+    final profileData = json['users'];
     Map<String, dynamic>? profileMap;
     if (profileData is List && profileData.isNotEmpty) {
       profileMap = profileData.first;

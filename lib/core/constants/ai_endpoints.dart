@@ -23,10 +23,19 @@ class AiEndpoints {
   static String get recommendBusinesses =>
       '$supabaseUrl/functions/v1/recommend-businesses';
 
-  /// MODEL 3: B2B Random Forest Compatibility Matcher
-  /// POST {"category_a": "Agriculture", "category_b": "Restaurant", "distance_km": 2.5}
-  /// Returns: {"compatibility_score": 0.87}
-  static String get b2bMatch => '$supabaseUrl/functions/v1/b2b-match';
+  // ---------------------------------------------------------------------------
+  // Hybrid Recommendation Backend (FastAPI on Render)
+  // ---------------------------------------------------------------------------
+
+  /// MODEL 3: B2B Hybrid Recommender (rule-based + content-based TF-IDF +
+  /// collaborative filtering, averaged). Standalone FastAPI service — not a
+  /// Supabase Edge Function.
+  /// GET /recommend/business/{business_id}?top_n=N
+  /// Returns: [{"business_id": "...", "final_score": 0.87, ...}]
+  static const String _hybridBackendBase = 'https://ifind-backend-9wvd.onrender.com';
+
+  static String recommendForBusiness(String businessId, {int topN = 10}) =>
+      '$_hybridBackendBase/recommend/business/$businessId?top_n=$topN';
 
   // ---------------------------------------------------------------------------
   // Supabase Storage — AI Model Files (Public bucket: ai_models)

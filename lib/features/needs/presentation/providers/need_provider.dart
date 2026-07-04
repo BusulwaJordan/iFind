@@ -232,15 +232,30 @@ final myNeedsProvider =
 final businessLeadsProvider =
     FutureProvider.family<List<Need>, Business>((ref, business) async {
   final repository = ref.read(needsRepositoryProvider);
+  final supabase = Supabase.instance.client;
+
   final needs = await repository.getNearbyNeeds(
     business.latitude,
     business.longitude,
     20.0,
   );
 
+  // Exclude customers already contacted by this business
+  final chatsResp = await supabase
+      .from('chats')
+      .select('customer_id')
+      .eq('business_id', business.id)
+      .eq('is_b2b', false);
+  final contactedIds = (chatsResp as List)
+      .map((c) => c['customer_id'] as String?)
+      .whereType<String>()
+      .toSet();
+
   return needs
       .where((need) =>
-          businessCategoryForNeedCategory(need.category) == business.category)
+          businessCategoryForNeedCategory(need.category) == business.category &&
+          need.userId != business.ownerId &&
+          !contactedIds.contains(need.userId))
       .toList();
 });
 

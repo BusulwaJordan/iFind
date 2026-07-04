@@ -9,8 +9,6 @@ import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
-import 'package:ifind/features/business/domain/entities/business.dart';
-import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
 import 'package:ifind/features/chat/domain/entities/chat.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -30,16 +28,8 @@ class ChatRoomScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final businessAsync = chat.businessId != null
-        ? ref.watch(businessProvider(chat.businessId!))
-        : const AsyncValue<Business?>.data(null);
-    final displayName = businessAsync.when(
-      data: (b) => b?.name ?? otherPartyName,
-      loading: () => otherPartyName,
-      error: (_, __) => otherPartyName,
-    );
-
-    final business = businessAsync.valueOrNull;
+    final displayName = otherPartyName;
+    const business = null;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FB),
@@ -201,6 +191,10 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
 
       // Refresh the chats list to update last message
       ref.invalidate(myChatsProvider);
+      if (!widget.chat.isB2B && widget.chat.businessId != null) {
+        ref.invalidate(businessChatsProvider(widget.chat.businessId!));
+        ref.invalidate(unansweredContactsProvider(widget.chat.businessId!));
+      }
 
       // Auto-scroll after message sent
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -580,7 +574,7 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
 
   Widget _buildInputArea() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [

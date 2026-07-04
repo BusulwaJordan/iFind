@@ -24,12 +24,11 @@ final recommendationServiceProvider = Provider<RecommendationService>((ref) {
 });
 
 // ---------------------------------------------------------------------------
-// B2B Service (MODEL 3 — Random Forest Regression)
+// B2B Service (MODEL 3 — Hybrid Recommender: rule-based + content-based +
+// collaborative filtering)
 // ---------------------------------------------------------------------------
 final b2bServiceProvider = Provider<B2bService>((ref) {
-  return B2bService(
-    supabaseAnonKey: ApiConstants.supabaseAnonKey,
-  );
+  return B2bService();
 });
 
 // ---------------------------------------------------------------------------

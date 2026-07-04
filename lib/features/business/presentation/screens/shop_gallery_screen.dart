@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -92,7 +91,7 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
       final repository = ref.read(portfolioRepositoryProvider);
       final uploadResult = await repository.uploadPortfolioItem(
         businessId: widget.business.id,
-        file: File(pickedFile.path),
+        file: pickedFile,
         type: type,
         caption: caption?.isEmpty == true ? null : caption,
         price: price,
@@ -242,10 +241,10 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
                 GridView.builder(
                   padding: const EdgeInsets.all(16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 20,
-                    childAspectRatio: 0.8,
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.7,
                   ),
                   itemCount: items.length,
                   itemBuilder: (context, index) {
@@ -328,19 +327,19 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
                                   if (item.price != null)
                                     Positioned(
                                       top: 12,
-                                      left: 12,
+                                      left: 6,
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 6),
+                                            horizontal: 6, vertical: 3),
                                         decoration: BoxDecoration(
                                           color: AppColors.primaryGreen,
                                           borderRadius:
-                                              BorderRadius.circular(12),
+                                              BorderRadius.circular(8),
                                           boxShadow: [
                                             BoxShadow(
                                               color: AppColors.primaryGreen
                                                   .withValues(alpha: 0.4),
-                                              blurRadius: 8,
+                                              blurRadius: 6,
                                               offset: const Offset(0, 2),
                                             ),
                                           ],
@@ -349,9 +348,9 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
                                           'UGX ${item.price!.toInt().toString().replaceAllMapped(RegExp(r"(\d{1,3})(?=(\d{3})+(?!\d))"), (Match m) => "${m[1]},")}',
                                           style: GoogleFonts.outfit(
                                             color: Colors.white,
-                                            fontSize: 13,
+                                            fontSize: 9,
                                             fontWeight: FontWeight.w900,
-                                            letterSpacing: 0.2,
+                                            letterSpacing: 0.1,
                                           ),
                                         ),
                                       ),
@@ -359,19 +358,19 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
 
                                   // Quick Delete
                                   Positioned(
-                                    top: 12,
-                                    right: 12,
+                                    top: 6,
+                                    right: 6,
                                     child: GestureDetector(
                                       onTap: () => _deleteItem(item.id),
                                       child: Container(
-                                        padding: const EdgeInsets.all(6),
+                                        padding: const EdgeInsets.all(4),
                                         decoration: BoxDecoration(
                                           color: Colors.black
                                               .withValues(alpha: 0.3),
                                           shape: BoxShape.circle,
                                         ),
                                         child: const Icon(Icons.close_rounded,
-                                            color: Colors.white, size: 14),
+                                            color: Colors.white, size: 11),
                                       ),
                                     ),
                                   ),
@@ -380,32 +379,16 @@ class _ShopGalleryScreenState extends ConsumerState<ShopGalleryScreen> {
                             ),
                           ),
                           Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.caption ?? 'Premium Product',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.darkText,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  item.mediaType == MediaType.video
-                                      ? 'Video Showcase'
-                                      : 'Product Photo',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 11,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
+                            padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                            child: Text(
+                              item.caption ?? 'Premium Product',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.darkText,
+                              ),
                             ),
                           ),
                         ],

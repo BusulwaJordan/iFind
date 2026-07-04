@@ -15,8 +15,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:ifind/core/providers/ai_providers.dart';
-import 'package:ifind/core/services/interaction_service.dart';
 import 'package:ifind/features/notifications/presentation/providers/notification_provider.dart';
 
 import 'package:ifind/features/portfolio/presentation/providers/comment_provider.dart';
@@ -172,13 +170,6 @@ class _ProductItemViewState extends ConsumerState<_ProductItemView> {
         senderId: user.id,
         content: _buildProductInquiryPayload(message.trim()),
       );
-
-      // Log B2C interaction
-      ref.read(interactionServiceProvider).logInteraction(
-            userId: user.id,
-            businessId: widget.businessId,
-            type: InteractionType.inquirySent,
-          );
 
       if (mounted) {
         Navigator.push(

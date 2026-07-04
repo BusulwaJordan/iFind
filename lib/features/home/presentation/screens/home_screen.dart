@@ -685,6 +685,7 @@ class _ContentArea extends ConsumerWidget {
     final categories = [
       {'name': 'Food', 'image': 'assets/images/Screenshot 2026-02-11 112931.png', 'icon': Icons.restaurant_rounded, 'cat': BusinessCategory.food},
       {'name': 'Fashion', 'image': 'assets/images/Color Gradient T-shirts Display.png', 'icon': Icons.checkroom_rounded, 'cat': BusinessCategory.fashion},
+      {'name': 'Footwear', 'image': null, 'icon': Icons.roller_skating_rounded, 'cat': BusinessCategory.footwear},
       {'name': 'Electronics', 'image': 'assets/images/Contemporary VR Headsets Display.png', 'icon': Icons.devices_rounded, 'cat': BusinessCategory.electronics},
       {'name': 'Home', 'image': 'assets/images/Modern Workspace Setup.png', 'icon': Icons.home_rounded, 'cat': BusinessCategory.home},
       {'name': 'Beauty', 'image': null, 'icon': Icons.spa_rounded, 'cat': BusinessCategory.beauty},
@@ -699,6 +700,10 @@ class _ContentArea extends ConsumerWidget {
       {'name': 'Properties', 'image': null, 'icon': Icons.apartment_rounded, 'cat': BusinessCategory.realEstate},
       {'name': 'Pets', 'image': 'assets/images/Screenshot 2026-02-11 112656.png', 'icon': Icons.pets_rounded, 'cat': BusinessCategory.pets},
       {'name': 'Finance', 'image': null, 'icon': Icons.account_balance_wallet_rounded, 'cat': BusinessCategory.finance},
+      {'name': 'Agriculture', 'image': null, 'icon': Icons.agriculture_rounded, 'cat': BusinessCategory.agriculture},
+      {'name': 'Wholesale', 'image': null, 'icon': Icons.local_shipping_rounded, 'cat': BusinessCategory.wholesale},
+      {'name': 'Manufacturing', 'image': null, 'icon': Icons.factory_rounded, 'cat': BusinessCategory.manufacturing},
+      {'name': 'Construction', 'image': null, 'icon': Icons.construction_rounded, 'cat': BusinessCategory.construction},
     ];
 
     final row1 = categories.sublist(0, (categories.length / 2).ceil());

@@ -12,6 +12,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:ifind/features/portfolio/presentation/providers/comment_provider.dart';
 import 'package:ifind/features/portfolio/presentation/widgets/comments_bottom_sheet.dart';
+import 'package:ifind/features/products/presentation/providers/product_provider.dart';
+import 'package:ifind/features/products/presentation/screens/product_detail_screen.dart';
 
 class GalleryMediaViewScreen extends ConsumerStatefulWidget {
   final PortfolioItem item;
@@ -81,6 +83,26 @@ class _GalleryMediaViewScreenState
   void _copyLink() {
     Clipboard.setData(ClipboardData(text: widget.item.mediaUrl));
     AppToast.show(context, 'Link copied to clipboard!', type: ToastType.success);
+  }
+
+  Future<void> _openProductDetail() async {
+    final productId = widget.item.productId;
+    if (productId == null) return;
+
+    final product = await ref.read(productByIdProvider(productId).future);
+    if (!mounted) return;
+
+    if (product == null) {
+      AppToast.show(context, 'This product is no longer available', type: ToastType.info);
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProductDetailScreen(product: product, onInquire: widget.onInquire),
+      ),
+    );
   }
 
   Future<void> _toggleLike() async {
@@ -227,6 +249,29 @@ class _GalleryMediaViewScreenState
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                  if (widget.item.productId != null) ...[
+                    const SizedBox(height: 10),
+                    InkWell(
+                      onTap: _openProductDetail,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'View all photos',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.arrow_forward_rounded,
+                              color: Colors.white.withValues(alpha: 0.9), size: 14),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   Row(
                     children: [

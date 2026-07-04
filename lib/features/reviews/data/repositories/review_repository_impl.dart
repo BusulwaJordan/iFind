@@ -10,23 +10,36 @@ class ReviewRepositoryImpl implements ReviewRepository {
 
   ReviewRepositoryImpl(this._client);
 
+  /// `reviews.business_id` is the UUID primary key on `businesses`, but
+  /// callers pass the custom text business id (e.g. "BIZ0122") used
+  /// everywhere else in the app. Resolve the UUID before querying/writing.
+  Future<String?> _resolveBusinessUuid(String businessId) async {
+    final row = await _client
+        .from('businesses')
+        .select('id')
+        .eq('business_id', businessId)
+        .maybeSingle();
+    return row?['id'] as String?;
+  }
+
   @override
   Future<Either<Failure, List<Review>>> getReviews(String businessId) async {
     try {
+      final resolvedId = await _resolveBusinessUuid(businessId) ?? businessId;
       List<dynamic> response;
       try {
         // Try with user join (requires FK constraint in Supabase)
         response = await _client
             .from('reviews')
             .select('*, users(full_name, avatar_url)')
-            .eq('business_id', businessId)
+            .eq('business_id', resolvedId)
             .order('created_at', ascending: false);
       } catch (_) {
         // FK not set up — fall back to plain reviews; authorName shows as Anonymous
         response = await _client
             .from('reviews')
             .select()
-            .eq('business_id', businessId)
+            .eq('business_id', resolvedId)
             .order('created_at', ascending: false);
       }
 
@@ -42,10 +55,11 @@ class ReviewRepositoryImpl implements ReviewRepository {
   Stream<Either<Failure, List<Review>>> streamReviews(
       String businessId) async* {
     try {
+      final resolvedId = await _resolveBusinessUuid(businessId) ?? businessId;
       final stream = _client
           .from('reviews')
           .stream(primaryKey: ['id'])
-          .eq('business_id', businessId)
+          .eq('business_id', resolvedId)
           .order('created_at', ascending: false);
 
       await for (final data in stream) {
@@ -88,14 +102,24 @@ class ReviewRepositoryImpl implements ReviewRepository {
         return const Left(ServerFailure('User not authenticated'));
       }
 
+      final resolvedId = await _resolveBusinessUuid(businessId);
+      if (resolvedId == null) {
+        return const Left(ServerFailure('Business not found'));
+      }
+
       final data = {
-        'business_id': businessId,
+        'business_id': resolvedId,
         'customer_id': userId,
         'rating': rating,
         'comment': comment,
       };
 
-      await _client.from('reviews').insert(data);
+      // Upsert: a customer can only have one review per business
+      // (reviews_business_id_customer_id_key), so a repeat rating updates
+      // their existing review instead of failing on the unique constraint.
+      await _client
+          .from('reviews')
+          .upsert(data, onConflict: 'business_id,customer_id');
 
       return const Right(null);
     } catch (e) {
