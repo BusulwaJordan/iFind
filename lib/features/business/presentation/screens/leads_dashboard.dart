@@ -875,6 +875,8 @@ class _ContactTile extends StatelessWidget {
     final name = chat.isB2B
         ? (chat.businessName ?? 'Business')
         : (chat.customerName ?? 'Customer');
+    final avatarUrl =
+        chat.isB2B ? chat.partnerBusinessLogo : chat.customerAvatarUrl;
     final subtitle = chat.lastMessage?.isNotEmpty == true
         ? chat.lastMessage!
         : 'No messages yet';
@@ -901,14 +903,19 @@ class _ContactTile extends StatelessWidget {
         leading: CircleAvatar(
           radius: 24,
           backgroundColor: const Color(0xFF0A5C36).withValues(alpha: 0.12),
-          child: Text(
-            name.isNotEmpty ? name[0].toUpperCase() : '?',
-            style: GoogleFonts.outfit(
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF0A5C36),
-              fontSize: 18,
-            ),
-          ),
+          backgroundImage:
+              avatarUrl != null ? NetworkImage(avatarUrl) : null,
+          onBackgroundImageError: avatarUrl != null ? (_, __) {} : null,
+          child: avatarUrl != null
+              ? null
+              : Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF0A5C36),
+                    fontSize: 18,
+                  ),
+                ),
         ),
         title: Text(
           name,
