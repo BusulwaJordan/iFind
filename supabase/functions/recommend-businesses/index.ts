@@ -15,6 +15,7 @@ type Interaction = {
 
 type Business = {
   id: string;
+  business_id: string;
   name: string;
   category: string;
   rating_average: number | null;
@@ -77,7 +78,7 @@ Deno.serve(async (request) => {
 
     const { data: businesses, error: businessesError } = await supabase
       .from("businesses")
-      .select("id,name,category,rating_average,rating_count,created_at")
+      .select("id,business_id,name,category,rating_average,rating_count,created_at")
       .eq("is_verified", true)
       .order("rating_average", { ascending: false, nullsFirst: false })
       .order("rating_count", { ascending: false, nullsFirst: false })
@@ -90,11 +91,13 @@ Deno.serve(async (request) => {
       return jsonResponse(200, []);
     }
 
+    // interactions.business_id is the app's custom TEXT id (e.g. "BIZ0016"),
+    // not businesses.id (UUID) — matched against businesses.business_id below.
     const { data: interactions, error: interactionsError } = await supabase
       .from("interactions")
       .select("business_id,interaction_type")
       .eq("user_id", userId)
-      .order("created_at", { ascending: false })
+      .order("timestamp", { ascending: false })
       .limit(200);
 
     if (interactionsError) throw interactionsError;
@@ -108,15 +111,15 @@ Deno.serve(async (request) => {
     if (interactedBusinessIds.length > 0) {
       const { data, error } = await supabase
         .from("businesses")
-        .select("id,name,category,rating_average,rating_count,created_at")
-        .in("id", interactedBusinessIds);
+        .select("id,business_id,name,category,rating_average,rating_count,created_at")
+        .in("business_id", interactedBusinessIds);
 
       if (error) throw error;
       interactedBusinesses = (data ?? []) as Business[];
     }
 
     const categoryByBusinessId = new Map(
-      interactedBusinesses.map((business) => [business.id, business.category]),
+      interactedBusinesses.map((business) => [business.business_id, business.category]),
     );
     const categoryScores = new Map<string, number>();
     const seenBusinessIds = new Set<string>();
@@ -136,7 +139,7 @@ Deno.serve(async (request) => {
         const rating = Number(business.rating_average ?? 0);
         const ratingCount = Number(business.rating_count ?? 0);
         const popularity = Math.log1p(ratingCount);
-        const explorationBoost = seenBusinessIds.has(business.id) ? 0 : 0.4;
+        const explorationBoost = seenBusinessIds.has(business.business_id) ? 0 : 0.4;
 
         const rawScore =
           categoryAffinity * 0.55 +
@@ -145,7 +148,7 @@ Deno.serve(async (request) => {
           explorationBoost;
 
         return {
-          business_id: business.id,
+          business_id: business.business_id,
           name: business.name,
           category: business.category,
           score: Number(Math.max(rawScore, 0.05).toFixed(4)),
@@ -157,8 +160,12 @@ Deno.serve(async (request) => {
     return jsonResponse(200, scored);
   } catch (error) {
     console.error("recommend-businesses error", error);
-    return jsonResponse(500, {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    // Postgrest errors are plain objects (not Error instances) with a
+    // .message field — String(error) on those just yields "[object Object]",
+    // which is what made the underlying cause of a 500 impossible to see.
+    const message = error instanceof Error
+      ? error.message
+      : (error as { message?: string })?.message ?? String(error);
+    return jsonResponse(500, { error: message });
   }
 });
