@@ -286,6 +286,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 .fadeIn(delay: 540.ms, duration: 450.ms)
                                 .slideX(begin: -0.06),
 
+                            // Forgot password link
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: GestureDetector(
+                                onTap: isLoading
+                                    ? null
+                                    : () => context.push('/forgot-password'),
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 10),
+                                  child: Text(
+                                    'Forgot Password?',
+                                    style: GoogleFonts.outfit(
+                                      color: AppColors.primaryGreen,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ).animate().fadeIn(delay: 560.ms),
+
                             // Error banner
                             if (_loginError != null) ...[
                               const SizedBox(height: 16),

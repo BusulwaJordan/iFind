@@ -11,6 +11,8 @@ import 'package:ifind/features/auth/presentation/screens/register_screen.dart';
 import 'package:ifind/features/auth/presentation/screens/email_confirmation_screen.dart';
 import 'package:ifind/features/auth/presentation/screens/registration_success_screen.dart';
 import 'package:ifind/features/auth/presentation/screens/email_verified_screen.dart';
+import 'package:ifind/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:ifind/features/auth/presentation/screens/reset_password_screen.dart';
 import 'package:ifind/features/business/presentation/screens/create_business_screen.dart';
 import 'package:ifind/features/chat/presentation/screens/chat_room_screen.dart';
 import 'package:ifind/features/chat/domain/entities/chat.dart';
@@ -80,6 +82,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isPublicAuthRoute = loc == '/login' ||
           loc == '/register' ||
           loc == '/onboarding' ||
+          loc == '/forgot-password' ||
+          loc == '/reset-password' ||
           loc.startsWith('/auth/callback') ||
           loc.startsWith('/confirmation') ||
           loc.startsWith('/registration-success') ||
@@ -146,6 +150,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           final email = state.uri.queryParameters['email'] ?? '';
           return EmailVerifiedScreen(email: email);
         },
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) => const ResetPasswordScreen(),
       ),
 
       // Main Application Shell - Role-based Navigation
@@ -352,7 +364,12 @@ class _AuthCallbackScreenState extends ConsumerState<AuthCallbackScreen> {
 
   Future<void> _finishAuth() async {
     try {
+      final isRecovery = Uri.base.toString().contains('type=recovery');
       await Supabase.instance.client.auth.getSessionFromUrl(_currentAuthUri());
+      if (isRecovery) {
+        if (mounted) context.go('/reset-password');
+        return;
+      }
       await _waitForSession();
       await ref.read(authProvider.notifier).refreshCurrentUser();
       ref.read(pendingRegistrationProvider.notifier).state = null;
