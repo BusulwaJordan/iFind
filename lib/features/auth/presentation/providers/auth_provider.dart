@@ -255,6 +255,33 @@ class AuthNotifier extends StateNotifier<AsyncValue<User?>> {
       (user) => state = const AsyncValue.data(null),
     );
   }
+
+  Future<String?> resetPassword(String email) async {
+    try {
+      final base = Uri.base.toString();
+      final hashIndex = base.indexOf('#');
+      final origin = hashIndex >= 0 ? base.substring(0, hashIndex) : base;
+      final redirectTo = '${origin.endsWith('/') ? origin : '$origin/'}#/auth/callback';
+      await Supabase.instance.client.auth.resetPasswordForEmail(
+        email,
+        redirectTo: redirectTo,
+      );
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<String?> updatePassword(String newPassword) async {
+    try {
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(password: newPassword),
+      );
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
 }
 
 /// Auth state provider
