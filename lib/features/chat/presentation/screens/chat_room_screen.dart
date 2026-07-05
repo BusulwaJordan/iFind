@@ -29,7 +29,13 @@ class ChatRoomScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final displayName = otherPartyName;
-    const business = null;
+    // Mirrors chat_list_screen.dart's displayLogo resolution: B2B chats show
+    // the partner business's logo, B2C chats show whichever side isn't the
+    // current chat's own business record (business logo for the customer's
+    // view, customer avatar for the business owner's view).
+    final avatarUrl = chat.isB2B
+        ? chat.partnerBusinessLogo
+        : (chat.businessLogoUrl ?? chat.customerAvatarUrl);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FB),
@@ -61,11 +67,11 @@ class ChatRoomScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Business logo
-                business?.logoUrl != null
+                // Business logo / avatar
+                avatarUrl != null && avatarUrl.isNotEmpty
                     ? CircleAvatar(
                         radius: 20,
-                        backgroundImage: NetworkImage(business!.logoUrl!),
+                        backgroundImage: NetworkImage(avatarUrl),
                         backgroundColor:
                             Colors.white.withValues(alpha: 0.15),
                       )

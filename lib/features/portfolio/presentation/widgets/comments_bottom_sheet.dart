@@ -174,13 +174,20 @@ class _CommentsBottomSheetState extends ConsumerState<CommentsBottomSheet> {
                         CircleAvatar(
                           radius: 18,
                           backgroundColor: AppColors.primaryGreen.withValues(alpha: 0.1),
-                          child: Text(
-                            (comment.authorName ?? 'U')[0].toUpperCase(),
-                            style: const TextStyle(
-                              color: AppColors.primaryGreen,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          backgroundImage: comment.authorAvatarUrl != null &&
+                                  comment.authorAvatarUrl!.isNotEmpty
+                              ? NetworkImage(comment.authorAvatarUrl!)
+                              : null,
+                          child: comment.authorAvatarUrl != null &&
+                                  comment.authorAvatarUrl!.isNotEmpty
+                              ? null
+                              : Text(
+                                  (comment.authorName ?? 'U')[0].toUpperCase(),
+                                  style: const TextStyle(
+                                    color: AppColors.primaryGreen,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(

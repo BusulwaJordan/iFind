@@ -18,6 +18,7 @@ import 'package:ifind/features/needs/domain/entities/need.dart';
 import 'package:ifind/features/needs/presentation/providers/need_provider.dart';
 import 'package:ifind/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:ifind/features/notifications/presentation/widgets/notification_badge.dart';
+import 'package:ifind/features/notifications/utils/notification_preview_formatter.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:ifind/features/business/presentation/screens/b2b_matches_screen.dart';
 import 'package:ifind/features/settings/presentation/screens/settings_screen.dart';
@@ -1142,8 +1143,15 @@ class _LeadCard extends ConsumerWidget {
                   radius: 11,
                   backgroundColor:
                       AppColors.primaryGreen.withValues(alpha: 0.1),
-                  child: const Icon(Icons.person,
-                      size: 13, color: AppColors.primaryGreen),
+                  backgroundImage: customer.avatarUrl != null &&
+                          customer.avatarUrl!.isNotEmpty
+                      ? NetworkImage(customer.avatarUrl!)
+                      : null,
+                  child: customer.avatarUrl != null &&
+                          customer.avatarUrl!.isNotEmpty
+                      ? null
+                      : const Icon(Icons.person,
+                          size: 13, color: AppColors.primaryGreen),
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -1186,12 +1194,12 @@ class _LeadCard extends ConsumerWidget {
             child: ElevatedButton.icon(
               onPressed: () async {
                 final messenger = ScaffoldMessenger.of(context);
-                final customer = customerProfileAsync.value;
-                if (customer == null) {
-                  messenger.showSnackBar(const SnackBar(
-                      content: Text('Customer profile is still loading.')));
-                  return;
-                }
+                // .valueOrNull, not .value — .value rethrows when the
+                // profile fetch errored, and this button doesn't actually
+                // need the profile to succeed (getOrCreateChat only needs
+                // need.userId, already known synchronously); the customer
+                // object is just used for a nicer display name below.
+                final customer = customerProfileAsync.valueOrNull;
                 try {
                   final chat = await ref
                       .read(chatRemoteDataSourceProvider)
@@ -1206,7 +1214,7 @@ class _LeadCard extends ConsumerWidget {
                       MaterialPageRoute(
                         builder: (_) => ChatRoomScreen(
                           chat: chat,
-                          otherPartyName: customer.fullName,
+                          otherPartyName: customer?.fullName ?? 'Customer',
                         ),
                       ),
                     );
@@ -1263,11 +1271,16 @@ class _ContactTile extends StatelessWidget {
     final name = chat.isB2B
         ? (chat.businessName ?? 'Business')
         : (chat.customerName ?? 'Customer');
-    final lastMsg = chat.lastMessage?.isNotEmpty == true
-        ? (chat.lastMessage!.length > 40
-            ? '${chat.lastMessage!.substring(0, 40)}...'
-            : chat.lastMessage!)
-        : 'Start a conversation';
+    final avatarUrl =
+        chat.isB2B ? chat.partnerBusinessLogo : chat.customerAvatarUrl;
+    final cleanedLastMessage = chat.lastMessage?.isNotEmpty == true
+        ? NotificationPreviewFormatter.cleanBody(chat.lastMessage!)
+        : null;
+    final lastMsg = cleanedLastMessage == null || cleanedLastMessage.isEmpty
+        ? 'Start a conversation'
+        : (cleanedLastMessage.length > 40
+            ? '${cleanedLastMessage.substring(0, 40)}...'
+            : cleanedLastMessage);
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     final updatedAt = chat.updatedAt;
 
@@ -1295,13 +1308,18 @@ class _ContactTile extends StatelessWidget {
           CircleAvatar(
             radius: 22,
             backgroundColor: avatarColor.withValues(alpha: 0.15),
-            child: Text(
-              initial,
-              style: GoogleFonts.outfit(
-                  color: avatarColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16),
-            ),
+            backgroundImage:
+                avatarUrl != null ? NetworkImage(avatarUrl) : null,
+            onBackgroundImageError: avatarUrl != null ? (_, __) {} : null,
+            child: avatarUrl != null
+                ? null
+                : Text(
+                    initial,
+                    style: GoogleFonts.outfit(
+                        color: avatarColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16),
+                  ),
           ),
           const SizedBox(width: 12),
           // Name + message
