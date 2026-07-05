@@ -180,7 +180,7 @@ class AppTheme {
   static ThemeData get darkTheme {
     final darkBackground = Colors.grey.shade900;
     final darkSurface = Colors.grey.shade800;
-    final darkText = Colors.white;
+    const darkText = Colors.white;
     final darkLightText = Colors.grey.shade400;
 
     return ThemeData(

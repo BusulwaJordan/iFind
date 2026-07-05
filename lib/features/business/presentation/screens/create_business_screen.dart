@@ -16,6 +16,7 @@ import 'package:ifind/features/business/domain/usecases/configure_business.dart'
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:ifind/features/business/presentation/screens/location_picker_screen.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter/foundation.dart';
@@ -459,66 +460,77 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
     required IconData icon,
     String? hint,
     bool alignLabelWithHint = false,
+    Widget? suffix,
   }) {
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      prefixIcon: Icon(icon),
+      labelStyle: GoogleFonts.outfit(color: Colors.grey[500], fontSize: 14),
+      prefixIcon: Icon(icon, color: AppColors.primaryGreen, size: 20),
+      suffixIcon: suffix,
       alignLabelWithHint: alignLabelWithHint,
       filled: true,
-      fillColor: Colors.grey[50],
+      fillColor: const Color(0xFFF0FDF4),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: Colors.grey.shade200, width: 1),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.primaryGreen, width: 1.5),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.red.shade300),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: AppColors.error, width: 1.5),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.red.shade300, width: 1.5),
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: AppColors.error, width: 2),
       ),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
     );
   }
 
-  Widget _sectionCard({required String title, required List<Widget> children}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.outfit(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.darkText,
+  Widget _formSection({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required List<Widget> children,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 17),
             ),
-          ),
-          const SizedBox(height: 16),
-          ...children,
-        ],
-      ),
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: GoogleFonts.outfit(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: AppColors.deepGreen,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        ...children,
+      ],
     );
   }
 
@@ -527,350 +539,497 @@ class _CreateBusinessScreenState extends ConsumerState<CreateBusinessScreen> {
     final state = ref.watch(createBusinessProvider);
     final user = ref.watch(currentUserProvider);
     final isLoading = state.isLoading;
+    final isEdit = widget.business != null;
     final willAutoUpgrade =
-        widget.business == null && user?.role == UserRole.customer;
+        !isEdit && user?.role == UserRole.customer;
+    final topPad = MediaQuery.of(context).padding.top;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF0F7F4),
       body: Form(
         key: _formKey,
         child: CustomScrollView(
           slivers: [
+            // ── Hero header — background image + green overlay ──────────
             SliverAppBar(
-              expandedHeight: 260,
+              expandedHeight: topPad + kToolbarHeight + 190.0,
               pinned: true,
               backgroundColor: AppColors.deepGreen,
+              elevation: 0,
+              surfaceTintColor: Colors.transparent,
               automaticallyImplyLeading: false,
               leading: widget.isSetupMode
                   ? null
-                  : Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: CircleAvatar(
-                        backgroundColor: Colors.white.withValues(alpha: 0.2),
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back,
-                              color: Colors.white, size: 20),
-                          onPressed: () => Navigator.pop(context),
+                  : IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(10),
                         ),
+                        child: const Icon(Icons.arrow_back_rounded,
+                            color: Colors.white, size: 20),
                       ),
                     ),
               title: Text(
                 widget.isSetupMode
                     ? 'Set Up Your Shop'
-                    : widget.business == null
-                        ? 'Create Your Shop'
-                        : 'Edit Shop',
+                    : isEdit
+                        ? 'Edit Shop Profile'
+                        : 'Create Your Shop',
                 style: GoogleFonts.outfit(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600),
               ),
               flexibleSpace: FlexibleSpaceBar(
-                background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [AppColors.deepGreen, AppColors.primaryGreen],
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 56),
-                      Expanded(
-                        child: _buildImageSection(),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Text(
-                          'Tap to change photos',
-                          style: GoogleFonts.outfit(
-                            color: Colors.white54,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                collapseMode: CollapseMode.pin,
+                background: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    if (widget.isSetupMode) ...[
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        margin: const EdgeInsets.only(bottom: 20),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryGreen.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                              color: AppColors.primaryGreen.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.info_outline_rounded,
-                                color: AppColors.primaryGreen, size: 20),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'Complete your shop profile to start receiving customers. This step is required before accessing your dashboard.',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 12,
-                                  color: AppColors.primaryGreen,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
+                    Image.asset(
+                      'assets/images/Color Gradient T-shirts Display.png',
+                      fit: BoxFit.cover,
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            const Color(0xFF064E3B).withValues(alpha: 0.92),
+                            const Color(0xFF10B981).withValues(alpha: 0.50),
+                            const Color(0xFF064E3B).withValues(alpha: 0.96),
                           ],
+                          stops: const [0.0, 0.5, 1.0],
                         ),
                       ),
-                    ],
-                    // Section 1: Business Identity
-                    _sectionCard(
-                      title: 'Business Identity',
-                      children: [
-                        if (willAutoUpgrade) ...[
-                          _buildAutoUpgradeNotice(),
-                          const SizedBox(height: 16),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(
+                          top: topPad + kToolbarHeight + 8),
+                      child: Column(
+                        children: [
+                          Expanded(child: _buildImageSection()),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: Text(
+                              'Tap photos to update',
+                              style: GoogleFonts.outfit(
+                                  color: Colors.white54, fontSize: 12),
+                            ),
+                          ),
                         ],
-                        TextFormField(
-                          controller: _nameController,
-                          style: GoogleFonts.outfit(),
-                          decoration: _fieldDecoration(
-                            label: 'Shop Name',
-                            icon: Icons.storefront_outlined,
-                            hint: "e.g. Maria's Cakes & Bakes",
-                          ),
-                          validator: (value) => value == null || value.isEmpty
-                              ? 'Shop name is required'
-                              : null,
-                        ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<BusinessCategory>(
-                          initialValue: _selectedCategory,
-                          decoration: _fieldDecoration(
-                            label: 'Category',
-                            icon: Icons.category_outlined,
-                          ),
-                          items: BusinessCategory.values.map((category) {
-                            return DropdownMenuItem(
-                              value: category,
-                              child: Text(
-                                category.name.toUpperCase(),
-                                style: GoogleFonts.outfit(fontSize: 14),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() => _selectedCategory = value);
-                            }
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _descriptionController,
-                          style: GoogleFonts.outfit(),
-                          decoration: _fieldDecoration(
-                            label: 'Description',
-                            icon: Icons.description_outlined,
-                            alignLabelWithHint: true,
-                          ),
-                          maxLines: 4,
-                          validator: (value) => value == null || value.isEmpty
-                              ? 'Description is required'
-                              : null,
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Section 2: Location
-                    _sectionCard(
-                      title: 'Location',
-                      children: [
-                        TextFormField(
-                          controller: _addressController,
-                          style: GoogleFonts.outfit(),
-                          decoration: _fieldDecoration(
-                            label: 'Business Address',
-                            icon: Icons.location_on_outlined,
-                          ),
-                          validator: (value) => widget.business == null &&
-                                  (value == null || value.trim().length < 6)
-                              ? 'A clear business address is required'
-                              : null,
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: _isGettingLocation
-                                    ? null
-                                    : _getCurrentLocation,
-                                icon: _isGettingLocation
-                                    ? const SizedBox(
-                                        width: 14,
-                                        height: 14,
-                                        child: CircularProgressIndicator(
-                                            strokeWidth: 2))
-                                    : const Icon(Icons.my_location, size: 16),
-                                label: const Text('Use My Location'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppColors.primaryGreen,
-                                  side: const BorderSide(
-                                      color: AppColors.primaryGreen),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 12),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () async {
-                                  final LatLng? result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => LocationPickerScreen(
-                                        initialLocation:
-                                            LatLng(_latitude, _longitude),
-                                      ),
-                                    ),
-                                  );
-                                  if (result != null) {
-                                    setState(() {
-                                      _latitude = result.latitude;
-                                      _longitude = result.longitude;
-                                    });
-                                  }
-                                },
-                                icon: const Icon(Icons.map_outlined, size: 16),
-                                label: const Text('Pick on Map'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primaryGreen,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 12),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Center(
-                          child: Text(
-                            'Lat: ${_latitude.toStringAsFixed(6)}, Long: ${_longitude.toStringAsFixed(6)}',
-                            style: GoogleFonts.outfit(
-                              fontSize: 11,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Section 3: Contact & Web
-                    _sectionCard(
-                      title: 'Contact & Web',
-                      children: [
-                        TextFormField(
-                          controller: _phoneController,
-                          style: GoogleFonts.outfit(),
-                          decoration: _fieldDecoration(
-                            label: 'Business Phone',
-                            icon: Icons.phone_outlined,
-                          ),
-                          keyboardType: TextInputType.phone,
-                          validator: (value) => widget.business == null &&
-                                  (value == null || value.trim().length < 7)
-                              ? 'A reachable business phone is required'
-                              : null,
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _emailController,
-                          style: GoogleFonts.outfit(),
-                          decoration: _fieldDecoration(
-                            label: 'Business Email',
-                            icon: Icons.email_outlined,
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (widget.business == null &&
-                                (value == null || value.trim().isEmpty)) {
-                              return 'A business email is required';
-                            }
-                            if (value != null && value.isNotEmpty) {
-                              return Validators.validateEmail(value);
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _websiteController,
-                          style: GoogleFonts.outfit(),
-                          decoration: _fieldDecoration(
-                            label: 'Website (Optional)',
-                            icon: Icons.language_outlined,
-                          ),
-                          keyboardType: TextInputType.url,
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Submit button
-                    SizedBox(
-                      height: 56,
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: isLoading ? null : _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryGreen,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16)),
-                          elevation: 0,
-                        ),
-                        child: isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                    color: Colors.white, strokeWidth: 2))
-                            : Text(
-                                widget.business == null
-                                    ? 'Launch My Shop'
-                                    : 'Save Changes',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
                       ),
                     ),
-
-                    const SizedBox(height: 40),
                   ],
                 ),
               ),
+            ),
+
+            // ── White sliding form card (auth page pattern) ─────────────
+            SliverToBoxAdapter(
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(36)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 48),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Page heading
+                      Text(
+                        isEdit ? 'Edit Shop Profile' : 'Create Your Shop',
+                        style: GoogleFonts.outfit(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.deepGreen,
+                          letterSpacing: -0.4,
+                        ),
+                      ).animate().fadeIn(delay: 180.ms, duration: 500.ms),
+                      const SizedBox(height: 4),
+                      Text(
+                        isEdit
+                            ? 'Update your business info and tap Save Changes.'
+                            : 'Fill in your shop details to start receiving customers.',
+                        style: GoogleFonts.outfit(
+                            fontSize: 13, color: Colors.grey[500]),
+                      ).animate().fadeIn(delay: 230.ms, duration: 500.ms),
+                      const SizedBox(height: 28),
+
+                      // Setup mode info banner
+                      if (widget.isSetupMode) ...[
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          margin: const EdgeInsets.only(bottom: 24),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryGreen
+                                .withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                                color: AppColors.primaryGreen
+                                    .withValues(alpha: 0.25)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.info_outline_rounded,
+                                  color: AppColors.primaryGreen, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Complete your shop profile to start receiving customers.',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 12,
+                                    color: AppColors.primaryGreen,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // ── Business Identity ─────────────────────────────
+                      _formSection(
+                        title: 'Business Identity',
+                        icon: Icons.storefront_outlined,
+                        color: const Color(0xFF3B82F6),
+                        children: [
+                          if (willAutoUpgrade) ...[
+                            _buildAutoUpgradeNotice(),
+                            const SizedBox(height: 16),
+                          ],
+                          TextFormField(
+                            controller: _nameController,
+                            style: GoogleFonts.outfit(),
+                            decoration: _fieldDecoration(
+                              label: 'Shop Name',
+                              icon: Icons.storefront_outlined,
+                              hint: "e.g. Maria's Cakes & Bakes",
+                            ),
+                            textInputAction: TextInputAction.next,
+                            validator: (v) => v == null || v.isEmpty
+                                ? 'Shop name is required'
+                                : null,
+                            enabled: !isLoading,
+                          ),
+                          const SizedBox(height: 16),
+                          DropdownButtonFormField<BusinessCategory>(
+                            initialValue: _selectedCategory,
+                            decoration: _fieldDecoration(
+                              label: 'Category',
+                              icon: Icons.category_outlined,
+                            ),
+                            items: BusinessCategory.values.map((cat) {
+                              final label = cat.name[0].toUpperCase() +
+                                  cat.name.substring(1);
+                              return DropdownMenuItem(
+                                value: cat,
+                                child: Text(label,
+                                    style: GoogleFonts.outfit(fontSize: 14)),
+                              );
+                            }).toList(),
+                            onChanged: isLoading
+                                ? null
+                                : (v) {
+                                    if (v != null) {
+                                      setState(() => _selectedCategory = v);
+                                    }
+                                  },
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _descriptionController,
+                            style: GoogleFonts.outfit(),
+                            maxLines: 4,
+                            decoration: _fieldDecoration(
+                              label: 'Description',
+                              icon: Icons.description_outlined,
+                              hint: 'What do you sell or offer?',
+                              alignLabelWithHint: true,
+                            ),
+                            validator: (v) => v == null || v.isEmpty
+                                ? 'Description is required'
+                                : null,
+                            enabled: !isLoading,
+                          ),
+                        ],
+                      ),
+
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Divider(
+                            color: Color(0xFFE8F5E9), thickness: 1.5),
+                      ),
+
+                      // ── Location ──────────────────────────────────────
+                      _formSection(
+                        title: 'Location',
+                        icon: Icons.location_on_outlined,
+                        color: const Color(0xFFEC4899),
+                        children: [
+                          TextFormField(
+                            controller: _addressController,
+                            style: GoogleFonts.outfit(),
+                            decoration: _fieldDecoration(
+                              label: 'Business Address',
+                              icon: Icons.location_on_outlined,
+                              hint: 'Street, area, city',
+                            ),
+                            validator: (v) => !isEdit &&
+                                    (v == null || v.trim().length < 6)
+                                ? 'A clear business address is required'
+                                : null,
+                            enabled: !isLoading,
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _isGettingLocation || isLoading
+                                      ? null
+                                      : _getCurrentLocation,
+                                  icon: _isGettingLocation
+                                      ? const SizedBox(
+                                          width: 14,
+                                          height: 14,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2))
+                                      : const Icon(Icons.my_location,
+                                          size: 16),
+                                  label: Text('Use My Location',
+                                      style: GoogleFonts.outfit(fontSize: 13)),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.primaryGreen,
+                                    side: const BorderSide(
+                                        color: AppColors.primaryGreen),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(14)),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: isLoading
+                                      ? null
+                                      : () async {
+                                          final LatLng? result =
+                                              await Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  LocationPickerScreen(
+                                                initialLocation: LatLng(
+                                                    _latitude, _longitude),
+                                              ),
+                                            ),
+                                          );
+                                          if (result != null) {
+                                            setState(() {
+                                              _latitude = result.latitude;
+                                              _longitude = result.longitude;
+                                            });
+                                          }
+                                        },
+                                  icon: const Icon(Icons.map_outlined,
+                                      size: 16),
+                                  label: Text('Pick on Map',
+                                      style: GoogleFonts.outfit(fontSize: 13)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primaryGreen,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(14)),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF0FDF4),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: Colors.grey.shade200, width: 1),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.pin_drop_outlined,
+                                    color: AppColors.primaryGreen, size: 16),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Lat: ${_latitude.toStringAsFixed(5)},  Lng: ${_longitude.toStringAsFixed(5)}',
+                                  style: GoogleFonts.outfit(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                      fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Divider(
+                            color: Color(0xFFE8F5E9), thickness: 1.5),
+                      ),
+
+                      // ── Contact & Web ─────────────────────────────────
+                      _formSection(
+                        title: 'Contact & Web',
+                        icon: Icons.contact_phone_outlined,
+                        color: const Color(0xFF10B981),
+                        children: [
+                          TextFormField(
+                            controller: _phoneController,
+                            style: GoogleFonts.outfit(),
+                            decoration: _fieldDecoration(
+                              label: 'Business Phone',
+                              icon: Icons.phone_outlined,
+                            ),
+                            keyboardType: TextInputType.phone,
+                            textInputAction: TextInputAction.next,
+                            validator: (v) => !isEdit &&
+                                    (v == null || v.trim().length < 7)
+                                ? 'A reachable phone number is required'
+                                : null,
+                            enabled: !isLoading,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _emailController,
+                            style: GoogleFonts.outfit(),
+                            decoration: _fieldDecoration(
+                              label: 'Business Email',
+                              icon: Icons.alternate_email_rounded,
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            validator: (v) {
+                              if (!isEdit &&
+                                  (v == null || v.trim().isEmpty)) {
+                                return 'A business email is required';
+                              }
+                              if (v != null && v.isNotEmpty) {
+                                return Validators.validateEmail(v);
+                              }
+                              return null;
+                            },
+                            enabled: !isLoading,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _websiteController,
+                            style: GoogleFonts.outfit(),
+                            decoration: _fieldDecoration(
+                              label: 'Website (Optional)',
+                              icon: Icons.language_outlined,
+                              hint: 'https://yourshop.com',
+                            ),
+                            keyboardType: TextInputType.url,
+                            textInputAction: TextInputAction.done,
+                            enabled: !isLoading,
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 36),
+
+                      // ── Submit button — auth page gradient style ───────
+                      SizedBox(
+                        height: 58,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: isLoading
+                                ? null
+                                : const LinearGradient(
+                                    colors: [
+                                      AppColors.primaryGreen,
+                                      AppColors.deepGreen,
+                                    ],
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                  ),
+                            color: isLoading ? Colors.grey[300] : null,
+                            borderRadius: BorderRadius.circular(18),
+                            boxShadow: isLoading
+                                ? []
+                                : [
+                                    BoxShadow(
+                                      color: AppColors.primaryGreen
+                                          .withValues(alpha: 0.35),
+                                      blurRadius: 20,
+                                      offset: const Offset(0, 8),
+                                    ),
+                                  ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: isLoading ? null : _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18)),
+                            ),
+                            child: isLoading
+                                ? const SizedBox(
+                                    height: 22,
+                                    width: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      valueColor: AlwaysStoppedAnimation<
+                                          Color>(Colors.white),
+                                    ),
+                                  )
+                                : Text(
+                                    isEdit
+                                        ? 'Save Changes'
+                                        : 'Launch My Shop',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      )
+                          .animate()
+                          .fadeIn(delay: 400.ms, duration: 500.ms)
+                          .slideY(begin: 0.1),
+
+                      const SizedBox(height: 40),
+                    ],
+                  ),
+                ),
+              )
+                  .animate()
+                  .slideY(
+                      begin: 0.1,
+                      delay: 200.ms,
+                      duration: 600.ms,
+                      curve: Curves.easeOutCubic)
+                  .fadeIn(delay: 200.ms, duration: 500.ms),
             ),
           ],
         ),

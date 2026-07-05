@@ -47,7 +47,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final bytes = await picked.readAsBytes();
     setState(() {
       _imageBytes = bytes;
-      _imageExt = picked.mimeType?.split('/').last?.toLowerCase()
+      _imageExt = picked.mimeType?.split('/').last.toLowerCase()
           ?? (picked.name.contains('.')
               ? picked.name.split('.').last.toLowerCase()
               : 'jpg');
