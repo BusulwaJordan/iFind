@@ -22,7 +22,6 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:ifind/features/reviews/presentation/providers/review_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ifind/core/widgets/app_drawer.dart';
-import 'package:ifind/core/utils/share_utils.dart';
 import 'package:ifind/features/products/presentation/screens/add_product_screen.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
 import 'package:ifind/features/chat/presentation/screens/chat_room_screen.dart';
@@ -122,19 +121,31 @@ Future<BusinessAnalytics> _loadBusinessAnalytics(
     final since =
         DateTime.now().subtract(const Duration(days: 30)).toIso8601String();
 
+    // products.business_id and portfolio_items.business_id are the UUID
+    // primary key on businesses, not the custom text id (e.g. "BIZ0122")
+    // used everywhere else — resolve it before querying those two tables,
+    // matching the pattern already used in ProductRemoteDataSource and
+    // PortfolioRepository.
+    final businessRow = await client
+        .from('businesses')
+        .select('id')
+        .eq('business_id', business.id)
+        .maybeSingle();
+    final businessUuid = businessRow?['id'] as String? ?? business.id;
+
     final interactions = await _safeList(() => client
         .from('interactions')
         .select('interaction_type')
         .eq('business_id', business.id)
-        .gte('created_at', since));
+        .gte('timestamp', since));
     final products = await _safeList(() => client
         .from('products')
         .select('is_available, stock_quantity')
-        .eq('business_id', business.id));
+        .eq('business_id', businessUuid));
     final portfolio = await _safeList(() => client
         .from('portfolio_items')
         .select('id')
-        .eq('business_id', business.id));
+        .eq('business_id', businessUuid));
     final chats = await _safeList(
         () => client.from('chats').select('id').eq('business_id', business.id));
     final needs = await _safeList(
@@ -415,12 +426,6 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
             style: GoogleFonts.outfit(
                 color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600),
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.more_vert, color: Colors.white),
-              onPressed: () {},
-            ),
-          ],
           flexibleSpace: FlexibleSpaceBar(
             collapseMode: CollapseMode.pin,
             background: _buildPageHeader(context, business),
@@ -657,11 +662,6 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                               style: GoogleFonts.outfit(
                                   color: Colors.white70, fontSize: 11),
                             ),
-                            const Text('  ·  ',
-                                style: TextStyle(color: Colors.white54)),
-                            Text('0 Followers',
-                                style: GoogleFonts.outfit(
-                                    color: Colors.white70, fontSize: 11)),
                           ],
                         ),
                       ],
@@ -670,52 +670,28 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                 ],
               ),
               const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  CreateBusinessScreen(business: business))),
-                      icon: const Icon(Icons.edit_outlined,
-                          size: 15, color: AppColors.primaryGreen),
-                      label: Text('Edit Profile',
-                          style: GoogleFonts.outfit(
-                              color: AppColors.primaryGreen, fontSize: 13)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppColors.primaryGreen,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                    ),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              CreateBusinessScreen(business: business))),
+                  icon: const Icon(Icons.edit_outlined,
+                      size: 15, color: AppColors.primaryGreen),
+                  label: Text('Edit Profile',
+                      style: GoogleFonts.outfit(
+                          color: AppColors.primaryGreen, fontSize: 13)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppColors.primaryGreen,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => shareText(
-                          context, 'Check out ${business.name} on iFind!'),
-                      icon: const Icon(Icons.ios_share_rounded,
-                          size: 15, color: Colors.white),
-                      label: Text('Share Shop',
-                          style: GoogleFonts.outfit(
-                              color: Colors.white, fontSize: 13)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        side: const BorderSide(color: Colors.white54),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
@@ -729,6 +705,10 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
   Widget _buildStatsBar(BuildContext context, Business business) {
     final analyticsAsync = ref.watch(businessAnalyticsProvider(business));
     final a = analyticsAsync.valueOrNull ?? BusinessAnalytics.empty(business);
+    // Same count shown on the Inquiries tab below (businessLeadsProvider),
+    // not the 30-day interaction log — that's a different, less useful number.
+    final inquiriesCount =
+        ref.watch(businessLeadsProvider(business)).valueOrNull?.length ?? 0;
 
     final stats = [
       (
@@ -739,21 +719,15 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
       ),
       (
         icon: Icons.chat_bubble_outline_rounded,
-        value: a.inquiries.toString(),
+        value: inquiriesCount.toString(),
         label: 'Inquiries',
         color: const Color(0xFFF59E0B),
       ),
       (
         icon: Icons.shopping_bag_outlined,
         value: a.products.toString(),
-        label: 'Products',
+        label: 'Listings',
         color: const Color(0xFF8B5CF6),
-      ),
-      (
-        icon: Icons.people_outline_rounded,
-        value: '0',
-        label: 'Followers',
-        color: const Color(0xFFEC4899),
       ),
     ];
 
@@ -835,6 +809,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
               accentColor: const Color(0xFFF59E0B)),
           right: _buildAboutCard(context, business,
               accentColor: const Color(0xFF8B5CF6)),
+          matchHeight: false,
         ),
         const SizedBox(height: 12),
         _buildQuickActionsWidget(context, business),
@@ -846,19 +821,23 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
     );
   }
 
-  Widget _twoColumn({required Widget left, required Widget right}) {
+  // matchHeight uses IntrinsicHeight to make both cards the same height —
+  // skip it for pairs where one side can grow to an unbounded height (e.g.
+  // an expanded "Read More" description), since IntrinsicHeight can't
+  // reconcile that with the final layout pass and overflows.
+  Widget _twoColumn(
+      {required Widget left, required Widget right, bool matchHeight = true}) {
     return LayoutBuilder(builder: (ctx, constraints) {
       if (constraints.maxWidth > 680) {
-        return IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(flex: 5, child: left),
-              const SizedBox(width: 12),
-              Expanded(flex: 5, child: right),
-            ],
-          ),
+        final row = Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: 5, child: left),
+            const SizedBox(width: 12),
+            Expanded(flex: 5, child: right),
+          ],
         );
+        return matchHeight ? IntrinsicHeight(child: row) : row;
       }
       return Column(children: [left, const SizedBox(height: 12), right]);
     });
@@ -871,12 +850,13 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
     String? action,
     VoidCallback? onAction,
     Color accentColor = AppColors.primaryGreen,
+    Color? backgroundColor,
   }) {
     return Container(
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: backgroundColor ?? Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: accentColor.withValues(alpha: 0.15)),
         boxShadow: [
@@ -1263,7 +1243,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
       (
         icon: Icons.chat_bubble_outline_rounded,
         label: 'View Inquiries',
-        badge: 3,
+        badge: null as int?,
         onTap: () => setState(() {
               _selectedTab = 3;
               _tabController.animateTo(3);
@@ -1305,9 +1285,9 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          childAspectRatio: 0.95,
+          mainAxisSpacing: 6,
+          crossAxisSpacing: 6,
+          childAspectRatio: 1.8,
         ),
         itemCount: actions.length,
         itemBuilder: (ctx, i) {
@@ -1328,18 +1308,18 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
                             color: color.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(a.icon, color: color, size: 20),
+                          child: Icon(a.icon, color: color, size: 13),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 3),
                         Text(a.label,
                             textAlign: TextAlign.center,
                             style: GoogleFonts.outfit(
-                                fontSize: 10.5,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.darkText)),
                       ],
@@ -1864,52 +1844,26 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                 ],
               ),
               const SizedBox(height: 12),
-              // Edit Profile + Share Shop buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) =>
-                                  CreateBusinessScreen(business: business))),
-                      icon: const Icon(Icons.edit_outlined,
-                          color: Colors.white, size: 16),
-                      label: Text('Edit Profile',
-                          style: GoogleFonts.outfit(color: Colors.white)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Colors.white54),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                      ),
-                    ),
+              // Edit Profile button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              CreateBusinessScreen(business: business))),
+                  icon: const Icon(Icons.edit_outlined,
+                      color: Colors.white, size: 16),
+                  label: Text('Edit Profile',
+                      style: GoogleFonts.outfit(color: Colors.white)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.white54),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => shareText(context,
-                          'Check out ${business.name} on iFind! Find great local businesses near you.'),
-                      icon: const Icon(Icons.share_rounded,
-                          color: AppColors.darkText, size: 16),
-                      label: Text(
-                        'Share Shop',
-                        style: GoogleFonts.outfit(
-                            color: AppColors.darkText,
-                            fontWeight: FontWeight.bold),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppColors.darkText,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        elevation: 0,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
