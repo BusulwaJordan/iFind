@@ -554,13 +554,6 @@ class _ContentArea extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Getting Started
-          _buildGettingStarted(context)
-              .animate()
-              .fadeIn(delay: 480.ms, duration: 500.ms)
-              .slideY(begin: 0.12),
-          const SizedBox(height: 32),
-
           // Popular Categories
           _buildCategoriesSection(context)
               .animate()
