@@ -12,41 +12,43 @@ import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/core/providers/theme_provider.dart';
 import 'package:ifind/core/router/app_router.dart'; // Import the router
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env", isOptional: true);
-
-  final prefs = await SharedPreferences.getInstance();
-
-  await Supabase.initialize(
-    url: ApiConstants.supabaseUrl,
-    anonKey: ApiConstants.supabaseAnonKey,
-    authOptions: const FlutterAuthClientOptions(
-      authFlowType: AuthFlowType.pkce,
-    ),
-  );
-
-  await DeepLinkService().initialize();
-
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-    if (kReleaseMode) debugPrint('[FlutterError] ${details.exception}');
-  };
-
-  PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint('[PlatformError] $error\n$stack');
-    return true;
-  };
-
+void main() {
   runZonedGuarded(
-    () => runApp(
-      ProviderScope(
-        overrides: [
-          sharedPreferencesProvider.overrideWithValue(prefs),
-        ],
-        child: const MyApp(),
-      ),
-    ),
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
+      await dotenv.load(fileName: ".env", isOptional: true);
+
+      final prefs = await SharedPreferences.getInstance();
+
+      await Supabase.initialize(
+        url: ApiConstants.supabaseUrl,
+        anonKey: ApiConstants.supabaseAnonKey,
+        authOptions: const FlutterAuthClientOptions(
+          authFlowType: AuthFlowType.pkce,
+        ),
+      );
+
+      await DeepLinkService().initialize();
+
+      FlutterError.onError = (FlutterErrorDetails details) {
+        FlutterError.presentError(details);
+        if (kReleaseMode) debugPrint('[FlutterError] ${details.exception}');
+      };
+
+      PlatformDispatcher.instance.onError = (error, stack) {
+        debugPrint('[PlatformError] $error\n$stack');
+        return true;
+      };
+
+      runApp(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+          ],
+          child: const MyApp(),
+        ),
+      );
+    },
     (error, stack) => debugPrint('[ZoneError] $error\n$stack'),
   );
 }

@@ -64,6 +64,29 @@ class ProductManagementScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.darkText),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: TextButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => AddProductScreen(businessId: businessId)),
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+                backgroundColor: Colors.white.withValues(alpha: 0.18),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              ),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: Text('Add',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
       ),
       body: productsAsync.when(
         data: (products) => Column(
@@ -71,10 +94,39 @@ class ProductManagementScreen extends ConsumerWidget {
             _buildSearchAndFilter(),
             Expanded(
               child: products.isEmpty
-                  ? const EmptyStateWidget(
-                      title: 'No products listed',
-                      message: 'Add products to your shop to help customers find what you offer.',
-                      icon: Icons.inventory_2_outlined,
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const EmptyStateWidget(
+                          title: 'No products listed',
+                          message: 'Add products to your shop to help customers find what you offer.',
+                          icon: Icons.inventory_2_outlined,
+                        ),
+                        const SizedBox(height: 20),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 80),
+                          child: ElevatedButton.icon(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      AddProductScreen(businessId: businessId)),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryGreen,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 28, vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14)),
+                            ),
+                            icon: const Icon(Icons.add_rounded),
+                            label: Text('Add Your First Product',
+                                style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.bold, fontSize: 15)),
+                          ),
+                        ),
+                      ],
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.all(20),
