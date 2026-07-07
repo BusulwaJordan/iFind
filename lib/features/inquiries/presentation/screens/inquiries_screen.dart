@@ -12,6 +12,7 @@ import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:ifind/features/chat/domain/entities/chat.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
+import 'package:ifind/features/notifications/utils/notification_preview_formatter.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class InquiriesScreen extends ConsumerWidget {
@@ -229,10 +230,14 @@ class _InquiryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // For business owners, Chat.businessName resolves to the customer's name
-    // (ChatModel.fromSupabase uses identity resolution based on ownerId)
-    final displayName = chat.businessName ?? 'Customer';
-    final lastMessage = chat.lastMessage ?? 'No messages yet';
+    // This screen is the business-owner's inquiry list — getChatsForBusiness
+    // only ever populates customerName/customerAvatarUrl (never
+    // businessName/businessLogoUrl, which are only set for the customer's
+    // own view of a chat), so the other party here is always the customer.
+    final displayName = chat.customerName ?? 'Customer';
+    final lastMessage = chat.lastMessage?.isNotEmpty == true
+        ? NotificationPreviewFormatter.cleanBody(chat.lastMessage!)
+        : 'No messages yet';
     final timestamp = chat.lastMessageAt ?? chat.createdAt;
 
     return Container(
@@ -258,10 +263,10 @@ class _InquiryTile extends StatelessWidget {
         leading: CircleAvatar(
           radius: 26,
           backgroundColor: AppColors.primaryGreen.withValues(alpha: 0.15),
-          backgroundImage: chat.businessLogoUrl != null
-              ? NetworkImage(chat.businessLogoUrl!)
+          backgroundImage: chat.customerAvatarUrl != null
+              ? NetworkImage(chat.customerAvatarUrl!)
               : null,
-          child: chat.businessLogoUrl == null
+          child: chat.customerAvatarUrl == null
               ? Text(
                   displayName.isNotEmpty
                       ? displayName[0].toUpperCase()

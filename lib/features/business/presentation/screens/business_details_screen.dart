@@ -165,8 +165,15 @@ class BusinessDetailScreen extends ConsumerWidget {
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
-              onTap: () {
-                r.read(favouritesProvider.notifier).toggle(b.id);
+              onTap: () async {
+                final ok =
+                    await r.read(favouritesProvider.notifier).toggle(b.id);
+                if (!ctx.mounted) return;
+                if (!ok) {
+                  AppToast.show(ctx, 'Could not update favourites — try again',
+                      type: ToastType.error);
+                  return;
+                }
                 final u = r.read(currentUserProvider);
                 if (u != null && !saved) {
                   r.read(interactionServiceProvider).logInteraction(
@@ -1447,7 +1454,8 @@ class _BottomBar extends ConsumerWidget {
                   child: SizedBox(
                     height: 52,
                     child: OutlinedButton.icon(
-                      onPressed: () => context.push('/post-need'),
+                      onPressed: () =>
+                          context.push('/post-need', extra: business),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primaryGreen,
                         side: const BorderSide(
@@ -1457,7 +1465,7 @@ class _BottomBar extends ConsumerWidget {
                       ),
                       icon: const Icon(Icons.campaign_rounded, size: 18),
                       label: Text(
-                        'Post a Need',
+                        'Send a Need',
                         style: GoogleFonts.outfit(
                             fontWeight: FontWeight.bold, fontSize: 13),
                       ),

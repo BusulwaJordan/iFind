@@ -177,6 +177,7 @@ class _HeroSection extends ConsumerWidget {
                   _TopNav(
                     firstName: firstName,
                     role: role,
+                    avatarUrl: user.avatarUrl,
                   ).animate().fadeIn(duration: 500.ms),
 
                   const SizedBox(height: 28),
@@ -239,7 +240,12 @@ class _HeroSection extends ConsumerWidget {
 class _TopNav extends ConsumerWidget {
   final String firstName;
   final String role;
-  const _TopNav({required this.firstName, required this.role});
+  final String? avatarUrl;
+  const _TopNav({
+    required this.firstName,
+    required this.role,
+    this.avatarUrl,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -324,8 +330,13 @@ class _TopNav extends ConsumerWidget {
                   CircleAvatar(
                     radius: 13,
                     backgroundColor: Colors.white.withValues(alpha: 0.2),
-                    child: const Icon(Icons.person_rounded,
-                        color: Colors.white, size: 14),
+                    backgroundImage: avatarUrl != null && avatarUrl!.isNotEmpty
+                        ? NetworkImage(avatarUrl!)
+                        : null,
+                    child: avatarUrl != null && avatarUrl!.isNotEmpty
+                        ? null
+                        : const Icon(Icons.person_rounded,
+                            color: Colors.white, size: 14),
                   ),
                   const SizedBox(width: 7),
                   Column(

@@ -31,6 +31,7 @@ class BusinessDiscoveryScreen extends ConsumerStatefulWidget {
 class _BusinessDiscoveryScreenState
     extends ConsumerState<BusinessDiscoveryScreen> {
   String _locationLabel = 'Locating...';
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -41,6 +42,12 @@ class _BusinessDiscoveryScreenState
       ref.read(searchQueryProvider.notifier).state = '';
       _fetchLocationLabel();
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchLocationLabel() async {
@@ -173,7 +180,7 @@ class _BusinessDiscoveryScreenState
 
   @override
   Widget build(BuildContext context) {
-    final businessesState = ref.watch(nearbyBusinessesProvider);
+    final businessesState = ref.watch(filteredBusinessesProvider);
     final selectedCategory = ref.watch(selectedCategoryProvider);
     final radius = ref.watch(searchRadiusProvider);
 
@@ -251,40 +258,57 @@ class _BusinessDiscoveryScreenState
                       ),
                     ),
                     const SizedBox(height: 16),
-                    GestureDetector(
-                      onTap: () => showSearch(
-                        context: context,
-                        delegate: BusinessSearchDelegate(ref),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 14),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.3),
-                                width: 1.5,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (value) => ref
+                                .read(searchQueryProvider.notifier)
+                                .state = value,
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 16,
+                            ),
+                            cursorColor: Colors.white,
+                            decoration: InputDecoration(
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 14),
+                              hintText: 'Search shops or products...',
+                              hintStyle: GoogleFonts.outfit(
+                                color: Colors.white.withValues(alpha: 0.8),
+                                fontSize: 16,
                               ),
+                              prefixIcon: const Icon(Icons.search_rounded,
+                                  color: Colors.white),
+                              suffixIcon: _searchController.text.isEmpty
+                                  ? null
+                                  : IconButton(
+                                      icon: const Icon(Icons.close_rounded,
+                                          color: Colors.white),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        ref
+                                            .read(
+                                                searchQueryProvider.notifier)
+                                            .state = '';
+                                        setState(() {});
+                                      },
+                                    ),
                             ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.search_rounded,
-                                    color: Colors.white),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'Search shops or products...',
-                                  style: GoogleFonts.outfit(
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ],
-                            ),
+                            onTapOutside: (_) =>
+                                FocusScope.of(context).unfocus(),
                           ),
                         ),
                       ),
@@ -702,51 +726,6 @@ class _BusinessGridTile extends ConsumerWidget {
       ),
     );
   }
-}
-
-class BusinessSearchDelegate extends SearchDelegate {
-  final WidgetRef ref;
-  BusinessSearchDelegate(this.ref);
-
-  @override
-  ThemeData appBarTheme(BuildContext context) {
-    return Theme.of(context).copyWith(
-      appBarTheme: AppBarTheme(
-          backgroundColor: Theme.of(context).colorScheme.surface, elevation: 0),
-      inputDecorationTheme:
-          const InputDecorationTheme(border: InputBorder.none),
-    );
-  }
-
-  @override
-  List<Widget>? buildActions(BuildContext context) => [
-        IconButton(
-            icon: const Icon(Icons.close_rounded), onPressed: () => query = ''),
-      ];
-
-  @override
-  Widget? buildLeading(BuildContext context) => IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new_rounded),
-        onPressed: () => close(context, null),
-      );
-
-  @override
-  Widget buildResults(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(searchQueryProvider.notifier).state = query;
-      close(context, null);
-    });
-    return const SizedBox();
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) => Container(
-        color: Theme.of(context).colorScheme.surface,
-        child: Center(
-          child: Text('Search businesses or items...',
-              style: GoogleFonts.outfit(color: Colors.grey)),
-        ),
-      );
 }
 
 IconData _getCategoryIcon(String label) {

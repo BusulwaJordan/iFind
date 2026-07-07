@@ -42,6 +42,7 @@ abstract class BusinessRepository {
     required String businessId,
     String? name,
     String? description,
+    BusinessCategory? category,
     String? phone,
     String? address,
     XFile? logoFile,

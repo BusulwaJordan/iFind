@@ -108,19 +108,10 @@ class BusinessListNotifier extends StateNotifier<AsyncValue<List<Business>>> {
           filtered =
               businesses.where((b) => b.ownerId != currentUser.id).toList();
         }
-
-        // Local filtering for search (if backend search not implemented)
-        final query = ref.read(searchQueryProvider).toLowerCase();
-        if (query.isEmpty) {
-          state = AsyncValue.data(filtered);
-        } else {
-          final searchFiltered = filtered
-              .where((b) =>
-                  b.name.toLowerCase().contains(query) ||
-                  b.description.toLowerCase().contains(query))
-              .toList();
-          state = AsyncValue.data(searchFiltered);
-        }
+        // Search-query filtering happens in filteredBusinessesProvider below,
+        // purely in-memory over this fetched list — not here, so typing a
+        // search query never re-triggers a location/network fetch.
+        state = AsyncValue.data(filtered);
       },
     );
   }
@@ -131,7 +122,6 @@ final nearbyBusinessesProvider = StateNotifierProvider.autoDispose<
     BusinessListNotifier, AsyncValue<List<Business>>>((ref) {
   final category = ref.watch(selectedCategoryProvider);
   final radius = ref.watch(searchRadiusProvider);
-  ref.watch(searchQueryProvider); // Trigger rebuild on search change
 
   return BusinessListNotifier(
     getNearbyBusinesses: ref.watch(getNearbyBusinessesProvider),
@@ -139,6 +129,22 @@ final nearbyBusinessesProvider = StateNotifierProvider.autoDispose<
     category: category,
     ref: ref,
   );
+});
+
+/// nearbyBusinessesProvider's list, filtered in-memory by searchQueryProvider
+/// as the user types — no network refetch per keystroke, since the search
+/// query never changes location/radius/category.
+final filteredBusinessesProvider =
+    Provider.autoDispose<AsyncValue<List<Business>>>((ref) {
+  final businessesAsync = ref.watch(nearbyBusinessesProvider);
+  final query = ref.watch(searchQueryProvider).trim().toLowerCase();
+  if (query.isEmpty) return businessesAsync;
+
+  return businessesAsync.whenData((businesses) => businesses
+      .where((b) =>
+          b.name.toLowerCase().contains(query) ||
+          b.description.toLowerCase().contains(query))
+      .toList());
 });
 
 final featuredBusinessesProvider = FutureProvider<List<Business>>((ref) async {

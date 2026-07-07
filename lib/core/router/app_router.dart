@@ -198,7 +198,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/post-need',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const PostNeedScreen(),
+        builder: (context, state) =>
+            PostNeedScreen(targetBusiness: state.extra as Business?),
       ),
       GoRoute(
         path: '/leads-dashboard',

@@ -19,13 +19,41 @@ class ChatRemoteDataSource {
     required String customerId,
     required String businessId,
   }) async {
+    // Enriches with the same customer display data (name/avatar, and the
+    // business_id "View Shop" should open if the customer owns one) that
+    // getMyChats/getChatsForBusiness apply — otherwise a chat opened
+    // straight from creation (e.g. "Message Customer") would look
+    // different from the same chat reopened later via the chat list.
+    Future<Chat> enrich(Chat chat) async {
+      final customerData =
+          (await _resolveCustomerDisplayData([customerId]))[customerId];
+      return chat.copyWith(
+        customerName: customerData?['full_name'] as String?,
+        customerAvatarUrl: customerData?['avatar_url'] as String?,
+        otherPartyBusinessId: customerData?['business_id'] as String?,
+      );
+    }
+
     try {
       final ownedBusinesses = await _getBusinessesOwnedBy(customerId);
-      final ownsThisBusiness = ownedBusinesses.any(
-        (b) => (b['business_id'] ?? b['id'])?.toString() == businessId,
-      );
-      if (ownsThisBusiness) {
+      final ownedBizIds = ownedBusinesses
+          .map((b) => (b['business_id'] ?? b['id'])?.toString())
+          .whereType<String>()
+          .toList();
+
+      if (ownedBizIds.contains(businessId)) {
         throw Exception('You cannot message your own business');
+      }
+
+      // If the customer's own business already has a B2B conversation with
+      // this business, reuse it instead of starting a second, redundant
+      // B2C thread between the same two businesses.
+      for (final myBizId in ownedBizIds) {
+        final existingB2B = await _findExistingB2BChat(
+          businessId: myBizId,
+          partnerBusinessId: businessId,
+        );
+        if (existingB2B != null) return existingB2B;
       }
 
       // Try to fetch existing. Use limit(1) instead of maybeSingle() —
@@ -42,7 +70,7 @@ class ChatRemoteDataSource {
           .limit(1);
 
       if (existingChats.isNotEmpty) {
-        return ChatModel.fromJson(existingChats.first).toEntity();
+        return await enrich(ChatModel.fromJson(existingChats.first).toEntity());
       }
 
       // Create new
@@ -57,7 +85,7 @@ class ChatRemoteDataSource {
             .select()
             .single();
 
-        return ChatModel.fromJson(response).toEntity();
+        return await enrich(ChatModel.fromJson(response).toEntity());
       } on PostgrestException catch (e) {
         // Unique-violation (23505) means a concurrent call (e.g. a fast
         // double-tap on "Message") already inserted this exact
@@ -72,13 +100,14 @@ class ChatRemoteDataSource {
               .order('created_at', ascending: true)
               .limit(1);
           if (retry.isNotEmpty) {
-            return ChatModel.fromJson(retry.first).toEntity();
+            return await enrich(ChatModel.fromJson(retry.first).toEntity());
           }
         }
         rethrow;
       }
     } catch (e) {
-      debugPrint('getOrCreateChat error: customerId=$customerId businessId=$businessId error=$e');
+      debugPrint(
+          'getOrCreateChat error: customerId=$customerId businessId=$businessId error=$e');
       throw Exception('Failed to get/create chat: $e');
     }
   }
@@ -94,7 +123,8 @@ class ChatRemoteDataSource {
       throw Exception('A business cannot start a B2B chat with itself');
     }
 
-    debugPrint('getOrCreateB2BChat: businessId=$businessId partnerBusinessId=$partnerBusinessId');
+    debugPrint(
+        'getOrCreateB2BChat: businessId=$businessId partnerBusinessId=$partnerBusinessId');
 
     // 1. Check if a chat already exists (either direction)
     final existing = await _findExistingB2BChat(
@@ -104,6 +134,26 @@ class ChatRemoteDataSource {
     if (existing != null) {
       debugPrint('getOrCreateB2BChat: reusing existing chat id=${existing.id}');
       return existing;
+    }
+
+    // 1.5 Upgrade an existing B2C chat between these two businesses' owners
+    // (if any) instead of creating a second, redundant conversation for the
+    // same two businesses.
+    final upgradedId =
+        await supabaseClient.rpc('upgrade_b2c_chat_to_b2b', params: {
+      'p_business_a_id': businessId,
+      'p_business_b_id': partnerBusinessId,
+    }) as String?;
+    if (upgradedId != null) {
+      debugPrint('getOrCreateB2BChat: upgraded B2C chat id=$upgradedId to B2B');
+      final row = await supabaseClient
+          .from('chats')
+          .select()
+          .eq('id', upgradedId)
+          .single();
+      return ChatModel.fromJson(row)
+          .toEntity()
+          .copyWith(otherPartyBusinessId: partnerBusinessId);
     }
 
     // 2. Create a new B2B chat
@@ -120,16 +170,16 @@ class ChatRemoteDataSource {
       'last_message_at': now,
     };
 
-    debugPrint('getOrCreateB2BChat: no existing chat found, creating new chat id=$chatId');
+    debugPrint(
+        'getOrCreateB2BChat: no existing chat found, creating new chat id=$chatId');
 
     try {
-      final response = await supabaseClient
-          .from('chats')
-          .insert(data)
-          .select()
-          .single();
+      final response =
+          await supabaseClient.from('chats').insert(data).select().single();
 
-      return ChatModel.fromJson(response).toEntity();
+      return ChatModel.fromJson(response)
+          .toEntity()
+          .copyWith(otherPartyBusinessId: partnerBusinessId);
     } on PostgrestException catch (e) {
       // Unique-violation (23505) means a concurrent call already inserted
       // this business pair between our existence check and this insert —
@@ -157,8 +207,13 @@ class ChatRemoteDataSource {
         .eq('business_a_id', businessId)
         .eq('business_b_id', partnerBusinessId)
         .maybeSingle();
-    debugPrint('_findExistingB2BChat A->B: business_a_id=$businessId business_b_id=$partnerBusinessId -> ${r1?['id']}');
-    if (r1 != null) return ChatModel.fromJson(r1).toEntity();
+    debugPrint(
+        '_findExistingB2BChat A->B: business_a_id=$businessId business_b_id=$partnerBusinessId -> ${r1?['id']}');
+    if (r1 != null) {
+      return ChatModel.fromJson(r1)
+          .toEntity()
+          .copyWith(otherPartyBusinessId: partnerBusinessId);
+    }
 
     // Check direction B → A
     final r2 = await supabaseClient
@@ -167,8 +222,13 @@ class ChatRemoteDataSource {
         .eq('business_a_id', partnerBusinessId)
         .eq('business_b_id', businessId)
         .maybeSingle();
-    debugPrint('_findExistingB2BChat B->A: business_a_id=$partnerBusinessId business_b_id=$businessId -> ${r2?['id']}');
-    if (r2 != null) return ChatModel.fromJson(r2).toEntity();
+    debugPrint(
+        '_findExistingB2BChat B->A: business_a_id=$partnerBusinessId business_b_id=$businessId -> ${r2?['id']}');
+    if (r2 != null) {
+      return ChatModel.fromJson(r2)
+          .toEntity()
+          .copyWith(otherPartyBusinessId: partnerBusinessId);
+    }
 
     return null;
   }
@@ -188,7 +248,8 @@ class ChatRemoteDataSource {
         'content': content,
       });
     } catch (e) {
-      debugPrint('sendMessage INSERT error (code=${_pgCode(e)}): chatId=$chatId senderId=$senderId error=$e');
+      debugPrint(
+          'sendMessage INSERT error (code=${_pgCode(e)}): chatId=$chatId senderId=$senderId error=$e');
       throw Exception('Failed to send message: $e');
     }
     try {
@@ -259,6 +320,52 @@ class ChatRemoteDataSource {
     }
   }
 
+  /// Resolves display name/avatar for each of [userIds] — preferring a
+  /// business they own (name + logo) over their personal profile, so a
+  /// customer who's also a business owner is shown consistently as their
+  /// business everywhere a chat with them appears (chat list, contacts,
+  /// inquiries, chat header) instead of their personal name in some places
+  /// and their business name in others.
+  Future<Map<String, Map<String, dynamic>>> _resolveCustomerDisplayData(
+    Iterable<String> userIds,
+  ) async {
+    final ids = userIds.toSet().toList();
+    if (ids.isEmpty) return {};
+
+    final usersResp = await supabaseClient
+        .from('users')
+        .select('id, full_name, avatar_url')
+        .inFilter('id', ids);
+    final result = <String, Map<String, dynamic>>{};
+    for (final u in (usersResp as List)) {
+      result[u['id'] as String] = {
+        'full_name': u['full_name'],
+        'avatar_url': u['avatar_url'],
+      };
+    }
+
+    final businessesResp = await supabaseClient
+        .from('businesses')
+        .select('owner_id, business_id, name, logo_url')
+        .inFilter('owner_id', ids)
+        .order('created_at');
+    final businessAssigned = <String>{};
+    for (final b in (businessesResp as List)) {
+      final ownerId = b['owner_id'] as String?;
+      // A user could own more than one business — the oldest wins, and a
+      // business always takes priority over the personal profile.
+      if (ownerId == null || businessAssigned.contains(ownerId)) continue;
+      businessAssigned.add(ownerId);
+      result[ownerId] = {
+        'full_name': b['name'],
+        'avatar_url': b['logo_url'],
+        'business_id': b['business_id'],
+      };
+    }
+
+    return result;
+  }
+
   /// Fetch user-specific chats (B2C + B2B)
   Future<List<Chat>> getMyChats(String userId) async {
     try {
@@ -274,7 +381,7 @@ class ChatRemoteDataSource {
       // Build OR filter — no embedded joins to avoid FK dependency issues
       final filters = <String>['customer_id.eq.$userId'];
       for (final customId in businessCustomIds) {
-        filters.add('business_id.eq.$customId');   // TEXT column (B2C)
+        filters.add('business_id.eq.$customId'); // TEXT column (B2C)
         filters.add('business_a_id.eq.$customId'); // TEXT column (B2B)
         filters.add('business_b_id.eq.$customId');
       }
@@ -290,8 +397,9 @@ class ChatRemoteDataSource {
       // blocked) where this user is both the customer and the business owner.
       final chatEntities = (response as List)
           .map((json) => ChatModel.fromJson(json).toEntity())
-          .where((c) =>
-              !(!c.isB2B && c.customerId == userId && myBizIds.contains(c.businessId)))
+          .where((c) => !(!c.isB2B &&
+              c.customerId == userId &&
+              myBizIds.contains(c.businessId)))
           .toList();
 
       // All business ID columns in chats are TEXT — collect custom IDs for lookup
@@ -326,18 +434,9 @@ class ChatRemoteDataSource {
         }
       }
 
-      // Fetch customer names for business-owner view
-      final customerMap = <String, Map<String, dynamic>>{};
-      if (customerIdsToFetch.isNotEmpty) {
-        final r = await supabaseClient
-            .from('users')
-            .select('id, full_name, avatar_url')
-            .inFilter('id', customerIdsToFetch.toList());
-        for (final u in (r as List)) {
-          customerMap[u['id'] as String] =
-              Map<String, dynamic>.from(u as Map);
-        }
-      }
+      // Fetch customer display data for business-owner view — prefers a
+      // business the customer owns over their personal profile.
+      final customerMap = await _resolveCustomerDisplayData(customerIdsToFetch);
 
       // Enrich each chat with resolved names/logos
       return chatEntities.map((chat) {
@@ -349,6 +448,7 @@ class ChatRemoteDataSource {
           return chat.copyWith(
             partnerBusinessName: data?['name'] as String?,
             partnerBusinessLogo: data?['logo_url'] as String?,
+            otherPartyBusinessId: partnerBizId,
           );
         } else {
           final isOwner = myBizIds.contains(chat.businessId);
@@ -359,6 +459,9 @@ class ChatRemoteDataSource {
             return chat.copyWith(
               customerName: customerData?['full_name'] as String?,
               customerAvatarUrl: customerData?['avatar_url'] as String?,
+              // Only set if the customer also owns a business — a plain
+              // customer has no shop for "View Shop" to open.
+              otherPartyBusinessId: customerData?['business_id'] as String?,
             );
           } else {
             // Viewer is the customer — other party is the business
@@ -367,6 +470,7 @@ class ChatRemoteDataSource {
             return chat.copyWith(
               businessName: bizData?['name'] as String?,
               businessLogoUrl: bizData?['logo_url'] as String?,
+              otherPartyBusinessId: chat.businessId,
             );
           }
         }
@@ -397,23 +501,13 @@ class ChatRemoteDataSource {
           .where((c) => c.customerId != ownerId)
           .toList();
 
-      // Fetch customer names separately
+      // Fetch customer display data — prefers a business the customer owns
+      // over their personal profile.
       final customerIds = chats
           .where((c) => c.customerId != null)
           .map((c) => c.customerId!)
-          .toSet()
-          .toList();
-      final customerMap = <String, Map<String, dynamic>>{};
-      if (customerIds.isNotEmpty) {
-        final r = await supabaseClient
-            .from('users')
-            .select('id, full_name, avatar_url')
-            .inFilter('id', customerIds);
-        for (final u in (r as List)) {
-          customerMap[u['id'] as String] =
-              Map<String, dynamic>.from(u as Map);
-        }
-      }
+          .toSet();
+      final customerMap = await _resolveCustomerDisplayData(customerIds);
 
       return chats.map((chat) {
         final customerData =
@@ -421,6 +515,9 @@ class ChatRemoteDataSource {
         return chat.copyWith(
           customerName: customerData?['full_name'] as String?,
           customerAvatarUrl: customerData?['avatar_url'] as String?,
+          // Only set if the customer also owns a business — a plain
+          // customer has no shop for "View Shop" to open.
+          otherPartyBusinessId: customerData?['business_id'] as String?,
         );
       }).toList();
     } catch (e) {
@@ -452,7 +549,8 @@ class ChatRemoteDataSource {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _getBusinessesOwnedBy(String userId) async {
+  Future<List<Map<String, dynamic>>> _getBusinessesOwnedBy(
+      String userId) async {
     try {
       final response = await supabaseClient
           .from('businesses')
@@ -487,6 +585,72 @@ class ChatRemoteDataSource {
       await supabaseClient.from('messages').delete().eq('id', messageId);
     } catch (e) {
       throw Exception('Failed to delete message: $e');
+    }
+  }
+
+  /// Block a user: they will no longer be able to send us messages
+  /// (enforced by a restrictive RLS policy on messages, not just client-side).
+  Future<void> blockUser(String blockedUserId) async {
+    final me = supabaseClient.auth.currentUser?.id;
+    if (me == null) throw Exception('Not authenticated');
+    try {
+      await supabaseClient.from('blocked_users').insert({
+        'blocker_id': me,
+        'blocked_id': blockedUserId,
+      });
+    } on PostgrestException catch (e) {
+      // Already blocked — treat as success.
+      if (e.code == '23505') return;
+      throw Exception('Failed to block user: $e');
+    }
+  }
+
+  Future<void> unblockUser(String blockedUserId) async {
+    final me = supabaseClient.auth.currentUser?.id;
+    if (me == null) throw Exception('Not authenticated');
+    try {
+      await supabaseClient
+          .from('blocked_users')
+          .delete()
+          .eq('blocker_id', me)
+          .eq('blocked_id', blockedUserId);
+    } catch (e) {
+      throw Exception('Failed to unblock user: $e');
+    }
+  }
+
+  Future<bool> isUserBlocked(String blockedUserId) async {
+    final me = supabaseClient.auth.currentUser?.id;
+    if (me == null) return false;
+    try {
+      final result = await supabaseClient
+          .from('blocked_users')
+          .select('id')
+          .eq('blocker_id', me)
+          .eq('blocked_id', blockedUserId)
+          .maybeSingle();
+      return result != null;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> reportUser({
+    required String reportedUserId,
+    required String chatId,
+    required String reason,
+  }) async {
+    final me = supabaseClient.auth.currentUser?.id;
+    if (me == null) throw Exception('Not authenticated');
+    try {
+      await supabaseClient.from('reports').insert({
+        'reporter_id': me,
+        'reported_user_id': reportedUserId,
+        'chat_id': chatId,
+        'reason': reason,
+      });
+    } catch (e) {
+      throw Exception('Failed to submit report: $e');
     }
   }
 

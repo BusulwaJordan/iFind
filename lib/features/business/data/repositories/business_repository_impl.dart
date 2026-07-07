@@ -133,6 +133,7 @@ class BusinessRepositoryImpl implements BusinessRepository {
     required String businessId,
     String? name,
     String? description,
+    BusinessCategory? category,
     String? phone,
     String? address,
     XFile? logoFile,
@@ -161,6 +162,7 @@ class BusinessRepositoryImpl implements BusinessRepository {
       final updates = {
         if (name != null) 'name': name,
         if (description != null) 'description': description,
+        if (category != null) 'category': category.storageValue,
         if (phone != null) 'phone': phone,
         if (address != null) 'address': address,
         if (logoUrl != null) 'logo_url': logoUrl,
