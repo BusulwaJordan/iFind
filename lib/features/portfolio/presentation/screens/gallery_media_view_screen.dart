@@ -8,7 +8,7 @@ import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/features/portfolio/domain/entities/portfolio_item.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:ifind/core/utils/share_utils.dart';
 import 'package:flutter/services.dart';
 import 'package:ifind/features/portfolio/presentation/providers/comment_provider.dart';
 import 'package:ifind/features/portfolio/presentation/widgets/comments_bottom_sheet.dart';
@@ -74,15 +74,16 @@ class _GalleryMediaViewScreenState
 
   void _handleShare() {
     final caption = widget.item.caption ?? '';
-    final shareText = caption.isNotEmpty
+    final message = caption.isNotEmpty
         ? 'Check out this on iFind: ${widget.item.mediaUrl}\n\n$caption'
         : 'Check out this on iFind: ${widget.item.mediaUrl}';
-    Share.share(shareText);
+    shareText(context, message);
   }
 
   void _copyLink() {
     Clipboard.setData(ClipboardData(text: widget.item.mediaUrl));
-    AppToast.show(context, 'Link copied to clipboard!', type: ToastType.success);
+    AppToast.show(context, 'Link copied to clipboard!',
+        type: ToastType.success);
   }
 
   Future<void> _openProductDetail() async {
@@ -93,14 +94,16 @@ class _GalleryMediaViewScreenState
     if (!mounted) return;
 
     if (product == null) {
-      AppToast.show(context, 'This product is no longer available', type: ToastType.info);
+      AppToast.show(context, 'This product is no longer available',
+          type: ToastType.info);
       return;
     }
 
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ProductDetailScreen(product: product, onInquire: widget.onInquire),
+        builder: (_) =>
+            ProductDetailScreen(product: product, onInquire: widget.onInquire),
       ),
     );
   }
@@ -116,7 +119,8 @@ class _GalleryMediaViewScreenState
       result.fold(
         (failure) {
           if (mounted) {
-            AppToast.show(context, friendlyError(Exception(failure.toString())), type: ToastType.error);
+            AppToast.show(context, friendlyError(Exception(failure.toString())),
+                type: ToastType.error);
           }
         },
         (isLiked) {
@@ -267,7 +271,8 @@ class _GalleryMediaViewScreenState
                           ),
                           const SizedBox(width: 4),
                           Icon(Icons.arrow_forward_rounded,
-                              color: Colors.white.withValues(alpha: 0.9), size: 14),
+                              color: Colors.white.withValues(alpha: 0.9),
+                              size: 14),
                         ],
                       ),
                     ),

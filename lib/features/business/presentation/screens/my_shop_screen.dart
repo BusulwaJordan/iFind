@@ -22,7 +22,7 @@ import 'package:timeago/timeago.dart' as timeago;
 import 'package:ifind/features/reviews/presentation/providers/review_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ifind/core/widgets/app_drawer.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:ifind/core/utils/share_utils.dart';
 import 'package:ifind/features/products/presentation/screens/add_product_screen.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
 import 'package:ifind/features/chat/presentation/screens/chat_room_screen.dart';
@@ -229,8 +229,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
     setState(() => _selectedTab = _tabController.index);
     if (_scrollController.hasClients) {
       _scrollController.animateTo(0,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut);
+          duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
     }
   }
 
@@ -259,8 +258,8 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancel',
-                  style: GoogleFonts.outfit(color: Colors.grey)),
+              child:
+                  Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey)),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
@@ -414,9 +413,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
           title: Text(
             'My Shop Profile',
             style: GoogleFonts.outfit(
-                color: Colors.white,
-                fontSize: 17,
-                fontWeight: FontWeight.w600),
+                color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600),
           ),
           actions: [
             IconButton(
@@ -440,37 +437,29 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                 unselectedLabelColor: Colors.white54,
                 indicatorColor: Colors.white,
                 indicatorWeight: 2.5,
-                labelPadding:
-                    const EdgeInsets.symmetric(horizontal: 14),
+                labelPadding: const EdgeInsets.symmetric(horizontal: 14),
                 labelStyle: GoogleFonts.outfit(
                     fontWeight: FontWeight.bold, fontSize: 12),
-                unselectedLabelStyle:
-                    GoogleFonts.outfit(fontSize: 12),
+                unselectedLabelStyle: GoogleFonts.outfit(fontSize: 12),
                 tabs: const [
                   Tab(
                       icon: Icon(Icons.bar_chart_rounded, size: 16),
                       text: 'Overview',
                       iconMargin: EdgeInsets.only(bottom: 2)),
                   Tab(
-                      icon:
-                          Icon(Icons.shopping_bag_outlined, size: 16),
+                      icon: Icon(Icons.shopping_bag_outlined, size: 16),
                       text: 'Products',
                       iconMargin: EdgeInsets.only(bottom: 2)),
                   Tab(
-                      icon:
-                          Icon(Icons.star_border_rounded, size: 16),
+                      icon: Icon(Icons.star_border_rounded, size: 16),
                       text: 'Reviews',
                       iconMargin: EdgeInsets.only(bottom: 2)),
                   Tab(
-                      icon: Icon(
-                          Icons.chat_bubble_outline_rounded,
-                          size: 16),
+                      icon: Icon(Icons.chat_bubble_outline_rounded, size: 16),
                       text: 'Inquiries',
                       iconMargin: EdgeInsets.only(bottom: 2)),
                   Tab(
-                      icon: Icon(
-                          Icons.insert_chart_outlined_rounded,
-                          size: 16),
+                      icon: Icon(Icons.insert_chart_outlined_rounded, size: 16),
                       text: 'Analytics',
                       iconMargin: EdgeInsets.only(bottom: 2)),
                 ],
@@ -545,188 +534,189 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
         ),
         // Business info content — pushed below the pinned app bar row
         Padding(
-          padding: EdgeInsets.fromLTRB(
-              16, topPad + kToolbarHeight + 10, 16, 20),
+          padding:
+              EdgeInsets.fromLTRB(16, topPad + kToolbarHeight + 10, 16, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 84,
-                    height: 84,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: Colors.white, width: 3),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(15),
-                      child: business.logoUrl != null
-                          ? Image.network(business.logoUrl!, fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.storefront_rounded,
-                                    size: 36,
-                                    color: AppColors.primaryGreen,
-                                  ))
-                          : const Icon(Icons.storefront_rounded,
-                              size: 36, color: AppColors.primaryGreen),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 2,
-                    right: 2,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryGreen,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: 84,
+                        height: 84,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: Colors.white, width: 3),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(15),
+                          child: business.logoUrl != null
+                              ? Image.network(business.logoUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                        Icons.storefront_rounded,
+                                        size: 36,
+                                        color: AppColors.primaryGreen,
+                                      ))
+                              : const Icon(Icons.storefront_rounded,
+                                  size: 36, color: AppColors.primaryGreen),
+                        ),
                       ),
-                      child: const Icon(Icons.camera_alt_rounded,
-                          size: 11, color: Colors.white),
+                      Positioned(
+                        bottom: 2,
+                        right: 2,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryGreen,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                          child: const Icon(Icons.camera_alt_rounded,
+                              size: 11, color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                business.name,
+                                style: GoogleFonts.outfit(
+                                    color: Colors.white,
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.bold),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            if (business.isVerified)
+                              const Icon(Icons.verified,
+                                  color: Colors.lightGreenAccent, size: 18),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white38),
+                          ),
+                          child: Text('Business Member',
+                              style: GoogleFonts.outfit(
+                                  color: Colors.white, fontSize: 11)),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_outlined,
+                                color: Colors.white70, size: 13),
+                            const SizedBox(width: 3),
+                            Flexible(
+                              child: Text(
+                                business.address ?? 'Uganda',
+                                style: GoogleFonts.outfit(
+                                    color: Colors.white70, fontSize: 11),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const Text('  ·  ',
+                                style: TextStyle(color: Colors.white54)),
+                            Text('Open',
+                                style: GoogleFonts.outfit(
+                                    color: Colors.lightGreenAccent,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 11)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.star_rounded,
+                                color: Color(0xFFFBBF24), size: 14),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${business.rating.toStringAsFixed(1)} (${business.reviewCount})',
+                              style: GoogleFonts.outfit(
+                                  color: Colors.white70, fontSize: 11),
+                            ),
+                            const Text('  ·  ',
+                                style: TextStyle(color: Colors.white54)),
+                            Text('0 Followers',
+                                style: GoogleFonts.outfit(
+                                    color: Colors.white70, fontSize: 11)),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            business.name,
-                            style: GoogleFonts.outfit(
-                                color: Colors.white,
-                                fontSize: 19,
-                                fontWeight: FontWeight.bold),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        if (business.isVerified)
-                          const Icon(Icons.verified,
-                              color: Colors.lightGreenAccent, size: 18),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white38),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  CreateBusinessScreen(business: business))),
+                      icon: const Icon(Icons.edit_outlined,
+                          size: 15, color: AppColors.primaryGreen),
+                      label: Text('Edit Profile',
+                          style: GoogleFonts.outfit(
+                              color: AppColors.primaryGreen, fontSize: 13)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppColors.primaryGreen,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                       ),
-                      child: Text('Business Member',
-                          style: GoogleFonts.outfit(
-                              color: Colors.white, fontSize: 11)),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(Icons.location_on_outlined,
-                            color: Colors.white70, size: 13),
-                        const SizedBox(width: 3),
-                        Flexible(
-                          child: Text(
-                            business.address ?? 'Uganda',
-                            style: GoogleFonts.outfit(
-                                color: Colors.white70, fontSize: 11),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const Text('  ·  ',
-                            style: TextStyle(color: Colors.white54)),
-                        Text('Open',
-                            style: GoogleFonts.outfit(
-                                color: Colors.lightGreenAccent,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 11)),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(Icons.star_rounded,
-                            color: Color(0xFFFBBF24), size: 14),
-                        const SizedBox(width: 3),
-                        Text(
-                          '${business.rating.toStringAsFixed(1)} (${business.reviewCount})',
-                          style: GoogleFonts.outfit(
-                              color: Colors.white70, fontSize: 11),
-                        ),
-                        const Text('  ·  ',
-                            style: TextStyle(color: Colors.white54)),
-                        Text('0 Followers',
-                            style: GoogleFonts.outfit(
-                                color: Colors.white70, fontSize: 11)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) =>
-                              CreateBusinessScreen(business: business))),
-                  icon: const Icon(Icons.edit_outlined,
-                      size: 15, color: AppColors.primaryGreen),
-                  label: Text('Edit Profile',
-                      style: GoogleFonts.outfit(
-                          color: AppColors.primaryGreen, fontSize: 13)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppColors.primaryGreen,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => Share.share(
-                      'Check out ${business.name} on iFind!'),
-                  icon: const Icon(Icons.ios_share_rounded,
-                      size: 15, color: Colors.white),
-                  label: Text('Share Shop',
-                      style: GoogleFonts.outfit(
-                          color: Colors.white, fontSize: 13)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    side: const BorderSide(color: Colors.white54),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => shareText(
+                          context, 'Check out ${business.name} on iFind!'),
+                      icon: const Icon(Icons.ios_share_rounded,
+                          size: 15, color: Colors.white),
+                      label: Text('Share Shop',
+                          style: GoogleFonts.outfit(
+                              color: Colors.white, fontSize: 13)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        side: const BorderSide(color: Colors.white54),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
             ],
           ),
         ),
@@ -775,8 +765,8 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-              color: AppColors.primaryGreen.withValues(alpha: 0.12)),
+          border:
+              Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.12)),
           boxShadow: [
             BoxShadow(
               color: AppColors.deepGreen.withValues(alpha: 0.10),
@@ -888,8 +878,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: accentColor.withValues(alpha: 0.15)),
+        border: Border.all(color: accentColor.withValues(alpha: 0.15)),
         boxShadow: [
           BoxShadow(
             color: accentColor.withValues(alpha: 0.06),
@@ -1009,8 +998,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
             onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (_) =>
-                        CreateBusinessScreen(business: business))),
+                    builder: (_) => CreateBusinessScreen(business: business))),
             child: Text('View Full Details  →',
                 style: GoogleFonts.outfit(
                     color: AppColors.primaryGreen,
@@ -1022,8 +1010,8 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
     );
   }
 
-  Widget _buildCompletionCard(BuildContext context, Business business,
-      int profileScore,
+  Widget _buildCompletionCard(
+      BuildContext context, Business business, int profileScore,
       {Color accentColor = AppColors.primaryGreen}) {
     return _shopCard(
       context: context,
@@ -1044,8 +1032,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                     CircularProgressIndicator(
                       value: profileScore / 100,
                       strokeWidth: 7,
-                      backgroundColor:
-                          Colors.grey.withValues(alpha: 0.15),
+                      backgroundColor: Colors.grey.withValues(alpha: 0.15),
                       valueColor: const AlwaysStoppedAnimation<Color>(
                           AppColors.primaryGreen),
                     ),
@@ -1076,9 +1063,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                     Text(
                       'Complete your profile to get more visibility and leads.',
                       style: GoogleFonts.outfit(
-                          fontSize: 10,
-                          color: Colors.grey[600],
-                          height: 1.3),
+                          fontSize: 10, color: Colors.grey[600], height: 1.3),
                     ),
                   ],
                 ),
@@ -1090,12 +1075,9 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
           _CheckItem(
               done: business.description.length >= 20,
               label: 'Add Business Description'),
+          _CheckItem(done: business.logoUrl != null, label: 'Add Logo Image'),
           _CheckItem(
-              done: business.logoUrl != null,
-              label: 'Add Logo Image'),
-          _CheckItem(
-              done: business.coverImageUrl != null,
-              label: 'Add Cover Photo'),
+              done: business.coverImageUrl != null, label: 'Add Cover Photo'),
           _CheckItem(
               done: business.phone != null || business.email != null,
               label: 'Add Contact Info'),
@@ -1231,15 +1213,13 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
             style: GoogleFonts.outfit(
                 fontSize: 12, color: Colors.grey[700], height: 1.4),
             maxLines: _descExpanded ? null : 5,
-            overflow: _descExpanded
-                ? TextOverflow.visible
-                : TextOverflow.ellipsis,
+            overflow:
+                _descExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
           ),
           if (business.description.length > 100) ...[
             const SizedBox(height: 6),
             GestureDetector(
-              onTap: () =>
-                  setState(() => _descExpanded = !_descExpanded),
+              onTap: () => setState(() => _descExpanded = !_descExpanded),
               child: Text(
                 _descExpanded ? 'Show Less  ⌃' : 'Read More  ⌄',
                 style: GoogleFonts.outfit(
@@ -1339,8 +1319,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: color.withValues(alpha: 0.20)),
+                border: Border.all(color: color.withValues(alpha: 0.20)),
               ),
               child: Stack(
                 children: [
@@ -1373,8 +1352,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                       child: Container(
                         padding: const EdgeInsets.all(3),
                         decoration: const BoxDecoration(
-                            color: Colors.redAccent,
-                            shape: BoxShape.circle),
+                            color: Colors.redAccent, shape: BoxShape.circle),
                         child: Text('${a.badge}',
                             style: const TextStyle(
                                 color: Colors.white, fontSize: 9)),
@@ -1395,8 +1373,8 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
       decoration: BoxDecoration(
         color: AppColors.primaryGreen.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: AppColors.primaryGreen.withValues(alpha: 0.12)),
+        border:
+            Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.12)),
       ),
       child: Row(
         children: [
@@ -1427,13 +1405,12 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
           ),
           const SizedBox(width: 10),
           ElevatedButton(
-            onPressed: () => AppToast.show(context, 'Coming soon!',
-                type: ToastType.info),
+            onPressed: () =>
+                AppToast.show(context, 'Coming soon!', type: ToastType.info),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryGreen,
               foregroundColor: Colors.white,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
             ),
@@ -1468,8 +1445,8 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                 const SizedBox(height: 3),
                 Text(
                   'Permanently remove this shop and all its data.',
-                  style: GoogleFonts.outfit(
-                      fontSize: 11, color: Colors.grey[600]),
+                  style:
+                      GoogleFonts.outfit(fontSize: 11, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -1482,8 +1459,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
               side: const BorderSide(color: Colors.red),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10)),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             ),
             child: Text('Delete',
                 style: GoogleFonts.outfit(
@@ -1533,8 +1509,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
               textAlign: TextAlign.center),
           const SizedBox(height: 6),
           Text('Add, edit, and manage your product inventory.',
-              style: GoogleFonts.outfit(
-                  fontSize: 13, color: Colors.grey[600]),
+              style: GoogleFonts.outfit(fontSize: 13, color: Colors.grey[600]),
               textAlign: TextAlign.center),
           const SizedBox(height: 20),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -1559,8 +1534,8 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
               onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (_) => ProductManagementScreen(
-                          businessId: business.id))),
+                      builder: (_) =>
+                          ProductManagementScreen(businessId: business.id))),
               icon: const Icon(Icons.open_in_new_rounded, size: 18),
               label: Text('Open Product Manager',
                   style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
@@ -1585,8 +1560,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
     return reviewsAsync.when(
       loading: () => const Center(
           child: Padding(
-              padding: EdgeInsets.all(40),
-              child: CircularProgressIndicator())),
+              padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
       error: (_, __) => const EmptyStateWidget(
           title: 'No Reviews Yet',
           message: 'Great service leads to great reviews!',
@@ -1673,12 +1647,10 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
     return leadsAsync.when(
       loading: () => const Center(
           child: Padding(
-              padding: EdgeInsets.all(40),
-              child: CircularProgressIndicator())),
+              padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
       error: (_, __) => const EmptyStateWidget(
           title: 'No Inquiries Yet',
-          message:
-              'Customer inquiries matching your shop will appear here.',
+          message: 'Customer inquiries matching your shop will appear here.',
           icon: Icons.forum_rounded),
       data: (needs) {
         if (needs.isEmpty) {
@@ -1772,7 +1744,8 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(14),
                       child: logoUrl != null
-                          ? Image.network(logoUrl, fit: BoxFit.cover,
+                          ? Image.network(logoUrl,
+                              fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => const Icon(
                                     Icons.storefront_rounded,
                                     color: AppColors.primaryGreen,
@@ -1867,8 +1840,8 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                   const SizedBox(width: 6),
                   Text(
                     '${business.rating.toStringAsFixed(1)} (${business.reviewCount})',
-                    style: GoogleFonts.outfit(
-                        color: Colors.white70, fontSize: 12),
+                    style:
+                        GoogleFonts.outfit(color: Colors.white70, fontSize: 12),
                   ),
                   const SizedBox(width: 8),
                   Text('·',
@@ -1876,16 +1849,16 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                           color: Colors.white70, fontSize: 12)),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       '0 followers',
-                      style: GoogleFonts.outfit(
-                          color: Colors.white, fontSize: 11),
+                      style:
+                          GoogleFonts.outfit(color: Colors.white, fontSize: 11),
                     ),
                   ),
                 ],
@@ -1916,7 +1889,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                   const SizedBox(width: 10),
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () => Share.share(
+                      onPressed: () => shareText(context,
                           'Check out ${business.name} on iFind! Find great local businesses near you.'),
                       icon: const Icon(Icons.share_rounded,
                           color: AppColors.darkText, size: 16),
@@ -2086,7 +2059,8 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const _CheckItem(done: true, label: 'Business Name'),
+                            const _CheckItem(
+                                done: true, label: 'Business Name'),
                             _CheckItem(
                               done: business.description.length >= 20,
                               label: 'Description',
@@ -2137,8 +2111,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12)),
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                           child: Text('Manage Photos',
                               style: GoogleFonts.outfit(
@@ -2161,9 +2134,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                             ? 'No description yet.'
                             : business.description,
                         style: GoogleFonts.outfit(
-                            fontSize: 13,
-                            color: Colors.grey[700],
-                            height: 1.5),
+                            fontSize: 13, color: Colors.grey[700], height: 1.5),
                         maxLines: _descExpanded ? null : 4,
                         overflow: _descExpanded
                             ? TextOverflow.visible
@@ -2171,8 +2142,8 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                       ),
                       if (business.description.length > 120)
                         TextButton(
-                          onPressed: () => setState(
-                              () => _descExpanded = !_descExpanded),
+                          onPressed: () =>
+                              setState(() => _descExpanded = !_descExpanded),
                           child: Text(
                             _descExpanded ? 'Show Less' : 'Read More',
                             style: GoogleFonts.outfit(
@@ -2215,8 +2186,8 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                         onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (_) => AddProductScreen(
-                                    businessId: business.id))),
+                                builder: (_) =>
+                                    AddProductScreen(businessId: business.id))),
                       ),
                       _QuickActionTile(
                         label: 'Products',
@@ -2291,9 +2262,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                       Text(
                         'Promote your shop to reach more customers in your area and increase sales.',
                         style: GoogleFonts.outfit(
-                            fontSize: 13,
-                            color: Colors.white70,
-                            height: 1.4),
+                            fontSize: 13, color: Colors.white70, height: 1.4),
                       ),
                       const SizedBox(height: 16),
                       SizedBox(
@@ -2307,8 +2276,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                             foregroundColor: AppColors.deepGreen,
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12)),
-                            padding:
-                                const EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                           child: Text('Promote Now',
                               style: GoogleFonts.outfit(
@@ -2418,8 +2386,8 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryGreen
-                                .withValues(alpha: 0.1),
+                            color:
+                                AppColors.primaryGreen.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(Icons.inventory_2_rounded,
@@ -2454,8 +2422,8 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                               width: 1,
                               height: 32,
                               color: Colors.grey.withValues(alpha: 0.2),
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 16),
+                              margin:
+                                  const EdgeInsets.symmetric(horizontal: 16),
                             ),
                             _ProductStat(
                               label: 'Available',
@@ -2473,8 +2441,8 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                                 MaterialPageRoute(
                                     builder: (_) => ProductManagementScreen(
                                         businessId: business.id))),
-                            icon: const Icon(Icons.open_in_new_rounded,
-                                size: 18),
+                            icon:
+                                const Icon(Icons.open_in_new_rounded, size: 18),
                             label: Text('Open Product Manager',
                                 style: GoogleFonts.outfit(
                                     fontWeight: FontWeight.bold)),
@@ -2483,8 +2451,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14)),
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 14),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                           ),
                         ),
@@ -2556,8 +2523,7 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
                                   review.authorName ?? 'Customer',
@@ -2725,8 +2691,7 @@ class _SectionCard extends StatelessWidget {
   final String title;
   final Widget child;
   final IconData? icon;
-  const _SectionCard(
-      {required this.title, required this.child, this.icon});
+  const _SectionCard({required this.title, required this.child, this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -2737,10 +2702,7 @@ class _SectionCard extends StatelessWidget {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Theme.of(context)
-              .colorScheme
-              .outline
-              .withValues(alpha: 0.1),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
         ),
         boxShadow: [
           BoxShadow(
@@ -2840,9 +2802,7 @@ class _CheckItem extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            done
-                ? Icons.check_circle_rounded
-                : Icons.radio_button_unchecked,
+            done ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
             color: done ? AppColors.primaryGreen : Colors.grey[400],
             size: 18,
           ),
@@ -2920,8 +2880,7 @@ class _PerformanceMetricCard extends StatelessWidget {
                 children: [
                   Icon(Icons.arrow_upward_rounded, color: color, size: 10),
                   Text(' this month',
-                      style:
-                          GoogleFonts.outfit(fontSize: 10, color: color)),
+                      style: GoogleFonts.outfit(fontSize: 10, color: color)),
                 ],
               ),
             ],
@@ -2991,12 +2950,9 @@ class _ProductStat extends StatelessWidget {
       children: [
         Text(value,
             style: GoogleFonts.outfit(
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-                color: color)),
+                fontSize: 28, fontWeight: FontWeight.w900, color: color)),
         Text(label,
-            style: GoogleFonts.outfit(
-                fontSize: 12, color: Colors.grey[500])),
+            style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey[500])),
       ],
     );
   }
@@ -3022,8 +2978,7 @@ class _InquiryCard extends ConsumerWidget {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color:
-              Theme.of(context).colorScheme.outline.withValues(alpha: 0.12),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.12),
         ),
         boxShadow: [
           BoxShadow(
@@ -3040,8 +2995,8 @@ class _InquiryCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.primaryGreen.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
@@ -3076,9 +3031,7 @@ class _InquiryCard extends ConsumerWidget {
             Text(
               need.description!,
               style: GoogleFonts.outfit(
-                  fontSize: 13,
-                  color: Colors.grey[700],
-                  height: 1.4),
+                  fontSize: 13, color: Colors.grey[700], height: 1.4),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -3104,8 +3057,7 @@ class _InquiryCard extends ConsumerWidget {
                 final customer = customerAsync.value;
                 if (customer == null) {
                   messenger.showSnackBar(const SnackBar(
-                      content:
-                          Text('Customer profile is still loading.')));
+                      content: Text('Customer profile is still loading.')));
                   return;
                 }
                 try {
@@ -3206,8 +3158,7 @@ class _AnalyticsTab extends ConsumerWidget {
                   color: Colors.white.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(Icons.analytics_rounded,
-                    color: Colors.white),
+                child: const Icon(Icons.analytics_rounded, color: Colors.white),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -3242,8 +3193,7 @@ class _AnalyticsTab extends ConsumerWidget {
             decoration: BoxDecoration(
               color: const Color(0xFFF8FAFB),
               borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                  color: healthColor.withValues(alpha: 0.16)),
+              border: Border.all(color: healthColor.withValues(alpha: 0.16)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -3276,8 +3226,7 @@ class _AnalyticsTab extends ConsumerWidget {
                   child: LinearProgressIndicator(
                     value: health / 100,
                     minHeight: 9,
-                    backgroundColor:
-                        Colors.grey.withValues(alpha: 0.12),
+                    backgroundColor: Colors.grey.withValues(alpha: 0.12),
                     color: healthColor,
                   ),
                 ),
@@ -3297,8 +3246,7 @@ class _AnalyticsTab extends ConsumerWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               const spacing = 6.0;
-              final tileWidth =
-                  (constraints.maxWidth - spacing * 3) / 4;
+              final tileWidth = (constraints.maxWidth - spacing * 3) / 4;
               final metricCards = [
                 _AnalyticsMetricCard(
                   label: 'Reach',
@@ -3324,8 +3272,7 @@ class _AnalyticsTab extends ConsumerWidget {
                 ),
                 _AnalyticsMetricCard(
                   label: 'Inventory',
-                  value:
-                      '${analytics.availableProducts}/${analytics.products}',
+                  value: '${analytics.availableProducts}/${analytics.products}',
                   detail: '${analytics.lowStockProducts} low stock',
                   icon: Icons.inventory_2_rounded,
                   color: const Color(0xFFF59E0B),
@@ -3351,8 +3298,7 @@ class _AnalyticsTab extends ConsumerWidget {
                     children: [
                       for (var i = 0; i < 4; i++) ...[
                         if (i > 0) const SizedBox(width: spacing),
-                        SizedBox(
-                            width: tileWidth, child: metricCards[i]),
+                        SizedBox(width: tileWidth, child: metricCards[i]),
                       ],
                     ],
                   ),
@@ -3360,11 +3306,9 @@ class _AnalyticsTab extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      SizedBox(
-                          width: tileWidth, child: metricCards[4]),
+                      SizedBox(width: tileWidth, child: metricCards[4]),
                       const SizedBox(width: spacing),
-                      SizedBox(
-                          width: tileWidth, child: metricCards[5]),
+                      SizedBox(width: tileWidth, child: metricCards[5]),
                     ],
                   ),
                 ],
@@ -3527,4 +3471,3 @@ class _AnalyticsMetricCard extends StatelessWidget {
     );
   }
 }
-

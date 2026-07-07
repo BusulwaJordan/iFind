@@ -14,6 +14,7 @@ import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
+import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
 import 'package:ifind/features/chat/domain/entities/chat.dart';
@@ -74,16 +75,35 @@ class _DateSeparator extends StatelessWidget {
 class _BusinessInfoCard extends StatelessWidget {
   final String name;
   final String? logoUrl;
+  final BusinessCategory? category;
+  final double? rating;
+  final int? reviewCount;
   final VoidCallback onViewShop;
 
   const _BusinessInfoCard({
     required this.name,
     required this.onViewShop,
     this.logoUrl,
+    this.category,
+    this.rating,
+    this.reviewCount,
   });
 
   @override
   Widget build(BuildContext context) {
+    final categoryLabel = category == null
+        ? null
+        : category!.name[0].toUpperCase() + category!.name.substring(1);
+    final ratingValue = rating;
+    final fullStars = ratingValue == null ? 0 : ratingValue.floor().clamp(0, 5);
+    final hasHalfStar = ratingValue != null && (ratingValue - fullStars) >= 0.5;
+    final emptyStars = (5 - fullStars - (hasHalfStar ? 1 : 0)).clamp(0, 5);
+    final reviewsLabel = reviewCount == null
+        ? null
+        : (reviewCount == 0
+            ? 'No reviews yet'
+            : '$reviewCount review${reviewCount == 1 ? '' : 's'}');
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       padding: const EdgeInsets.all(14),
@@ -125,32 +145,42 @@ class _BusinessInfoCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Fashion & Footwear',
-                    style: GoogleFonts.outfit(
-                        fontSize: 11,
-                        color: Colors.grey[500],
-                        fontWeight: FontWeight.w500)),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    ...List.generate(
-                        4,
-                        (_) => const Icon(Icons.star_rounded,
-                            color: Color(0xFFFBBF24), size: 13)),
-                    const Icon(Icons.star_half_rounded,
-                        color: Color(0xFFFBBF24), size: 13),
-                    const SizedBox(width: 4),
-                    Text('4.8',
-                        style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87)),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text('2.5 km away  •  Responds in 2 mins',
-                    style: GoogleFonts.outfit(
-                        fontSize: 11, color: Colors.grey[400])),
+                if (categoryLabel != null) ...[
+                  Text(categoryLabel,
+                      style: GoogleFonts.outfit(
+                          fontSize: 11,
+                          color: Colors.grey[500],
+                          fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 2),
+                ],
+                if (ratingValue != null) ...[
+                  Row(
+                    children: [
+                      ...List.generate(
+                          fullStars,
+                          (_) => const Icon(Icons.star_rounded,
+                              color: Color(0xFFFBBF24), size: 13)),
+                      if (hasHalfStar)
+                        const Icon(Icons.star_half_rounded,
+                            color: Color(0xFFFBBF24), size: 13),
+                      ...List.generate(
+                          emptyStars,
+                          (_) => const Icon(Icons.star_border_rounded,
+                              color: Color(0xFFFBBF24), size: 13)),
+                      const SizedBox(width: 4),
+                      Text(ratingValue.toStringAsFixed(1),
+                          style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87)),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                ],
+                if (reviewsLabel != null)
+                  Text(reviewsLabel,
+                      style: GoogleFonts.outfit(
+                          fontSize: 11, color: Colors.grey[400])),
               ],
             ),
           ),
@@ -539,10 +569,14 @@ class ChatRoomScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final topPad = MediaQuery.of(context).padding.top;
-    final isBusiness = chat.otherPartyBusinessId != null;
+    final otherPartyBusinessId = chat.otherPartyBusinessId;
+    final isBusiness = otherPartyBusinessId != null;
     final logoUrl = chat.isB2B
         ? chat.partnerBusinessLogo
         : (chat.businessLogoUrl ?? chat.customerAvatarUrl);
+    final otherBusiness = otherPartyBusinessId == null
+        ? null
+        : ref.watch(businessProvider(otherPartyBusinessId)).valueOrNull;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5FBF7),
@@ -680,6 +714,9 @@ class ChatRoomScreen extends ConsumerWidget {
             _BusinessInfoCard(
               name: otherPartyName,
               logoUrl: logoUrl,
+              category: otherBusiness?.category,
+              rating: otherBusiness?.rating,
+              reviewCount: otherBusiness?.reviewCount,
               onViewShop: () => _navigateToShop(context, ref),
             ),
 
@@ -744,6 +781,17 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    _markAsRead();
+  }
+
+  Future<void> _markAsRead() async {
+    final user = ref.read(currentUserProvider);
+    if (user == null) return;
+    await ref.read(chatRemoteDataSourceProvider).markChatAsRead(
+          chatId: widget.chat.id,
+          userId: user.id,
+        );
+    ref.invalidate(myChatsProvider);
   }
 
   void _scrollToBottom() {

@@ -33,6 +33,9 @@ class Chat with _$Chat {
     // business owner's B2C view. Null when there's no business to show
     // (e.g. a plain customer with no business of their own).
     String? otherPartyBusinessId,
+    // Number of messages in this chat sent by the other party that this
+    // user hasn't read yet. Computed separately (not a raw chats column).
+    @Default(0) int unreadCount,
   }) = _Chat;
 }
 

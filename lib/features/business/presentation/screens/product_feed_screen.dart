@@ -13,7 +13,7 @@ import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
 import 'package:ifind/features/chat/presentation/screens/chat_room_screen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:ifind/core/utils/share_utils.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:ifind/features/notifications/presentation/providers/notification_provider.dart';
 
@@ -346,7 +346,8 @@ class _ProductItemViewState extends ConsumerState<_ProductItemView> {
   Future<void> _handleLike() async {
     final user = ref.read(currentUserProvider);
     if (user == null) {
-      AppToast.show(context, 'Please login to like products', type: ToastType.info);
+      AppToast.show(context, 'Please login to like products',
+          type: ToastType.info);
       return;
     }
 
@@ -489,7 +490,8 @@ class _ProductItemViewState extends ConsumerState<_ProductItemView> {
                     icon: Icons.chat_bubble_outline_rounded,
                     label: 'Comment',
                     onTap: () {
-                      AppToast.show(context, 'Comments coming soon!', type: ToastType.info);
+                      AppToast.show(context, 'Comments coming soon!',
+                          type: ToastType.info);
                     },
                   ),
                   const SizedBox(height: 24),
@@ -497,7 +499,7 @@ class _ProductItemViewState extends ConsumerState<_ProductItemView> {
                     icon: Icons.share_rounded,
                     label: 'Share',
                     onTap: () {
-                      Share.share(
+                      shareText(context,
                           'Check out this product from ${widget.businessName} on iFind!\n${widget.item.mediaUrl}');
                     },
                   ),
