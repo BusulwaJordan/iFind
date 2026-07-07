@@ -19,12 +19,31 @@ class ChatRemoteDataSource {
     required String customerId,
     required String businessId,
   }) async {
-    // Enriches with the same customer display data (name/avatar, and the
-    // business_id "View Shop" should open if the customer owns one) that
+    // Enriches with the same viewer-aware display data that
     // getMyChats/getChatsForBusiness apply — otherwise a chat opened
-    // straight from creation (e.g. "Message Customer") would look
-    // different from the same chat reopened later via the chat list.
+    // straight from creation would look different from the same chat
+    // reopened later via the chat list. Two distinct callers hit this:
+    // a customer messaging a business directly (viewer == customerId —
+    // e.g. the business page's "Message" button), where the "other party"
+    // to show is the business; and a business owner messaging one of their
+    // own leads/customers on the business's behalf (viewer != customerId —
+    // e.g. "Message Customer" on the Leads Dashboard), where the "other
+    // party" is that customer.
     Future<Chat> enrich(Chat chat) async {
+      final viewerIsCustomer =
+          supabaseClient.auth.currentUser?.id == customerId;
+      if (viewerIsCustomer) {
+        final bizRow = await supabaseClient
+            .from('businesses')
+            .select('name, logo_url')
+            .eq('business_id', businessId)
+            .maybeSingle();
+        return chat.copyWith(
+          businessName: bizRow?['name'] as String?,
+          businessLogoUrl: bizRow?['logo_url'] as String?,
+          otherPartyBusinessId: businessId,
+        );
+      }
       final customerData =
           (await _resolveCustomerDisplayData([customerId]))[customerId];
       return chat.copyWith(
@@ -54,6 +73,27 @@ class ChatRemoteDataSource {
           partnerBusinessId: businessId,
         );
         if (existingB2B != null) return existingB2B;
+
+        // Reverse direction: the other business's owner may already have
+        // their own separate B2C chat with MY business. Upgrade that one
+        // to B2B instead of creating a third, redundant conversation.
+        final reverseChatId = await supabaseClient.rpc(
+          'find_reverse_b2c_chat',
+          params: {
+            'p_my_business_id': myBizId,
+            'p_other_business_id': businessId,
+          },
+        ) as String?;
+        if (reverseChatId != null) {
+          final row = await supabaseClient
+              .from('chats')
+              .select()
+              .eq('id', reverseChatId)
+              .single();
+          return ChatModel.fromJson(row)
+              .toEntity()
+              .copyWith(otherPartyBusinessId: businessId);
+        }
       }
 
       // Try to fetch existing. Use limit(1) instead of maybeSingle() —
@@ -320,6 +360,53 @@ class ChatRemoteDataSource {
     }
   }
 
+  /// Marks every message in [chatId] not sent by [userId] as read — called
+  /// when the user opens that chat.
+  Future<void> markChatAsRead({
+    required String chatId,
+    required String userId,
+  }) async {
+    try {
+      // Routed through a SECURITY DEFINER RPC rather than a plain table
+      // update — RLS on messages is scoped to chat participancy, and a
+      // direct update marking someone else's messages as read was silently
+      // matching zero rows, so is_read never actually flipped.
+      await supabaseClient.rpc('mark_chat_read', params: {
+        'p_chat_id': chatId,
+        'p_user_id': userId,
+      });
+    } catch (e) {
+      debugPrint('markChatAsRead error: $e');
+    }
+  }
+
+  /// Number of unread messages (not sent by [userId]) per chat, for every
+  /// chat id in [chatIds]. Used to badge/filter the chat list by unread.
+  Future<Map<String, int>> getUnreadCounts({
+    required List<String> chatIds,
+    required String userId,
+  }) async {
+    if (chatIds.isEmpty) return {};
+    try {
+      final response = await supabaseClient
+          .from('messages')
+          .select('chat_id')
+          .inFilter('chat_id', chatIds)
+          .eq('is_read', false)
+          .neq('sender_id', userId);
+
+      final counts = <String, int>{};
+      for (final row in (response as List)) {
+        final chatId = row['chat_id'] as String;
+        counts[chatId] = (counts[chatId] ?? 0) + 1;
+      }
+      return counts;
+    } catch (e) {
+      debugPrint('getUnreadCounts error: $e');
+      return {};
+    }
+  }
+
   /// Resolves display name/avatar for each of [userIds] — preferring a
   /// business they own (name + logo) over their personal profile, so a
   /// customer who's also a business owner is shown consistently as their
@@ -438,8 +525,14 @@ class ChatRemoteDataSource {
       // business the customer owns over their personal profile.
       final customerMap = await _resolveCustomerDisplayData(customerIdsToFetch);
 
+      final unreadCounts = await getUnreadCounts(
+        chatIds: chatEntities.map((c) => c.id).toList(),
+        userId: userId,
+      );
+
       // Enrich each chat with resolved names/logos
       return chatEntities.map((chat) {
+        final unreadCount = unreadCounts[chat.id] ?? 0;
         if (chat.isB2B) {
           final partnerBizId = myBizIds.contains(chat.businessAId)
               ? chat.businessBId
@@ -449,6 +542,7 @@ class ChatRemoteDataSource {
             partnerBusinessName: data?['name'] as String?,
             partnerBusinessLogo: data?['logo_url'] as String?,
             otherPartyBusinessId: partnerBizId,
+            unreadCount: unreadCount,
           );
         } else {
           final isOwner = myBizIds.contains(chat.businessId);
@@ -462,6 +556,7 @@ class ChatRemoteDataSource {
               // Only set if the customer also owns a business — a plain
               // customer has no shop for "View Shop" to open.
               otherPartyBusinessId: customerData?['business_id'] as String?,
+              unreadCount: unreadCount,
             );
           } else {
             // Viewer is the customer — other party is the business
@@ -471,6 +566,7 @@ class ChatRemoteDataSource {
               businessName: bizData?['name'] as String?,
               businessLogoUrl: bizData?['logo_url'] as String?,
               otherPartyBusinessId: chat.businessId,
+              unreadCount: unreadCount,
             );
           }
         }

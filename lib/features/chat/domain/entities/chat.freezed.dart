@@ -42,7 +42,10 @@ mixin _$Chat {
 // B2C view, or the customer's own business (if they own one) for a
 // business owner's B2C view. Null when there's no business to show
 // (e.g. a plain customer with no business of their own).
-  String? get otherPartyBusinessId => throw _privateConstructorUsedError;
+  String? get otherPartyBusinessId =>
+      throw _privateConstructorUsedError; // Number of messages in this chat sent by the other party that this
+// user hasn't read yet. Computed separately (not a raw chats column).
+  int get unreadCount => throw _privateConstructorUsedError;
 
   /// Create a copy of Chat
   /// with the given fields replaced by the non-null parameter values.
@@ -72,7 +75,8 @@ abstract class $ChatCopyWith<$Res> {
       String? customerAvatarUrl,
       String? partnerBusinessName,
       String? partnerBusinessLogo,
-      String? otherPartyBusinessId});
+      String? otherPartyBusinessId,
+      int unreadCount});
 }
 
 /// @nodoc
@@ -107,6 +111,7 @@ class _$ChatCopyWithImpl<$Res, $Val extends Chat>
     Object? partnerBusinessName = freezed,
     Object? partnerBusinessLogo = freezed,
     Object? otherPartyBusinessId = freezed,
+    Object? unreadCount = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -177,6 +182,10 @@ class _$ChatCopyWithImpl<$Res, $Val extends Chat>
           ? _value.otherPartyBusinessId
           : otherPartyBusinessId // ignore: cast_nullable_to_non_nullable
               as String?,
+      unreadCount: null == unreadCount
+          ? _value.unreadCount
+          : unreadCount // ignore: cast_nullable_to_non_nullable
+              as int,
     ) as $Val);
   }
 }
@@ -205,7 +214,8 @@ abstract class _$$ChatImplCopyWith<$Res> implements $ChatCopyWith<$Res> {
       String? customerAvatarUrl,
       String? partnerBusinessName,
       String? partnerBusinessLogo,
-      String? otherPartyBusinessId});
+      String? otherPartyBusinessId,
+      int unreadCount});
 }
 
 /// @nodoc
@@ -237,6 +247,7 @@ class __$$ChatImplCopyWithImpl<$Res>
     Object? partnerBusinessName = freezed,
     Object? partnerBusinessLogo = freezed,
     Object? otherPartyBusinessId = freezed,
+    Object? unreadCount = null,
   }) {
     return _then(_$ChatImpl(
       id: null == id
@@ -307,6 +318,10 @@ class __$$ChatImplCopyWithImpl<$Res>
           ? _value.otherPartyBusinessId
           : otherPartyBusinessId // ignore: cast_nullable_to_non_nullable
               as String?,
+      unreadCount: null == unreadCount
+          ? _value.unreadCount
+          : unreadCount // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
@@ -331,7 +346,8 @@ class _$ChatImpl implements _Chat {
       this.customerAvatarUrl,
       this.partnerBusinessName,
       this.partnerBusinessLogo,
-      this.otherPartyBusinessId});
+      this.otherPartyBusinessId,
+      this.unreadCount = 0});
 
   @override
   final String id;
@@ -379,10 +395,15 @@ class _$ChatImpl implements _Chat {
 // (e.g. a plain customer with no business of their own).
   @override
   final String? otherPartyBusinessId;
+// Number of messages in this chat sent by the other party that this
+// user hasn't read yet. Computed separately (not a raw chats column).
+  @override
+  @JsonKey()
+  final int unreadCount;
 
   @override
   String toString() {
-    return 'Chat(id: $id, customerId: $customerId, businessId: $businessId, businessAId: $businessAId, businessBId: $businessBId, isB2B: $isB2B, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, createdAt: $createdAt, updatedAt: $updatedAt, businessName: $businessName, businessLogoUrl: $businessLogoUrl, customerName: $customerName, customerAvatarUrl: $customerAvatarUrl, partnerBusinessName: $partnerBusinessName, partnerBusinessLogo: $partnerBusinessLogo, otherPartyBusinessId: $otherPartyBusinessId)';
+    return 'Chat(id: $id, customerId: $customerId, businessId: $businessId, businessAId: $businessAId, businessBId: $businessBId, isB2B: $isB2B, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, createdAt: $createdAt, updatedAt: $updatedAt, businessName: $businessName, businessLogoUrl: $businessLogoUrl, customerName: $customerName, customerAvatarUrl: $customerAvatarUrl, partnerBusinessName: $partnerBusinessName, partnerBusinessLogo: $partnerBusinessLogo, otherPartyBusinessId: $otherPartyBusinessId, unreadCount: $unreadCount)';
   }
 
   @override
@@ -421,7 +442,9 @@ class _$ChatImpl implements _Chat {
             (identical(other.partnerBusinessLogo, partnerBusinessLogo) ||
                 other.partnerBusinessLogo == partnerBusinessLogo) &&
             (identical(other.otherPartyBusinessId, otherPartyBusinessId) ||
-                other.otherPartyBusinessId == otherPartyBusinessId));
+                other.otherPartyBusinessId == otherPartyBusinessId) &&
+            (identical(other.unreadCount, unreadCount) ||
+                other.unreadCount == unreadCount));
   }
 
   @override
@@ -443,7 +466,8 @@ class _$ChatImpl implements _Chat {
       customerAvatarUrl,
       partnerBusinessName,
       partnerBusinessLogo,
-      otherPartyBusinessId);
+      otherPartyBusinessId,
+      unreadCount);
 
   /// Create a copy of Chat
   /// with the given fields replaced by the non-null parameter values.
@@ -472,7 +496,8 @@ abstract class _Chat implements Chat {
       final String? customerAvatarUrl,
       final String? partnerBusinessName,
       final String? partnerBusinessLogo,
-      final String? otherPartyBusinessId}) = _$ChatImpl;
+      final String? otherPartyBusinessId,
+      final int unreadCount}) = _$ChatImpl;
 
   @override
   String get id; // B2C fields (nullable for B2B)
@@ -512,7 +537,11 @@ abstract class _Chat implements Chat {
 // business owner's B2C view. Null when there's no business to show
 // (e.g. a plain customer with no business of their own).
   @override
-  String? get otherPartyBusinessId;
+  String?
+      get otherPartyBusinessId; // Number of messages in this chat sent by the other party that this
+// user hasn't read yet. Computed separately (not a raw chats column).
+  @override
+  int get unreadCount;
 
   /// Create a copy of Chat
   /// with the given fields replaced by the non-null parameter values.
