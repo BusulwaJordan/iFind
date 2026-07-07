@@ -36,7 +36,13 @@ mixin _$Chat {
   String? get customerAvatarUrl =>
       throw _privateConstructorUsedError; // Transient UI fields (for B2B)
   String? get partnerBusinessName => throw _privateConstructorUsedError;
-  String? get partnerBusinessLogo => throw _privateConstructorUsedError;
+  String? get partnerBusinessLogo =>
+      throw _privateConstructorUsedError; // The business_id "View Shop" should open for this chat, resolved
+// per-viewer: the partner's business for B2B, the shop for a customer's
+// B2C view, or the customer's own business (if they own one) for a
+// business owner's B2C view. Null when there's no business to show
+// (e.g. a plain customer with no business of their own).
+  String? get otherPartyBusinessId => throw _privateConstructorUsedError;
 
   /// Create a copy of Chat
   /// with the given fields replaced by the non-null parameter values.
@@ -65,7 +71,8 @@ abstract class $ChatCopyWith<$Res> {
       String? customerName,
       String? customerAvatarUrl,
       String? partnerBusinessName,
-      String? partnerBusinessLogo});
+      String? partnerBusinessLogo,
+      String? otherPartyBusinessId});
 }
 
 /// @nodoc
@@ -99,6 +106,7 @@ class _$ChatCopyWithImpl<$Res, $Val extends Chat>
     Object? customerAvatarUrl = freezed,
     Object? partnerBusinessName = freezed,
     Object? partnerBusinessLogo = freezed,
+    Object? otherPartyBusinessId = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -165,6 +173,10 @@ class _$ChatCopyWithImpl<$Res, $Val extends Chat>
           ? _value.partnerBusinessLogo
           : partnerBusinessLogo // ignore: cast_nullable_to_non_nullable
               as String?,
+      otherPartyBusinessId: freezed == otherPartyBusinessId
+          ? _value.otherPartyBusinessId
+          : otherPartyBusinessId // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -192,7 +204,8 @@ abstract class _$$ChatImplCopyWith<$Res> implements $ChatCopyWith<$Res> {
       String? customerName,
       String? customerAvatarUrl,
       String? partnerBusinessName,
-      String? partnerBusinessLogo});
+      String? partnerBusinessLogo,
+      String? otherPartyBusinessId});
 }
 
 /// @nodoc
@@ -223,6 +236,7 @@ class __$$ChatImplCopyWithImpl<$Res>
     Object? customerAvatarUrl = freezed,
     Object? partnerBusinessName = freezed,
     Object? partnerBusinessLogo = freezed,
+    Object? otherPartyBusinessId = freezed,
   }) {
     return _then(_$ChatImpl(
       id: null == id
@@ -289,6 +303,10 @@ class __$$ChatImplCopyWithImpl<$Res>
           ? _value.partnerBusinessLogo
           : partnerBusinessLogo // ignore: cast_nullable_to_non_nullable
               as String?,
+      otherPartyBusinessId: freezed == otherPartyBusinessId
+          ? _value.otherPartyBusinessId
+          : otherPartyBusinessId // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -312,7 +330,8 @@ class _$ChatImpl implements _Chat {
       this.customerName,
       this.customerAvatarUrl,
       this.partnerBusinessName,
-      this.partnerBusinessLogo});
+      this.partnerBusinessLogo,
+      this.otherPartyBusinessId});
 
   @override
   final String id;
@@ -353,10 +372,17 @@ class _$ChatImpl implements _Chat {
   final String? partnerBusinessName;
   @override
   final String? partnerBusinessLogo;
+// The business_id "View Shop" should open for this chat, resolved
+// per-viewer: the partner's business for B2B, the shop for a customer's
+// B2C view, or the customer's own business (if they own one) for a
+// business owner's B2C view. Null when there's no business to show
+// (e.g. a plain customer with no business of their own).
+  @override
+  final String? otherPartyBusinessId;
 
   @override
   String toString() {
-    return 'Chat(id: $id, customerId: $customerId, businessId: $businessId, businessAId: $businessAId, businessBId: $businessBId, isB2B: $isB2B, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, createdAt: $createdAt, updatedAt: $updatedAt, businessName: $businessName, businessLogoUrl: $businessLogoUrl, customerName: $customerName, customerAvatarUrl: $customerAvatarUrl, partnerBusinessName: $partnerBusinessName, partnerBusinessLogo: $partnerBusinessLogo)';
+    return 'Chat(id: $id, customerId: $customerId, businessId: $businessId, businessAId: $businessAId, businessBId: $businessBId, isB2B: $isB2B, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, createdAt: $createdAt, updatedAt: $updatedAt, businessName: $businessName, businessLogoUrl: $businessLogoUrl, customerName: $customerName, customerAvatarUrl: $customerAvatarUrl, partnerBusinessName: $partnerBusinessName, partnerBusinessLogo: $partnerBusinessLogo, otherPartyBusinessId: $otherPartyBusinessId)';
   }
 
   @override
@@ -393,7 +419,9 @@ class _$ChatImpl implements _Chat {
             (identical(other.partnerBusinessName, partnerBusinessName) ||
                 other.partnerBusinessName == partnerBusinessName) &&
             (identical(other.partnerBusinessLogo, partnerBusinessLogo) ||
-                other.partnerBusinessLogo == partnerBusinessLogo));
+                other.partnerBusinessLogo == partnerBusinessLogo) &&
+            (identical(other.otherPartyBusinessId, otherPartyBusinessId) ||
+                other.otherPartyBusinessId == otherPartyBusinessId));
   }
 
   @override
@@ -414,7 +442,8 @@ class _$ChatImpl implements _Chat {
       customerName,
       customerAvatarUrl,
       partnerBusinessName,
-      partnerBusinessLogo);
+      partnerBusinessLogo,
+      otherPartyBusinessId);
 
   /// Create a copy of Chat
   /// with the given fields replaced by the non-null parameter values.
@@ -442,7 +471,8 @@ abstract class _Chat implements Chat {
       final String? customerName,
       final String? customerAvatarUrl,
       final String? partnerBusinessName,
-      final String? partnerBusinessLogo}) = _$ChatImpl;
+      final String? partnerBusinessLogo,
+      final String? otherPartyBusinessId}) = _$ChatImpl;
 
   @override
   String get id; // B2C fields (nullable for B2B)
@@ -475,7 +505,14 @@ abstract class _Chat implements Chat {
   @override
   String? get partnerBusinessName;
   @override
-  String? get partnerBusinessLogo;
+  String?
+      get partnerBusinessLogo; // The business_id "View Shop" should open for this chat, resolved
+// per-viewer: the partner's business for B2B, the shop for a customer's
+// B2C view, or the customer's own business (if they own one) for a
+// business owner's B2C view. Null when there's no business to show
+// (e.g. a plain customer with no business of their own).
+  @override
+  String? get otherPartyBusinessId;
 
   /// Create a copy of Chat
   /// with the given fields replaced by the non-null parameter values.

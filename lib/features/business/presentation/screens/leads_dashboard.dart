@@ -764,6 +764,11 @@ class _ActionGrid extends StatelessWidget {
       case 'Settings':
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => const SettingsScreen()));
+      case 'Post a Need':
+        // No `extra` — broadcasts to nearby category matches, same as the
+        // customer-facing entry points (unlike the targeted one on a
+        // specific business's profile page).
+        context.push('/post-need');
     }
   }
 
@@ -772,6 +777,7 @@ class _ActionGrid extends StatelessWidget {
     const actions = [
       (label: 'B2B Matches', icon: Icons.handshake_rounded,    color: Color(0xFF6366F1)),
       (label: 'Analytics',   icon: Icons.bar_chart_rounded,    color: Color(0xFFF59E0B)),
+      (label: 'Post a Need', icon: Icons.campaign_rounded,     color: Color(0xFF06B6D4)),
       (label: 'Add Product', icon: Icons.add_box_rounded,      color: Color(0xFF10B981)),
       (label: 'Reviews',     icon: Icons.star_rounded,         color: Color(0xFFEC4899)),
       (label: 'Messages',    icon: Icons.chat_bubble_rounded,  color: Color(0xFF3B82F6)),
@@ -1070,6 +1076,15 @@ class _LeadCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final customerProfileAsync =
         ref.watch(userProfileProvider(need.userId));
+    // A need's poster may be a business owner (posting from another
+    // business's profile page) rather than a plain customer — show their
+    // business's name in that case instead of the need's category, and
+    // fall back to their username otherwise.
+    final posterBusinesses =
+        ref.watch(myBusinessesProvider(need.userId)).valueOrNull ?? [];
+    final posterIdentity = posterBusinesses.isNotEmpty
+        ? posterBusinesses.first.name
+        : (customerProfileAsync.valueOrNull?.fullName ?? need.category);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -1103,7 +1118,7 @@ class _LeadCard extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  need.category.toUpperCase(),
+                  posterIdentity,
                   style: GoogleFonts.outfit(
                     color: AppColors.primaryGreen,
                     fontWeight: FontWeight.bold,
@@ -1194,13 +1209,13 @@ class _LeadCard extends ConsumerWidget {
             child: ElevatedButton.icon(
               onPressed: () async {
                 final messenger = ScaffoldMessenger.of(context);
-                // .valueOrNull, not .value — .value rethrows when the
-                // profile fetch errored, and this button doesn't actually
-                // need the profile to succeed (getOrCreateChat only needs
-                // need.userId, already known synchronously); the customer
-                // object is just used for a nicer display name below.
-                final customer = customerProfileAsync.valueOrNull;
                 try {
+                  // The need's content is already sent as the opening
+                  // message when the customer submits a need targeted at
+                  // this business (see PostNeedController.submitNeed) — it
+                  // has to happen there, not here, since messages.sender_id
+                  // must equal auth.uid() and the business owner can't send
+                  // "as" the customer.
                   final chat = await ref
                       .read(chatRemoteDataSourceProvider)
                       .getOrCreateChat(
@@ -1214,7 +1229,7 @@ class _LeadCard extends ConsumerWidget {
                       MaterialPageRoute(
                         builder: (_) => ChatRoomScreen(
                           chat: chat,
-                          otherPartyName: customer?.fullName ?? 'Customer',
+                          otherPartyName: posterIdentity,
                         ),
                       ),
                     );
@@ -1284,96 +1299,104 @@ class _ContactTile extends StatelessWidget {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     final updatedAt = chat.updatedAt;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color:
-              Theme.of(context).colorScheme.outline.withValues(alpha: 0.12),
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatRoomScreen(chat: chat, otherPartyName: name),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
-      child: Row(
-        children: [
-          // Avatar
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: avatarColor.withValues(alpha: 0.15),
-            backgroundImage:
-                avatarUrl != null ? NetworkImage(avatarUrl) : null,
-            onBackgroundImageError: avatarUrl != null ? (_, __) {} : null,
-            child: avatarUrl != null
-                ? null
-                : Text(
-                    initial,
-                    style: GoogleFonts.outfit(
-                        color: avatarColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16),
-                  ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color:
+                Theme.of(context).colorScheme.outline.withValues(alpha: 0.12),
           ),
-          const SizedBox(width: 12),
-          // Name + message
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Avatar
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: avatarColor.withValues(alpha: 0.15),
+              backgroundImage:
+                  avatarUrl != null ? NetworkImage(avatarUrl) : null,
+              onBackgroundImageError: avatarUrl != null ? (_, __) {} : null,
+              child: avatarUrl != null
+                  ? null
+                  : Text(
+                      initial,
+                      style: GoogleFonts.outfit(
+                          color: avatarColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16),
+                    ),
+            ),
+            const SizedBox(width: 12),
+            // Name + message
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: AppColors.darkText),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    lastMsg,
+                    style: GoogleFonts.outfit(
+                        fontSize: 12, color: Colors.grey[600]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Time + message button
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  name,
-                  style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      color: AppColors.darkText),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  lastMsg,
-                  style: GoogleFonts.outfit(
-                      fontSize: 12, color: Colors.grey[600]),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                    timeago.format(updatedAt),
+                    style: GoogleFonts.outfit(
+                        fontSize: 10, color: Colors.grey[500]),
+                  ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryGreen,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Message',
+                    style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 8),
-          // Time + message button
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                  timeago.format(updatedAt),
-                  style: GoogleFonts.outfit(
-                      fontSize: 10, color: Colors.grey[500]),
-                ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryGreen,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'Message',
-                  style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

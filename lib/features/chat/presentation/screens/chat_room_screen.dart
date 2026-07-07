@@ -2,8 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:ifind/core/constants/app_colors.dart';
 import 'package:ifind/core/utils/error_utils.dart';
 import 'package:ifind/core/widgets/app_toast.dart';
@@ -107,7 +111,8 @@ class _BusinessInfoCard extends StatelessWidget {
             child: logoUrl != null
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(logoUrl!, fit: BoxFit.cover,
+                    child: Image.network(logoUrl!,
+                        fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => const Icon(
                             Icons.storefront_outlined,
                             color: AppColors.primaryGreen)))
@@ -153,8 +158,7 @@ class _BusinessInfoCard extends StatelessWidget {
           GestureDetector(
             onTap: onViewShop,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 border: Border.all(
                     color: AppColors.primaryGreen.withValues(alpha: 0.4),
@@ -212,8 +216,7 @@ class ChatRoomScreen extends ConsumerWidget {
         ),
         backgroundColor: AppColors.deepGreen,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         duration: const Duration(seconds: 2),
       ),
@@ -221,23 +224,26 @@ class ChatRoomScreen extends ConsumerWidget {
   }
 
   Future<void> _navigateToShop(BuildContext context, WidgetRef ref) async {
-    final businessId = chat.businessId;
+    // otherPartyBusinessId, not chat.businessId — chat.businessId is always
+    // the B2C chat's own shop, so a business owner viewing their own
+    // customer chat would otherwise be sent to their own shop instead of
+    // the other party's.
+    final businessId = chat.otherPartyBusinessId;
     if (businessId == null) {
       _comingSoon(context, 'View Shop');
       return;
     }
-    final business =
-        await ref.read(businessProvider(businessId).future);
+    final business = await ref.read(businessProvider(businessId).future);
     if (!context.mounted) return;
     if (business == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Could not load shop details.',
-              style: GoogleFonts.outfit()),
+          content:
+              Text('Could not load shop details.', style: GoogleFonts.outfit()),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         ),
       );
@@ -246,182 +252,439 @@ class ChatRoomScreen extends ConsumerWidget {
     context.push('/business-details', extra: business);
   }
 
+  Future<void> _showChatMenu(BuildContext context, WidgetRef ref) async {
+    final otherUserId = await _resolveOtherUserId(ref);
+    var isBlocked = false;
+    if (otherUserId != null) {
+      isBlocked = await ref
+          .read(chatRemoteDataSourceProvider)
+          .isUserBlocked(otherUserId);
+    }
+    if (!context.mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            if (otherUserId != null) ...[
+              ListTile(
+                leading: Icon(
+                    isBlocked ? Icons.lock_open_rounded : Icons.block_rounded,
+                    color: isBlocked ? AppColors.primaryGreen : Colors.orange),
+                title: Text(
+                    isBlocked
+                        ? 'Unblock $otherPartyName'
+                        : 'Block $otherPartyName',
+                    style: GoogleFonts.outfit()),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  if (isBlocked) {
+                    _confirmUnblock(context, ref, otherUserId);
+                  } else {
+                    _confirmBlock(context, ref, otherUserId);
+                  }
+                },
+              ),
+              ListTile(
+                leading:
+                    const Icon(Icons.flag_outlined, color: Colors.redAccent),
+                title:
+                    Text('Report $otherPartyName', style: GoogleFonts.outfit()),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showReportDialog(context, ref, otherUserId);
+                },
+              ),
+            ],
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded,
+                  color: Colors.redAccent),
+              title: Text('Delete conversation', style: GoogleFonts.outfit()),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _confirmDeleteChat(context, ref);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Resolves the UUID of the other participant in this chat, regardless
+  /// of which side (customer or business owner) is currently viewing it.
+  Future<String?> _resolveOtherUserId(WidgetRef ref) async {
+    final myId = ref.read(currentUserProvider)?.id;
+    if (myId == null) return null;
+
+    if (chat.isB2B) {
+      final otherBizId = chat.otherPartyBusinessId;
+      if (otherBizId == null) return null;
+      final business = await ref.read(businessProvider(otherBizId).future);
+      return business?.ownerId;
+    }
+
+    if (chat.customerId != null && chat.customerId != myId) {
+      return chat.customerId;
+    }
+    if (chat.businessId != null) {
+      final business =
+          await ref.read(businessProvider(chat.businessId!).future);
+      return business?.ownerId;
+    }
+    return null;
+  }
+
+  Future<void> _confirmDeleteChat(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Delete chat?',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: Text('Remove your conversation with $otherPartyName?',
+            style: GoogleFonts.outfit()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await ref.read(chatRemoteDataSourceProvider).deleteChat(chat.id);
+      ref.invalidate(myChatsProvider);
+      if (chat.businessId != null) {
+        ref.invalidate(businessChatsProvider(chat.businessId!));
+        ref.invalidate(unansweredContactsProvider(chat.businessId!));
+      }
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        AppToast.show(context, 'Chat deleted', type: ToastType.info);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
+      }
+    }
+  }
+
+  Future<void> _confirmBlock(
+      BuildContext context, WidgetRef ref, String otherUserId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Block $otherPartyName?',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: Text('They will no longer be able to message you.',
+            style: GoogleFonts.outfit()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Block'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await ref.read(chatRemoteDataSourceProvider).blockUser(otherUserId);
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        AppToast.show(context, '$otherPartyName has been blocked',
+            type: ToastType.success);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
+      }
+    }
+  }
+
+  Future<void> _confirmUnblock(
+      BuildContext context, WidgetRef ref, String otherUserId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Unblock $otherPartyName?',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: Text('They will be able to message you again.',
+            style: GoogleFonts.outfit()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Unblock'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await ref.read(chatRemoteDataSourceProvider).unblockUser(otherUserId);
+      if (context.mounted) {
+        AppToast.show(context, '$otherPartyName has been unblocked',
+            type: ToastType.success);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
+      }
+    }
+  }
+
+  Future<void> _showReportDialog(
+      BuildContext context, WidgetRef ref, String otherUserId) async {
+    final controller = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Report $otherPartyName',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: controller,
+          maxLines: 3,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'What\'s the issue?'),
+          style: GoogleFonts.outfit(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryGreen,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+    if (reason == null || reason.isEmpty || !context.mounted) return;
+
+    try {
+      await ref.read(chatRemoteDataSourceProvider).reportUser(
+            reportedUserId: otherUserId,
+            chatId: chat.id,
+            reason: reason,
+          );
+      if (context.mounted) {
+        AppToast.show(context, 'Report submitted. Thank you.',
+            type: ToastType.success);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final topPad = MediaQuery.of(context).padding.top;
-    final isBusiness = chat.businessId != null || chat.isB2B;
+    final isBusiness = chat.otherPartyBusinessId != null;
     final logoUrl = chat.isB2B
         ? chat.partnerBusinessLogo
         : (chat.businessLogoUrl ?? chat.customerAvatarUrl);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5FBF7),
-      body: Stack(
+      body: Column(
         children: [
-          Column(
-            children: [
-              // ── Wave header ──────────────────────────────────────────────────
-              ClipRRect(
-                borderRadius:
-                    const BorderRadius.vertical(bottom: Radius.circular(0)),
-                child: Container(
-                  padding: EdgeInsets.fromLTRB(16, topPad + 12, 16, 16),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Color(0xFF022C22),
-                        Color(0xFF065F46),
-                        Color(0xFF059669)
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        top: -20,
-                        right: -20,
-                        child: Container(
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.05),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                      const Positioned.fill(
-                        child:
-                            CustomPaint(painter: _HeaderWavePainter()),
-                      ),
-                      Row(
-                        children: [
-                          // Back
-                          GestureDetector(
-                            onTap: () => Navigator.of(context).pop(),
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.14),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(
-                                  Icons.arrow_back_rounded,
-                                  color: Colors.white,
-                                  size: 20),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          // Avatar
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                  color:
-                                      Colors.white.withValues(alpha: 0.35),
-                                  width: 2),
-                            ),
-                            child: logoUrl != null
-                                ? ClipOval(
-                                    child: Image.network(logoUrl,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) =>
-                                            _avatarFallback(
-                                                otherPartyName)))
-                                : _avatarFallback(otherPartyName),
-                          ),
-                          const SizedBox(width: 10),
-                          // Name + online
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        otherPartyName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.outfit(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                    ),
-                                    if (isBusiness) ...[
-                                      const SizedBox(width: 4),
-                                      const Icon(Icons.verified_rounded,
-                                          color: Color(0xFF4ADE80),
-                                          size: 15),
-                                    ],
-                                  ],
-                                ),
-                                Row(
-                                  children: [
-                                    Container(
-                                      width: 7,
-                                      height: 7,
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFF4ADE80),
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 5),
-                                    Text('Online',
-                                        style: GoogleFonts.outfit(
-                                            color: Colors.white
-                                                .withValues(alpha: 0.70),
-                                            fontSize: 12)),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Action icons
-                          _HeaderAction(
-                              icon: Icons.call_rounded,
-                              onTap: () => _comingSoon(context, 'Voice calls')),
-                          const SizedBox(width: 6),
-                          _HeaderAction(
-                              icon: Icons.videocam_rounded,
-                              onTap: () => _comingSoon(context, 'Video calls')),
-                          const SizedBox(width: 6),
-                          _HeaderAction(
-                              icon: Icons.more_vert_rounded,
-                              onTap: () => _comingSoon(context, 'More options')),
-                        ],
-                      ),
-                    ],
-                  ),
+          // ── Wave header ──────────────────────────────────────────────────
+          ClipRRect(
+            borderRadius:
+                const BorderRadius.vertical(bottom: Radius.circular(0)),
+            child: Container(
+              padding: EdgeInsets.fromLTRB(16, topPad + 12, 16, 16),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xFF022C22),
+                    Color(0xFF065F46),
+                    Color(0xFF059669)
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
               ),
-
-              // ── Business info card ─────────────────────────────────────────
-              if (isBusiness)
-                _BusinessInfoCard(
-                  name: otherPartyName,
-                  logoUrl: logoUrl,
-                  onViewShop: () => _navigateToShop(context, ref),
-                ),
-
-              // ── Chat body ──────────────────────────────────────────────────
-              Expanded(child: _ChatRoomBody(chat: chat)),
-            ],
-          ),
-
-          // ── Floating AI assistant button ──────────────────────────────────
-          Positioned(
-            right: 16,
-            bottom: 84,
-            child: _AiAssistantButton(
-              onTap: () => _showAiAssistantSheet(context),
+              child: Stack(
+                children: [
+                  Positioned(
+                    top: -20,
+                    right: -20,
+                    child: Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.05),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                  const Positioned.fill(
+                    child: CustomPaint(painter: _HeaderWavePainter()),
+                  ),
+                  Row(
+                    children: [
+                      // Back
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.arrow_back_rounded,
+                              color: Colors.white, size: 20),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Avatar
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.35),
+                              width: 2),
+                        ),
+                        child: logoUrl != null
+                            ? ClipOval(
+                                child: Image.network(logoUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        _avatarFallback(otherPartyName)))
+                            : _avatarFallback(otherPartyName),
+                      ),
+                      const SizedBox(width: 10),
+                      // Name + online
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    otherPartyName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.outfit(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                                if (isBusiness) ...[
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.verified_rounded,
+                                      color: Color(0xFF4ADE80), size: 15),
+                                ],
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF4ADE80),
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                Text('Online',
+                                    style: GoogleFonts.outfit(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.70),
+                                        fontSize: 12)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Action icons
+                      _HeaderAction(
+                          icon: Icons.more_vert_rounded,
+                          onTap: () => _showChatMenu(context, ref)),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
+
+          // ── Business info card ─────────────────────────────────────────
+          if (isBusiness)
+            _BusinessInfoCard(
+              name: otherPartyName,
+              logoUrl: logoUrl,
+              onViewShop: () => _navigateToShop(context, ref),
+            ),
+
+          // ── Chat body ──────────────────────────────────────────────────
+          Expanded(child: _ChatRoomBody(chat: chat)),
         ],
       ),
     );
@@ -436,99 +699,6 @@ class ChatRoomScreen extends ConsumerWidget {
           style: GoogleFonts.outfit(
               color: Colors.white, fontWeight: FontWeight.bold),
         ),
-      ),
-    );
-  }
-
-  // TODO: wire this up to the real AI assistant feature once the backend
-  // endpoint exists (e.g. drafting replies, summarizing the thread, or
-  // suggesting a quotation). For now it's a lightweight placeholder sheet.
-  void _showAiAssistantSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.primaryGreen, Color(0xFF10B981)],
-                      ),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.auto_awesome_rounded,
-                        color: Colors.white, size: 18),
-                  ),
-                  const SizedBox(width: 10),
-                  Text('AI Assistant',
-                      style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold, fontSize: 16)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Draft replies, summarize this chat, or generate a quotation. Coming soon.',
-                style: GoogleFonts.outfit(
-                    fontSize: 13, color: Colors.grey[500], height: 1.4),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AiAssistantButton extends StatelessWidget {
-  final VoidCallback onTap;
-  const _AiAssistantButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primaryGreen, Color(0xFF10B981)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primaryGreen.withValues(alpha: 0.4),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: const Icon(Icons.auto_awesome_rounded,
-            color: Colors.white, size: 22),
       ),
     );
   }
@@ -573,8 +743,7 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _scrollToBottom());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
   }
 
   void _scrollToBottom() {
@@ -590,36 +759,39 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
+    _controller.clear();
+    await _sendRawContent(text);
+  }
+
+  /// Shared by text, photo, and location sends — handles the optimistic
+  /// bubble, the actual write, provider invalidation, and rollback on error.
+  Future<void> _sendRawContent(String content) async {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
-    _controller.clear();
     final tempMsg = Message(
       id: 'temp-${DateTime.now().millisecondsSinceEpoch}',
       chatId: widget.chat.id,
       senderId: user.id,
-      content: text,
+      content: content,
       createdAt: DateTime.now(),
       isRead: false,
     );
     setState(() => _optimisticMessages.add(tempMsg));
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _scrollToBottom());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
 
     try {
       await ref.read(chatRemoteDataSourceProvider).sendMessage(
             chatId: widget.chat.id,
             senderId: user.id,
-            content: text,
+            content: content,
           );
       ref.invalidate(myChatsProvider);
       if (!widget.chat.isB2B && widget.chat.businessId != null) {
         ref.invalidate(businessChatsProvider(widget.chat.businessId!));
-        ref.invalidate(
-            unansweredContactsProvider(widget.chat.businessId!));
+        ref.invalidate(unansweredContactsProvider(widget.chat.businessId!));
       }
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => _scrollToBottom());
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     } catch (e) {
       if (mounted) {
         AppToast.show(context, friendlyError(e), type: ToastType.error);
@@ -628,38 +800,89 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
     }
   }
 
+  Future<void> _sendPhoto() async {
+    try {
+      final picked = await ImagePicker()
+          .pickImage(source: ImageSource.gallery, imageQuality: 70);
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      final ext = picked.mimeType?.split('/').last.toLowerCase() ??
+          (picked.name.contains('.')
+              ? picked.name.split('.').last.toLowerCase()
+              : 'jpg');
+      final path =
+          '${widget.chat.id}/${DateTime.now().millisecondsSinceEpoch}.$ext';
+
+      final supabase = Supabase.instance.client;
+      await supabase.storage.from('chat_attachments').uploadBinary(
+            path,
+            bytes,
+            fileOptions: FileOptions(contentType: 'image/$ext'),
+          );
+      final url = supabase.storage.from('chat_attachments').getPublicUrl(path);
+
+      await _sendRawContent('IFIND_IMAGE::$url');
+    } catch (e) {
+      if (mounted) {
+        AppToast.show(context, 'Could not send photo: ${friendlyError(e)}',
+            type: ToastType.error);
+      }
+    }
+  }
+
+  Future<void> _sendLocation() async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception('Turn on location services and try again.');
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        throw Exception('Location permission denied.');
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium);
+      await _sendRawContent(
+          'IFIND_LOCATION::${position.latitude},${position.longitude}');
+    } catch (e) {
+      if (mounted) {
+        AppToast.show(context, friendlyError(e), type: ToastType.error);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final messagesAsync =
-        ref.watch(messagesStreamProvider(widget.chat.id));
+    final messagesAsync = ref.watch(messagesStreamProvider(widget.chat.id));
     final currentUser = ref.watch(currentUserProvider);
 
     return Column(
       children: [
         Expanded(
           child: messagesAsync.when(
-            loading: () =>
-                const Center(child: IFindLoaderInline(size: 60)),
+            loading: () => const Center(child: IFindLoaderInline(size: 60)),
             error: (e, _) => ErrorRetryWidget(
               message: friendlyError(e),
-              onRetry: () => ref.invalidate(
-                  messagesStreamProvider(widget.chat.id)),
+              onRetry: () =>
+                  ref.invalidate(messagesStreamProvider(widget.chat.id)),
             ),
             data: (serverMessages) {
-              _optimisticMessages.removeWhere((opt) =>
-                  serverMessages.any((srv) =>
+              _optimisticMessages.removeWhere((opt) => serverMessages.any(
+                  (srv) =>
                       srv.senderId == opt.senderId &&
                       srv.content == opt.content &&
-                      srv.createdAt
-                              .difference(opt.createdAt)
-                              .inSeconds
-                              .abs() <
+                      srv.createdAt.difference(opt.createdAt).inSeconds.abs() <
                           5));
 
-              final all = [
-                ...serverMessages,
-                ..._optimisticMessages
-              ]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+              final all = [...serverMessages, ..._optimisticMessages]
+                ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
               WidgetsBinding.instance
                   .addPostFrameCallback((_) => _scrollToBottom());
@@ -673,8 +896,7 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
                         width: 64,
                         height: 64,
                         decoration: BoxDecoration(
-                          color: AppColors.primaryGreen
-                              .withValues(alpha: 0.08),
+                          color: AppColors.primaryGreen.withValues(alpha: 0.08),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.chat_bubble_outline_rounded,
@@ -703,15 +925,14 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
                   final isMe = msg.senderId == currentUser?.id;
 
                   // Date separator
-                  final showDate = i == 0 ||
-                      !_sameDay(all[i - 1].createdAt, msg.createdAt);
+                  final showDate =
+                      i == 0 || !_sameDay(all[i - 1].createdAt, msg.createdAt);
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       if (showDate)
-                        _DateSeparator(
-                            label: _dateLabel(msg.createdAt)),
+                        _DateSeparator(label: _dateLabel(msg.createdAt)),
                       _MessageBubble(
                         msg: msg,
                         isMe: isMe,
@@ -733,10 +954,10 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
                         onDelete: isMe && !msg.id.startsWith('temp-')
                             ? () => _deleteMessage(msg)
                             : null,
-                        onQuotationAccept: () => _handleQuotationAction(
-                            msg, 'accepted'),
-                        onQuotationDecline: () => _handleQuotationAction(
-                            msg, 'declined'),
+                        onQuotationAccept: () =>
+                            _handleQuotationAction(msg, 'accepted'),
+                        onQuotationDecline: () =>
+                            _handleQuotationAction(msg, 'declined'),
                         onQuotationCounter: () => _handleQuotationAction(
                             msg, 'counter offer requested'),
                       ),
@@ -750,30 +971,8 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
         _InputArea(
           onSend: _sendMessage,
           controller: _controller,
-          onComingSoon: (feature) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.rocket_launch_rounded,
-                        color: Colors.white, size: 18),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text('$feature is coming soon!',
-                          style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.w600, fontSize: 14)),
-                    ),
-                  ],
-                ),
-                backgroundColor: AppColors.deepGreen,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          },
+          onSendPhoto: _sendPhoto,
+          onSendLocation: _sendLocation,
         ),
       ],
     );
@@ -801,14 +1000,11 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
 
   Future<void> _deleteMessage(Message msg) async {
     try {
-      await ref
-          .read(chatRemoteDataSourceProvider)
-          .deleteMessage(msg.id);
+      await ref.read(chatRemoteDataSourceProvider).deleteMessage(msg.id);
       ref.invalidate(messagesStreamProvider(widget.chat.id));
       ref.invalidate(myChatsProvider);
       if (mounted) {
-        AppToast.show(context, 'Message deleted',
-            type: ToastType.success);
+        AppToast.show(context, 'Message deleted', type: ToastType.success);
       }
     } catch (e) {
       if (mounted) {
@@ -829,6 +1025,9 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
 class _MessageBubble extends StatelessWidget {
   static const _productInquiryPrefix = 'IFIND_PRODUCT_INQUIRY::';
   static const _quotationPrefix = 'IFIND_QUOTATION::';
+  static const _needInquiryPrefix = 'IFIND_NEED_INQUIRY::';
+  static const _imagePrefix = 'IFIND_IMAGE::';
+  static const _locationPrefix = 'IFIND_LOCATION::';
 
   final Message msg;
   final bool isMe;
@@ -853,10 +1052,12 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isOptimistic = msg.id.startsWith('temp-');
-    final isProductInquiry =
-        msg.content.startsWith(_productInquiryPrefix);
+    final isProductInquiry = msg.content.startsWith(_productInquiryPrefix);
     final isRichInquiry = msg.content.startsWith('[MEDIA_INQUIRY]');
     final isQuotation = msg.content.startsWith(_quotationPrefix);
+    final isNeedInquiry = msg.content.startsWith(_needInquiryPrefix);
+    final isImageMessage = msg.content.startsWith(_imagePrefix);
+    final isLocationMessage = msg.content.startsWith(_locationPrefix);
 
     String displayContent = msg.content;
     String? mediaUrl;
@@ -864,26 +1065,45 @@ class _MessageBubble extends StatelessWidget {
     String? productTitle;
     String? productPrice;
     bool hasCard = false;
+    String? imageMessageUrl;
+    double? locationLat;
+    double? locationLng;
+
+    if (isImageMessage) {
+      imageMessageUrl = msg.content.substring(_imagePrefix.length);
+    } else if (isLocationMessage) {
+      final coords = msg.content.substring(_locationPrefix.length).split(',');
+      if (coords.length == 2) {
+        locationLat = double.tryParse(coords[0]);
+        locationLng = double.tryParse(coords[1]);
+      }
+    }
 
     Map<String, dynamic>? quotationData;
+    Map<String, dynamic>? needData;
     if (isQuotation) {
       try {
-        quotationData = jsonDecode(
-                msg.content.substring(_quotationPrefix.length))
-            as Map<String, dynamic>;
+        quotationData =
+            jsonDecode(msg.content.substring(_quotationPrefix.length))
+                as Map<String, dynamic>;
       } catch (_) {
         quotationData = null;
       }
+    } else if (isNeedInquiry) {
+      try {
+        needData = jsonDecode(msg.content.substring(_needInquiryPrefix.length))
+            as Map<String, dynamic>;
+      } catch (_) {
+        needData = null;
+      }
     } else if (isProductInquiry) {
       try {
-        final raw =
-            msg.content.substring(_productInquiryPrefix.length);
+        final raw = msg.content.substring(_productInquiryPrefix.length);
         final data = jsonDecode(raw) as Map<String, dynamic>;
         mediaType = data['media_type'] as String?;
-        mediaUrl =
-            (data['thumbnail_url'] ?? data['media_url']) as String?;
-        displayContent = data['message'] as String? ??
-            'I am interested in this item.';
+        mediaUrl = (data['thumbnail_url'] ?? data['media_url']) as String?;
+        displayContent =
+            data['message'] as String? ?? 'I am interested in this item.';
         productTitle = data['title'] as String? ?? 'Product inquiry';
         final price = data['price'];
         if (price is num) {
@@ -906,9 +1126,7 @@ class _MessageBubble extends StatelessWidget {
     }
 
     return GestureDetector(
-      onLongPress: onDelete != null
-          ? () => _showMenu(context)
-          : null,
+      onLongPress: onDelete != null ? () => _showMenu(context) : null,
       child: Opacity(
         opacity: isOptimistic ? 0.72 : 1.0,
         child: Padding(
@@ -939,13 +1157,34 @@ class _MessageBubble extends StatelessWidget {
                     onCounter: onQuotationCounter,
                   ),
                 )
+              else if (isNeedInquiry && needData != null)
+                Flexible(
+                  child: _NeedInquiryCard(data: needData, isMe: isMe),
+                )
+              else if (isImageMessage && imageMessageUrl != null)
+                Flexible(
+                  child: _ImageMessageCard(
+                    url: imageMessageUrl,
+                    onTap: () => _openMedia(context, imageMessageUrl!, 'image',
+                        null, msg.createdAt),
+                  ),
+                )
+              else if (isLocationMessage &&
+                  locationLat != null &&
+                  locationLng != null)
+                Flexible(
+                  child: _LocationMessageCard(
+                    lat: locationLat,
+                    lng: locationLng,
+                    isMe: isMe,
+                  ),
+                )
               else
                 // Bubble
                 Flexible(
                   child: Container(
                     constraints: BoxConstraints(
-                      maxWidth:
-                          MediaQuery.of(context).size.width * 0.72,
+                      maxWidth: MediaQuery.of(context).size.width * 0.72,
                     ),
                     decoration: BoxDecoration(
                       gradient: isMe
@@ -962,16 +1201,13 @@ class _MessageBubble extends StatelessWidget {
                       borderRadius: BorderRadius.only(
                         topLeft: const Radius.circular(22),
                         topRight: const Radius.circular(22),
-                        bottomLeft:
-                            Radius.circular(isMe ? 22 : 4),
-                        bottomRight:
-                            Radius.circular(isMe ? 4 : 22),
+                        bottomLeft: Radius.circular(isMe ? 22 : 4),
+                        bottomRight: Radius.circular(isMe ? 4 : 22),
                       ),
                       boxShadow: [
                         BoxShadow(
                           color: isMe
-                              ? AppColors.primaryGreen
-                                  .withValues(alpha: 0.20)
+                              ? AppColors.primaryGreen.withValues(alpha: 0.20)
                               : Colors.black.withValues(alpha: 0.06),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
@@ -982,10 +1218,8 @@ class _MessageBubble extends StatelessWidget {
                       borderRadius: BorderRadius.only(
                         topLeft: const Radius.circular(22),
                         topRight: const Radius.circular(22),
-                        bottomLeft:
-                            Radius.circular(isMe ? 22 : 4),
-                        bottomRight:
-                            Radius.circular(isMe ? 4 : 22),
+                        bottomLeft: Radius.circular(isMe ? 22 : 4),
+                        bottomRight: Radius.circular(isMe ? 4 : 22),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -1003,10 +1237,8 @@ class _MessageBubble extends StatelessWidget {
                                 title: productTitle,
                                 price: productPrice,
                                 isMe: isMe,
-                                onTap: () => _openMedia(
-                                    context, mediaUrl!, mediaType,
-                                    productTitle,
-                                    msg.createdAt),
+                                onTap: () => _openMedia(context, mediaUrl!,
+                                    mediaType, productTitle, msg.createdAt),
                               ),
                               const SizedBox(height: 8),
                             ],
@@ -1031,8 +1263,7 @@ class _MessageBubble extends StatelessWidget {
                                       locale: 'en_short'),
                                   style: TextStyle(
                                     color: isMe
-                                        ? Colors.white
-                                            .withValues(alpha: 0.65)
+                                        ? Colors.white.withValues(alpha: 0.65)
                                         : Colors.grey[400],
                                     fontSize: 10,
                                   ),
@@ -1044,8 +1275,7 @@ class _MessageBubble extends StatelessWidget {
                                         ? Icons.access_time_rounded
                                         : Icons.done_all_rounded,
                                     size: 12,
-                                    color:
-                                        Colors.white.withValues(alpha: 0.65),
+                                    color: Colors.white.withValues(alpha: 0.65),
                                   ),
                                 ],
                               ],
@@ -1069,8 +1299,7 @@ class _MessageBubble extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.vertical(top: Radius.circular(24))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1087,8 +1316,7 @@ class _MessageBubble extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.delete_outline_rounded,
                   color: Colors.redAccent),
-              title: Text('Delete message',
-                  style: GoogleFonts.outfit()),
+              title: Text('Delete message', style: GoogleFonts.outfit()),
               onTap: () {
                 Navigator.pop(context);
                 onDelete?.call();
@@ -1113,8 +1341,7 @@ class _MessageBubble extends StatelessWidget {
     );
     Navigator.push(
       context,
-      MaterialPageRoute(
-          builder: (_) => GalleryMediaViewScreen(item: item)),
+      MaterialPageRoute(builder: (_) => GalleryMediaViewScreen(item: item)),
     );
   }
 }
@@ -1133,12 +1360,12 @@ class _SenderAvatar extends StatelessWidget {
         shape: BoxShape.circle,
         color: AppColors.primaryGreen.withValues(alpha: 0.12),
         border: Border.all(
-            color: AppColors.primaryGreen.withValues(alpha: 0.3),
-            width: 1.5),
+            color: AppColors.primaryGreen.withValues(alpha: 0.3), width: 1.5),
       ),
       child: logoUrl != null
           ? ClipOval(
-              child: Image.network(logoUrl!, fit: BoxFit.cover,
+              child: Image.network(logoUrl!,
+                  fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Center(
                       child: Text(initial,
                           style: GoogleFonts.outfit(
@@ -1179,9 +1406,8 @@ class _ProductCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: isMe
-              ? Colors.white.withValues(alpha: 0.12)
-              : Colors.grey.shade50,
+          color:
+              isMe ? Colors.white.withValues(alpha: 0.12) : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isMe
@@ -1205,15 +1431,12 @@ class _ProductCard extends StatelessWidget {
                     height: 64,
                     fit: BoxFit.cover,
                     placeholder: (_, __) => Container(
-                        width: 64,
-                        height: 64,
-                        color: Colors.grey.shade200),
+                        width: 64, height: 64, color: Colors.grey.shade200),
                     errorWidget: (_, __, ___) => Container(
                         width: 64,
                         height: 64,
                         color: Colors.grey.shade300,
-                        child: const Icon(
-                            Icons.image_not_supported_outlined,
+                        child: const Icon(Icons.image_not_supported_outlined,
                             size: 20)),
                   ),
                   if (mediaType == 'video')
@@ -1232,8 +1455,8 @@ class _ProductCard extends StatelessWidget {
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1284,6 +1507,207 @@ class _ProductCard extends StatelessWidget {
   }
 }
 
+// ── Need inquiry card ─────────────────────────────────────────────────────────
+// Expects messages formatted as:
+//   IFIND_NEED_INQUIRY::{"need_id":"...","title":"...","description":"...","category":"..."}
+// Surfaces the original "Post a Need" text as the opening message when a
+// business follows up from Recent Inquiries (see leads_dashboard.dart).
+class _NeedInquiryCard extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final bool isMe;
+
+  const _NeedInquiryCard({required this.data, required this.isMe});
+
+  @override
+  Widget build(BuildContext context) {
+    final title = data['title'] as String? ?? 'A need';
+    final description = data['description'] as String?;
+    final category = data['category'] as String?;
+    // Renders standalone (outside the gradient bubble), so colors are fixed
+    // and not tinted by isMe — matching _QuotationCard's convention.
+    const mutedColor = AppColors.primaryGreen;
+
+    return Container(
+      constraints:
+          BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.campaign_rounded, size: 15, color: mutedColor),
+              const SizedBox(width: 6),
+              Text(
+                'POSTED NEED',
+                style: GoogleFonts.outfit(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
+                  color: mutedColor,
+                ),
+              ),
+              if (category != null && category.isNotEmpty) ...[
+                const Spacer(),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryGreen.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    category,
+                    style: GoogleFonts.outfit(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryGreen,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: GoogleFonts.outfit(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          if (description != null && description.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              description,
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                height: 1.3,
+                color: Colors.black54,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Image message card ────────────────────────────────────────────────────────
+// Expects messages formatted as: IFIND_IMAGE::<public storage url>
+class _ImageMessageCard extends StatelessWidget {
+  final String url;
+  final VoidCallback onTap;
+
+  const _ImageMessageCard({required this.url, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: CachedNetworkImage(
+          imageUrl: url,
+          width: 200,
+          height: 200,
+          fit: BoxFit.cover,
+          placeholder: (_, __) => Container(
+            width: 200,
+            height: 200,
+            color: Colors.grey.shade200,
+            child:
+                const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+          errorWidget: (_, __, ___) => Container(
+            width: 200,
+            height: 200,
+            color: Colors.grey.shade300,
+            child: const Icon(Icons.image_not_supported_outlined),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Location message card ─────────────────────────────────────────────────────
+// Expects messages formatted as: IFIND_LOCATION::<lat>,<lng>
+class _LocationMessageCard extends StatelessWidget {
+  final double lat;
+  final double lng;
+  final bool isMe;
+
+  const _LocationMessageCard({
+    required this.lat,
+    required this.lng,
+    required this.isMe,
+  });
+
+  Future<void> _openInMaps() async {
+    final uri =
+        Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Renders standalone (outside the gradient bubble), so colors are fixed
+    // and not tinted by isMe — matching _QuotationCard's convention.
+    return GestureDetector(
+      onTap: _openInMaps,
+      child: Container(
+        width: 200,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.location_on_rounded,
+                size: 28, color: AppColors.primaryGreen),
+            const SizedBox(height: 8),
+            Text(
+              'Shared Location',
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}',
+              style: GoogleFonts.outfit(
+                fontSize: 11,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Tap to open in Maps',
+              style: GoogleFonts.outfit(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primaryGreen,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Quotation card ───────────────────────────────────────────────────────────
 // Expects messages formatted as:
 //   IFIND_QUOTATION::{"items":"30 Pairs Nike Air Max","total":5400000,"status":"pending"}
@@ -1312,7 +1736,8 @@ class _QuotationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = data?['items']?.toString() ?? 'Items';
     final totalRaw = data?['total'];
-    final total = totalRaw is num ? _formatUgx(totalRaw) : (totalRaw?.toString() ?? '—');
+    final total =
+        totalRaw is num ? _formatUgx(totalRaw) : (totalRaw?.toString() ?? '—');
     final status = (data?['status'] as String?) ?? 'pending';
 
     return Container(
@@ -1385,8 +1810,7 @@ class _QuotationCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               timeago.format(createdAt, locale: 'en_short'),
-              style: GoogleFonts.outfit(
-                  fontSize: 10, color: Colors.grey[400]),
+              style: GoogleFonts.outfit(fontSize: 10, color: Colors.grey[400]),
             ),
             const SizedBox(height: 10),
             if (status == 'pending')
@@ -1414,7 +1838,8 @@ class _QuotationCard extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primaryGreen,
                         side: BorderSide(
-                            color: AppColors.primaryGreen.withValues(alpha: 0.5)),
+                            color:
+                                AppColors.primaryGreen.withValues(alpha: 0.5)),
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10)),
@@ -1477,12 +1902,14 @@ class _QuotationCard extends StatelessWidget {
 class _InputArea extends StatelessWidget {
   final VoidCallback onSend;
   final TextEditingController controller;
-  final void Function(String feature) onComingSoon;
+  final VoidCallback onSendPhoto;
+  final VoidCallback onSendLocation;
 
   const _InputArea({
     required this.onSend,
     required this.controller,
-    required this.onComingSoon,
+    required this.onSendPhoto,
+    required this.onSendLocation,
   });
 
   @override
@@ -1504,38 +1931,16 @@ class _InputArea extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Attachment icons — scrollable so new options (docs, quotes)
-            // don't get cramped on smaller screens.
+            // Attachment icons
             SizedBox(
               height: 34,
-              width: 168,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
+              width: 72,
+              child: Row(
                 children: [
-                  _AttachBtn(
-                      icon: Icons.image_outlined,
-                      onTap: () => onComingSoon('Photo sharing')),
+                  _AttachBtn(icon: Icons.image_outlined, onTap: onSendPhoto),
                   const SizedBox(width: 4),
                   _AttachBtn(
-                      icon: Icons.camera_alt_outlined,
-                      onTap: () => onComingSoon('Camera')),
-                  const SizedBox(width: 4),
-                  _AttachBtn(
-                      icon: Icons.location_on_outlined,
-                      onTap: () => onComingSoon('Location sharing')),
-                  const SizedBox(width: 4),
-                  _AttachBtn(
-                      icon: Icons.inventory_2_outlined,
-                      onTap: () => onComingSoon('Product sharing')),
-                  const SizedBox(width: 4),
-                  _AttachBtn(
-                      icon: Icons.description_outlined,
-                      onTap: () => onComingSoon('File attachments')),
-                  const SizedBox(width: 4),
-                  _AttachBtn(
-                      icon: Icons.attach_money_rounded,
-                      onTap: () => onComingSoon('Quotation builder')),
+                      icon: Icons.location_on_outlined, onTap: onSendLocation),
                 ],
               ),
             ),
@@ -1549,8 +1954,7 @@ class _InputArea extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFFF0FDF4),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                      color: Colors.grey.shade200, width: 1),
+                  border: Border.all(color: Colors.grey.shade200, width: 1),
                 ),
                 child: TextField(
                   controller: controller,
@@ -1590,8 +1994,7 @@ class _InputArea extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primaryGreen
-                          .withValues(alpha: 0.35),
+                      color: AppColors.primaryGreen.withValues(alpha: 0.35),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),

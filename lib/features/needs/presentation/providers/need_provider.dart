@@ -1,9 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/domain/repositories/business_repository.dart';
 import 'package:ifind/features/business/presentation/providers/business_provider.dart';
+import 'package:ifind/features/chat/data/datasources/chat_remote_datasource.dart';
+import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
 import 'package:ifind/features/needs/data/repositories/needs_repository.dart';
 import 'package:ifind/features/notifications/presentation/providers/notification_provider.dart';
 import 'package:ifind/features/needs/domain/entities/need.dart';
@@ -234,11 +238,28 @@ final businessLeadsProvider =
   final repository = ref.read(needsRepositoryProvider);
   final supabase = Supabase.instance.client;
 
-  final needs = await repository.getNearbyNeeds(
+  final nearbyNeeds = await repository.getNearbyNeeds(
     business.latitude,
     business.longitude,
     20.0,
   );
+  // Needs sent directly to this business bypass the nearby+category match
+  // below entirely — the sender explicitly picked this business, so it
+  // shouldn't matter how far away they were or whether the AI-inferred
+  // category string happens to match.
+  final targetedNeeds =
+      await repository.getNeedsTargetingBusiness(business.id);
+
+  final needsById = <String, Need>{};
+  for (final need in nearbyNeeds) {
+    if (businessCategoryForNeedCategory(need.category) == business.category) {
+      needsById[need.id] = need;
+    }
+  }
+  for (final need in targetedNeeds) {
+    needsById[need.id] = need;
+  }
+  final needs = needsById.values.toList();
 
   // Exclude customers already contacted by this business
   final chatsResp = await supabase
@@ -251,12 +272,32 @@ final businessLeadsProvider =
       .whereType<String>()
       .toSet();
 
+  // Exclude needs whose poster no longer has a real users row (deleted or
+  // orphaned account) — "Message Customer" can't create a chat for someone
+  // who doesn't exist, so surfacing these as actionable leads is a dead end.
+  final candidateUserIds = needs.map((n) => n.userId).toSet().toList();
+  final existingUserIds = <String>{};
+  if (candidateUserIds.isNotEmpty) {
+    final usersResp = await supabase
+        .from('users')
+        .select('id')
+        .inFilter('id', candidateUserIds);
+    existingUserIds.addAll(
+      (usersResp as List).map((u) => u['id'] as String),
+    );
+  }
+
   return needs
       .where((need) =>
-          businessCategoryForNeedCategory(need.category) == business.category &&
           need.userId != business.ownerId &&
-          !contactedIds.contains(need.userId))
-      .toList();
+          // Needs targeted directly at this business are shown regardless
+          // of prior contact — a deliberate new inquiry shouldn't be hidden
+          // just because an unrelated older chat already exists.
+          (need.targetBusinessId == business.id ||
+              !contactedIds.contains(need.userId)) &&
+          existingUserIds.contains(need.userId))
+      .toList()
+    ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 });
 
 /*
@@ -299,33 +340,42 @@ class PostNeedController extends StateNotifier<PostNeedState> {
   final NeedsRepository _needsRepository;
   final BusinessRepository _businessRepository;
   final NotificationRepository _notificationRepository;
+  final ChatRemoteDataSource _chatDataSource;
 
   PostNeedController(
     this._needsRepository,
     this._businessRepository,
     this._notificationRepository,
+    this._chatDataSource,
   ) : super(PostNeedState());
 
-  Future<void> analyzeText(String text) async {
+  /// Analyzes [text] to classify the need's category/urgency. When
+  /// [targetBusiness] is given (posting a need directly to one specific
+  /// business, from that business's profile page), the nearby-matching
+  /// search is skipped entirely — this need isn't going to be broadcast, so
+  /// there's nothing to rank or preview.
+  Future<void> analyzeText(String text, {Business? targetBusiness}) async {
     state = state.copyWith(isAnalyzing: true, error: null);
     try {
       final analysis = _analyzeNeed(text);
       final result = analysis.toJson();
-      final position = await _getCurrentPosition();
 
-      final businessesResult = await _businessRepository.getNearbyBusinesses(
-        latitude: position.latitude,
-        longitude: position.longitude,
-        radiusKm: _radiusForUrgency(analysis.urgency),
-        category: analysis.businessCategory == BusinessCategory.other
-            ? null
-            : analysis.businessCategory,
-      );
-
-      final businesses = _rankBusinesses(
-        businessesResult.getOrElse(() => []),
-        analysis,
-      );
+      var businesses = <Business>[];
+      if (targetBusiness == null) {
+        final position = await _getCurrentPosition();
+        final businessesResult = await _businessRepository.getNearbyBusinesses(
+          latitude: position.latitude,
+          longitude: position.longitude,
+          radiusKm: _radiusForUrgency(analysis.urgency),
+          category: analysis.businessCategory == BusinessCategory.other
+              ? null
+              : analysis.businessCategory,
+        );
+        businesses = _rankBusinesses(
+          businessesResult.getOrElse(() => []),
+          analysis,
+        );
+      }
 
       state = state.copyWith(
         isAnalyzing: false,
@@ -474,11 +524,18 @@ class PostNeedController extends StateNotifier<PostNeedState> {
         .join(' ');
   }
 
-  Future<bool> submitNeed({
+  /// Creates the need and notifies businesses about it.
+  ///
+  /// When [targetBusiness] is given, the need is sent directly to just that
+  /// business instead of being broadcast to the top nearby category matches.
+  ///
+  /// Returns the number of businesses notified, or null on failure.
+  Future<int?> submitNeed({
     required String userId,
     required String title,
     required String description,
     required String category,
+    Business? targetBusiness,
   }) async {
     state = state.copyWith(isSubmitting: true, error: null);
     try {
@@ -493,6 +550,7 @@ class PostNeedController extends StateNotifier<PostNeedState> {
         longitude: position.longitude,
         status: NeedStatus.active,
         createdAt: DateTime.now(),
+        targetBusinessId: targetBusiness?.id,
       );
 
       final needId = await _needsRepository.createNeed(need);
@@ -510,17 +568,53 @@ class PostNeedController extends StateNotifier<PostNeedState> {
               confidence:
                   (state.aiAnalysis!['confidence'] as num?)?.toDouble() ?? 0,
             );
-      final targetCategory = analysis.businessCategory;
-      final relevantBusinesses = state.matchingBusinesses
-          .where((business) =>
-              targetCategory != BusinessCategory.other &&
-              business.category == targetCategory)
-          .toList()
-        ..sort((a, b) => _businessMatchScore(b, analysis)
-            .compareTo(_businessMatchScore(a, analysis)));
 
-      // Notify only the strongest businesses for this need.
-      for (final business in relevantBusinesses.take(8)) {
+      final List<Business> relevantBusinesses;
+      if (targetBusiness != null) {
+        relevantBusinesses = [targetBusiness];
+
+        // Surface this need as the opening message in the direct chat with
+        // this business, sent now while the customer is still the
+        // authenticated user — messages.sender_id must equal auth.uid(), so
+        // this can't be done later from the business owner's side (they'd be
+        // sending "as" the customer, which RLS correctly rejects).
+        try {
+          final chat = await _chatDataSource.getOrCreateChat(
+            customerId: userId,
+            businessId: targetBusiness.id,
+          );
+          await _chatDataSource.sendMessage(
+            chatId: chat.id,
+            senderId: userId,
+            content: 'IFIND_NEED_INQUIRY::${jsonEncode({
+                  'version': 1,
+                  'need_id': needId,
+                  'title': title,
+                  'description': description,
+                  'category': category,
+                })}',
+          );
+        } catch (_) {
+          // Best-effort — the need itself was already created successfully;
+          // don't fail the whole submission just because the chat/message
+          // couldn't be created (e.g. the business somehow doesn't exist).
+        }
+      } else {
+        final targetCategory = analysis.businessCategory;
+        relevantBusinesses = state.matchingBusinesses
+            .where((business) =>
+                targetCategory != BusinessCategory.other &&
+                business.category == targetCategory)
+            .toList()
+          ..sort((a, b) => _businessMatchScore(b, analysis)
+              .compareTo(_businessMatchScore(a, analysis)));
+        // Notify only the strongest businesses for a broadcast need.
+        if (relevantBusinesses.length > 8) {
+          relevantBusinesses.removeRange(8, relevantBusinesses.length);
+        }
+      }
+
+      for (final business in relevantBusinesses) {
         await _notificationRepository.createNotification(
           businessId: business.id,
           needId: needId,
@@ -542,10 +636,10 @@ class PostNeedController extends StateNotifier<PostNeedState> {
       }
 
       state = state.copyWith(isSubmitting: false);
-      return true;
+      return relevantBusinesses.length;
     } catch (e) {
       state = state.copyWith(isSubmitting: false, error: e.toString());
-      return false;
+      return null;
     }
   }
 }
@@ -556,6 +650,7 @@ final postNeedProvider =
     ref.watch(needsRepositoryProvider),
     ref.watch(businessRepositoryProvider),
     ref.watch(notificationRepositoryProvider),
+    ref.watch(chatRemoteDataSourceProvider),
   );
 });
 

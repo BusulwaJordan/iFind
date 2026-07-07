@@ -54,6 +54,19 @@ class NeedsRepository {
     }).toList();
   }
 
+  /// Needs sent directly to [businessId] (from that business's profile
+  /// page), regardless of the sender's distance or the need's inferred
+  /// category — the sender explicitly chose this business.
+  Future<List<Need>> getNeedsTargetingBusiness(String businessId) async {
+    final response = await _client
+        .from('needs')
+        .select()
+        .eq('status', 'active')
+        .eq('target_business_id', businessId)
+        .order('created_at', ascending: false);
+    return (response as List).map((json) => Need.fromJson(json)).toList();
+  }
+
   Future<void> deleteNeed(String needId) async {
     await _client.from('needs').delete().eq('id', needId);
   }

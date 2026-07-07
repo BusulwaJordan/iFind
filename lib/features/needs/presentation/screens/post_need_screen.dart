@@ -11,7 +11,11 @@ import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/needs/presentation/providers/need_provider.dart';
 
 class PostNeedScreen extends ConsumerStatefulWidget {
-  const PostNeedScreen({super.key});
+  /// When set, this need is sent directly to just this business instead of
+  /// being broadcast to the top nearby category matches.
+  final Business? targetBusiness;
+
+  const PostNeedScreen({super.key, this.targetBusiness});
 
   @override
   ConsumerState<PostNeedScreen> createState() => _PostNeedScreenState();
@@ -58,7 +62,10 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
       FocusScope.of(context).unfocus();
     }
 
-    await ref.read(postNeedProvider.notifier).analyzeText(_textController.text);
+    await ref.read(postNeedProvider.notifier).analyzeText(
+          _textController.text,
+          targetBusiness: widget.targetBusiness,
+        );
     if (!mounted) return;
 
     final state = ref.read(postNeedProvider);
@@ -74,18 +81,22 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
     final user = ref.read(currentUserProvider);
     if (user == null) return;
 
-    final success = await ref.read(postNeedProvider.notifier).submitNeed(
+    final notifiedCount = await ref.read(postNeedProvider.notifier).submitNeed(
           userId: user.id,
           title: _textController.text,
           description: _descController.text,
           category: _analysisResult?['category'] ?? 'General',
+          targetBusiness: widget.targetBusiness,
         );
 
-    if (success && mounted) {
+    if (notifiedCount != null && mounted) {
       // Show success animation or dialog
       showDialog(
         context: context,
-        builder: (_) => _SuccessDialog(),
+        builder: (_) => _SuccessDialog(
+          notifiedCount: notifiedCount,
+          targetBusinessName: widget.targetBusiness?.name,
+        ),
       );
     }
   }
@@ -189,7 +200,9 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
                             .slideY(begin: 0.2),
                         const SizedBox(height: 6),
                         Text(
-                          'Tell us what you need — AI finds the best match nearby.',
+                          widget.targetBusiness != null
+                              ? 'Send this need directly to ${widget.targetBusiness!.name}.'
+                              : 'Tell us what you need — AI finds the best match nearby.',
                           style: GoogleFonts.outfit(
                               color: Colors.white.withValues(alpha: 0.75),
                               fontSize: 13,
@@ -463,7 +476,9 @@ class _PostNeedScreenState extends ConsumerState<PostNeedScreen> {
               child: isSubmitting
                   ? const LoadingWidget(size: 24)
                   : Text(
-                      'Broadcast Need',
+                      widget.targetBusiness != null
+                          ? 'Send to ${widget.targetBusiness!.name}'
+                          : 'Broadcast Need',
                       style: GoogleFonts.outfit(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -590,8 +605,22 @@ class _MatchingBusinessCard extends StatelessWidget {
 }
 
 class _SuccessDialog extends StatelessWidget {
+  final int notifiedCount;
+  final String? targetBusinessName;
+
+  const _SuccessDialog({
+    required this.notifiedCount,
+    this.targetBusinessName,
+  });
+
   @override
   Widget build(BuildContext context) {
+    final message = targetBusinessName != null
+        ? 'Your need was sent to $targetBusinessName. Expect a reply soon!'
+        : (notifiedCount > 0
+            ? 'We notified $notifiedCount relevant business${notifiedCount == 1 ? '' : 'es'} near you. Expect offers soon!'
+            : 'Your need was posted, but no matching businesses were found nearby yet.');
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
@@ -610,14 +639,14 @@ class _SuccessDialog extends StatelessWidget {
             ).animate().scale().shake(delay: 200.ms),
             const SizedBox(height: 24),
             Text(
-              'Need Broadcasted!',
+              targetBusinessName != null ? 'Need Sent!' : 'Need Broadcasted!',
               style:
                   GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'We notified 12 relevant businesses near you. Expect offers soon!',
+              message,
               style: GoogleFonts.outfit(color: Colors.grey[600], height: 1.5),
               textAlign: TextAlign.center,
             ),

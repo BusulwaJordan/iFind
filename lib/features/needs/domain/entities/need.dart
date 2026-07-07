@@ -13,6 +13,12 @@ class Need extends Equatable {
   final NeedStatus status;
   final DateTime createdAt;
 
+  /// Set when this need was sent directly to one specific business (from
+  /// that business's profile page) rather than broadcast to nearby
+  /// category matches. Recent Inquiries shows these regardless of distance
+  /// or category-match, since the sender explicitly chose this business.
+  final String? targetBusinessId;
+
   const Need({
     required this.id,
     required this.userId,
@@ -23,10 +29,22 @@ class Need extends Equatable {
     required this.longitude,
     required this.status,
     required this.createdAt,
+    this.targetBusinessId,
   });
 
   @override
-  List<Object?> get props => [id, userId, title, description, category, latitude, longitude, status, createdAt];
+  List<Object?> get props => [
+        id,
+        userId,
+        title,
+        description,
+        category,
+        latitude,
+        longitude,
+        status,
+        createdAt,
+        targetBusinessId,
+      ];
 
   factory Need.fromJson(Map<String, dynamic> json) {
     return Need(
@@ -42,6 +60,7 @@ class Need extends Equatable {
         orElse: () => NeedStatus.active,
       ),
       createdAt: DateTime.parse(json['created_at']),
+      targetBusinessId: json['target_business_id'] as String?,
     );
   }
 
@@ -54,6 +73,7 @@ class Need extends Equatable {
       'latitude': latitude,
       'longitude': longitude,
       'status': status.name,
+      'target_business_id': targetBusinessId,
       // 'created_at' is handled by DB default
     };
   }

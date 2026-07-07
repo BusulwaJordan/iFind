@@ -27,6 +27,12 @@ class Chat with _$Chat {
     // Transient UI fields (for B2B)
     String? partnerBusinessName,
     String? partnerBusinessLogo,
+    // The business_id "View Shop" should open for this chat, resolved
+    // per-viewer: the partner's business for B2B, the shop for a customer's
+    // B2C view, or the customer's own business (if they own one) for a
+    // business owner's B2C view. Null when there's no business to show
+    // (e.g. a plain customer with no business of their own).
+    String? otherPartyBusinessId,
   }) = _Chat;
 }
 

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -16,6 +15,7 @@ import 'package:ifind/core/widgets/empty_state_widget.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
 import 'package:ifind/features/chat/domain/entities/chat.dart';
 import 'package:ifind/core/widgets/app_drawer.dart';
+import 'package:ifind/features/notifications/utils/notification_preview_formatter.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 enum _ChatFilter { all, customers, businesses, unread, archived }
@@ -589,7 +589,6 @@ class _CategoryChips extends StatelessWidget {
 
 // ── Chat card ────────────────────────────────────────────────────────────────
 class _ChatCard extends ConsumerWidget {
-  static const _productInquiryPrefix = 'IFIND_PRODUCT_INQUIRY::';
 
   final Chat chat;
   final int index;
@@ -886,23 +885,7 @@ class _ChatCard extends ConsumerWidget {
 
   String _previewMessage(String? message) {
     if (message == null || message.trim().isEmpty) return 'No messages yet';
-    if (message.startsWith(_productInquiryPrefix)) {
-      try {
-        final data = jsonDecode(
-                message.substring(_productInquiryPrefix.length))
-            as Map<String, dynamic>;
-        final title = data['title'] as String? ?? 'product';
-        return 'Product inquiry: $title';
-      } catch (_) {
-        return 'Product inquiry';
-      }
-    }
-    if (message.startsWith('[MEDIA_INQUIRY]')) {
-      final parts = message.split('|');
-      if (parts.length > 3 && parts[3].trim().isNotEmpty) return parts[3];
-      return 'Product inquiry';
-    }
-    return message;
+    return NotificationPreviewFormatter.cleanBody(message);
   }
 }
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:ifind/features/business/domain/entities/business.dart';
@@ -21,9 +22,14 @@ class FavouritesNotifier extends AsyncNotifier<Set<String>> {
         .toSet();
   }
 
-  Future<void> toggle(String businessId) async {
+  /// Returns true if the toggle actually persisted, false otherwise — the
+  /// caller should tell the user it failed rather than showing a success
+  /// toast regardless, which is exactly what made this feature look broken
+  /// (the favorites table didn't exist and this silently swallowed the
+  /// resulting error every time).
+  Future<bool> toggle(String businessId) async {
     final user = _client.auth.currentUser;
-    if (user == null) return;
+    if (user == null) return false;
 
     final current = state.valueOrNull ?? {};
 
@@ -36,8 +42,11 @@ class FavouritesNotifier extends AsyncNotifier<Set<String>> {
             .delete()
             .eq('user_id', user.id)
             .eq('business_id', businessId);
-      } catch (_) {
+        return true;
+      } catch (e) {
+        debugPrint('FavouritesNotifier remove error: $e');
         state = AsyncData(current);
+        return false;
       }
     } else {
       // Optimistic add
@@ -47,8 +56,11 @@ class FavouritesNotifier extends AsyncNotifier<Set<String>> {
           'user_id': user.id,
           'business_id': businessId,
         });
-      } catch (_) {
+        return true;
+      } catch (e) {
+        debugPrint('FavouritesNotifier add error: $e');
         state = AsyncData(current);
+        return false;
       }
     }
   }

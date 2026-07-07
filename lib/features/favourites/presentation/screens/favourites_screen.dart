@@ -184,7 +184,7 @@ class FavouritesScreen extends ConsumerWidget {
 
 class _SavedBusinessCard extends StatelessWidget {
   final Business business;
-  final VoidCallback onRemove;
+  final Future<bool> Function() onRemove;
 
   const _SavedBusinessCard({required this.business, required this.onRemove});
 
@@ -300,9 +300,16 @@ class _SavedBusinessCard extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: () {
-                  onRemove();
-                  AppToast.show(context, '${business.name} removed from favourites', type: ToastType.info);
+                onPressed: () async {
+                  final ok = await onRemove();
+                  if (!context.mounted) return;
+                  AppToast.show(
+                    context,
+                    ok
+                        ? '${business.name} removed from favourites'
+                        : 'Could not remove — try again',
+                    type: ok ? ToastType.info : ToastType.error,
+                  );
                 },
                 icon: const Icon(Icons.bookmark_remove_rounded,
                     color: Colors.redAccent),
