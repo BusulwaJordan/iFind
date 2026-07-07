@@ -624,8 +624,6 @@ class _ChatRoomBodyState extends ConsumerState<_ChatRoomBody> {
       ref.invalidate(myChatsProvider);
       if (!widget.chat.isB2B && widget.chat.businessId != null) {
         ref.invalidate(businessChatsProvider(widget.chat.businessId!));
-        ref.invalidate(
-            unansweredContactsProvider(widget.chat.businessId!));
       }
       WidgetsBinding.instance
           .addPostFrameCallback((_) => _scrollToBottom());

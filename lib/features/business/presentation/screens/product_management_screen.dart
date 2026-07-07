@@ -10,7 +10,7 @@ import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:ifind/features/products/presentation/providers/product_provider.dart';
 import 'package:ifind/features/products/domain/entities/product.dart';
-import 'package:ifind/features/business/presentation/widgets/add_product_dialog.dart';
+import 'package:ifind/features/products/presentation/screens/add_product_screen.dart';
 import 'package:intl/intl.dart';
 
 class ProductManagementScreen extends ConsumerWidget {
@@ -151,9 +151,10 @@ class ProductManagementScreen extends ConsumerWidget {
         error: (e, s) => ErrorRetryWidget(message: friendlyError(e), onRetry: () => ref.invalidate(businessProductsProvider(businessId))),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showDialog(
-          context: context, 
-          builder: (_) => AddProductDialog(businessId: businessId)
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => AddProductScreen(businessId: businessId)),
         ),
         backgroundColor: AppColors.primaryGreen,
         icon: const Icon(Icons.add_rounded, color: Colors.white),
