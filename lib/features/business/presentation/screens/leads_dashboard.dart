@@ -535,7 +535,7 @@ class _StatsSection extends ConsumerWidget {
             Text(
               'Business Overview',
               style: GoogleFonts.outfit(
-                  fontSize: 18,
+                  fontSize: 25,
                   fontWeight: FontWeight.bold,
                   color: AppColors.darkText),
             ),
@@ -563,7 +563,7 @@ class _StatsSection extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 15),
         statsAsync.when(
           data: (stats) {
             final items = [
@@ -611,7 +611,7 @@ class _StatsSection extends ConsumerWidget {
             );
           },
           loading: () => const SizedBox(
-            height: 120,
+            height: 250,
             child: Center(child: CircularProgressIndicator()),
           ),
           error: (_, __) => const SizedBox.shrink(),

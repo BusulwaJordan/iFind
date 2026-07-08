@@ -10,7 +10,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class B2bMatchCandidate {
   final Business business;
   final double compatibilityScore;
-  const B2bMatchCandidate({required this.business, required this.compatibilityScore});
+  const B2bMatchCandidate(
+      {required this.business, required this.compatibilityScore});
 }
 
 // Below this, the model considers the pairing "Poor Compatibility" (see
@@ -18,11 +19,11 @@ class B2bMatchCandidate {
 const _kMinViableCompatibility = 0.25;
 
 /// The number of ranked candidates to pull from the hybrid backend before
-/// applying local filters (verified / not-connected / not-self-owned). Kept
-/// well above the 10 we ultimately show since filtering can drop entries.
+/// applying local filters (not-connected / not-self-owned). Kept well above
+/// the 10 we ultimately show since filtering can drop entries.
 const _kBackendTopN = 50;
 
-/// Nearby, verified, not-already-connected businesses that the hybrid
+/// Nearby, not-already-connected businesses that the hybrid
 /// recommendation backend (rule-based + content-based + collaborative
 /// filtering, see `ifind_backend/main.py`) considers plausible partners for
 /// [businessId], ranked highest-compatibility first. Keyed by the business's
@@ -30,21 +31,24 @@ const _kBackendTopN = 50;
 /// the exact same list, instead of each call site independently computing
 /// its own.
 final b2bPartnerCandidatesProvider =
-    FutureProvider.family<List<B2bMatchCandidate>, String>((ref, businessId) async {
+    FutureProvider.family<List<B2bMatchCandidate>, String>(
+        (ref, businessId) async {
   final business = await ref.watch(businessProvider(businessId).future);
   if (business == null) return [];
 
   final service = ref.watch(b2bServiceProvider);
   final supabase = Supabase.instance.client;
 
-  final recommendations = await service.getRecommendations(businessId, topN: _kBackendTopN);
+  final recommendations =
+      await service.getRecommendations(businessId, topN: _kBackendTopN);
   if (recommendations.isEmpty) return [];
 
   final chatsResp = await supabase
-      .from('chats')
-      .select('business_a_id, business_b_id')
-      .eq('is_b2b', true)
-      .or('business_a_id.eq.${business.id},business_b_id.eq.${business.id}') as List;
+          .from('chats')
+          .select('business_a_id, business_b_id')
+          .eq('is_b2b', true)
+          .or('business_a_id.eq.${business.id},business_b_id.eq.${business.id}')
+      as List;
 
   final connectedIds = <String>{};
   for (final c in chatsResp) {
@@ -66,15 +70,16 @@ final b2bPartnerCandidatesProvider =
     if (candidate == null) continue;
     if (candidate.id == business.id) continue;
     if (candidate.ownerId == business.ownerId) continue;
-    if (!candidate.isVerified) continue;
 
-    candidates.add(B2bMatchCandidate(business: candidate, compatibilityScore: rec.finalScore));
+    candidates.add(B2bMatchCandidate(
+        business: candidate, compatibilityScore: rec.finalScore));
   }
 
   // The backend already returns results sorted by final_score descending;
   // re-sort defensively since local filtering doesn't change order but keeps
   // this provider's contract self-evident.
-  candidates.sort((a, b) => b.compatibilityScore.compareTo(a.compatibilityScore));
+  candidates
+      .sort((a, b) => b.compatibilityScore.compareTo(a.compatibilityScore));
 
   return candidates.take(10).toList();
 });

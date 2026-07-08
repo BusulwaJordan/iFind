@@ -141,100 +141,109 @@ class _MainScaffoldState extends ConsumerState<MainScaffold> {
   // ── Notched BottomAppBar ──────────────────────────────────────────────────
 
   Widget _buildNotchedBar(bool isBusinessOwner, int currentIndex) {
-    return BottomAppBar(
-      shape: const CircularNotchedRectangle(),
-      notchMargin: 10,
-      padding: EdgeInsets.zero,
-      height: 72,
-      elevation: 16,
-      shadowColor: Colors.black.withValues(alpha: 0.18),
-      surfaceTintColor: Colors.transparent,
-      color: Theme.of(context).colorScheme.surface,
-      child: Row(
-        children: [
-          // ── Left 2 items ──────────────────────────────────────────────
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: isBusinessOwner
-                  ? [
-                      _NavItem(
-                        icon: Icons.dashboard_outlined,
-                        activeIcon: Icons.dashboard_rounded,
-                        label: 'Dashboard',
-                        isSelected: currentIndex == 0,
-                        onTap: () => _onTap(0),
-                      ),
-                      _NavItem(
-                        icon: Icons.search_outlined,
-                        activeIcon: Icons.search_rounded,
-                        label: 'Discover',
-                        isSelected: currentIndex == 1,
-                        onTap: () => _onTap(1),
-                      ),
-                    ]
-                  : [
-                      _NavItem(
-                        icon: Icons.home_outlined,
-                        activeIcon: Icons.home_rounded,
-                        label: 'Home',
-                        isSelected: currentIndex == 0,
-                        onTap: () => _onTap(0),
-                      ),
-                      _NavItem(
-                        icon: Icons.search_outlined,
-                        activeIcon: Icons.search_rounded,
-                        label: 'Discover',
-                        isSelected: currentIndex == 1,
-                        onTap: () => _onTap(1),
-                      ),
-                    ],
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.deepGreen, Colors.white],
+        ),
+      ),
+      child: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 10,
+        padding: EdgeInsets.zero,
+        height: 72,
+        elevation: 16,
+        shadowColor: Colors.black.withValues(alpha: 0.18),
+        surfaceTintColor: Colors.transparent,
+        color: Colors.transparent,
+        child: Row(
+          children: [
+            // ── Left 2 items ──────────────────────────────────────────────
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: isBusinessOwner
+                    ? [
+                        _NavItem(
+                          icon: Icons.dashboard_outlined,
+                          activeIcon: Icons.dashboard_rounded,
+                          label: 'Dashboard',
+                          isSelected: currentIndex == 0,
+                          onTap: () => _onTap(0),
+                        ),
+                        _NavItem(
+                          icon: Icons.search_outlined,
+                          activeIcon: Icons.search_rounded,
+                          label: 'Discover',
+                          isSelected: currentIndex == 1,
+                          onTap: () => _onTap(1),
+                        ),
+                      ]
+                    : [
+                        _NavItem(
+                          icon: Icons.home_outlined,
+                          activeIcon: Icons.home_rounded,
+                          label: 'Home',
+                          isSelected: currentIndex == 0,
+                          onTap: () => _onTap(0),
+                        ),
+                        _NavItem(
+                          icon: Icons.search_outlined,
+                          activeIcon: Icons.search_rounded,
+                          label: 'Discover',
+                          isSelected: currentIndex == 1,
+                          onTap: () => _onTap(1),
+                        ),
+                      ],
+              ),
             ),
-          ),
 
-          // ── Center gap (FAB sits here) ────────────────────────────────
-          const SizedBox(width: 80),
+            // ── Center gap (FAB sits here) ────────────────────────────────
+            const SizedBox(width: 80),
 
-          // ── Right 2 items ─────────────────────────────────────────────
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: isBusinessOwner
-                  ? [
-                      _NavItem(
-                        icon: Icons.chat_bubble_outline_rounded,
-                        activeIcon: Icons.chat_bubble_rounded,
-                        label: 'Chats',
-                        isSelected: currentIndex == 3,
-                        onTap: () => _onTap(3),
-                      ),
-                      _NavItem(
-                        icon: Icons.storefront_outlined,
-                        activeIcon: Icons.storefront_rounded,
-                        label: 'My Shop',
-                        isSelected: currentIndex == 4,
-                        onTap: () => _onTap(4),
-                      ),
-                    ]
-                  : [
-                      _NavItem(
-                        icon: Icons.chat_bubble_outline_rounded,
-                        activeIcon: Icons.chat_bubble_rounded,
-                        label: 'Chats',
-                        isSelected: currentIndex == 3,
-                        onTap: () => _onTap(3),
-                      ),
-                      _NavItem(
-                        icon: Icons.person_outline_rounded,
-                        activeIcon: Icons.person_rounded,
-                        label: 'Profile',
-                        isSelected: currentIndex == 4,
-                        onTap: () => _onTap(4),
-                      ),
-                    ],
+            // ── Right 2 items ─────────────────────────────────────────────
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: isBusinessOwner
+                    ? [
+                        _NavItem(
+                          icon: Icons.chat_bubble_outline_rounded,
+                          activeIcon: Icons.chat_bubble_rounded,
+                          label: 'Chats',
+                          isSelected: currentIndex == 3,
+                          onTap: () => _onTap(3),
+                        ),
+                        _NavItem(
+                          icon: Icons.storefront_outlined,
+                          activeIcon: Icons.storefront_rounded,
+                          label: 'My Shop',
+                          isSelected: currentIndex == 4,
+                          onTap: () => _onTap(4),
+                        ),
+                      ]
+                    : [
+                        _NavItem(
+                          icon: Icons.chat_bubble_outline_rounded,
+                          activeIcon: Icons.chat_bubble_rounded,
+                          label: 'Chats',
+                          isSelected: currentIndex == 3,
+                          onTap: () => _onTap(3),
+                        ),
+                        _NavItem(
+                          icon: Icons.person_outline_rounded,
+                          activeIcon: Icons.person_rounded,
+                          label: 'Profile',
+                          isSelected: currentIndex == 4,
+                          onTap: () => _onTap(4),
+                        ),
+                      ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -322,9 +331,7 @@ class _NavItem extends StatelessWidget {
                 isSelected ? activeIcon : icon,
                 key: ValueKey(isSelected),
                 size: 24,
-                color: isSelected
-                    ? AppColors.primaryGreen
-                    : Colors.grey[400],
+                color: Colors.white.withValues(alpha: 0.75),
               ),
             ),
             const SizedBox(height: 3),
@@ -335,9 +342,7 @@ class _NavItem extends StatelessWidget {
               style: GoogleFonts.outfit(
                 fontSize: isSelected ? 10.5 : 0.1,
                 fontWeight: FontWeight.w700,
-                color: isSelected
-                    ? AppColors.deepGreen
-                    : Colors.transparent,
+                color: isSelected ? AppColors.deepGreen : Colors.transparent,
                 height: 1,
               ),
               child: Text(label, maxLines: 1, overflow: TextOverflow.clip),

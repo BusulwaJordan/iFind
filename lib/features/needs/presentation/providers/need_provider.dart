@@ -31,6 +31,15 @@ BusinessCategory businessCategoryForNeedCategory(String category) {
       normalized.contains('hair')) {
     return BusinessCategory.beauty;
   }
+  // Checked before fashion/retail so "shoe shop" doesn't fall through to
+  // the generic 'shop' -> retail match below.
+  if (normalized.contains('shoe') ||
+      normalized.contains('footwear') ||
+      normalized.contains('boot') ||
+      normalized.contains('sneaker') ||
+      normalized.contains('sandal')) {
+    return BusinessCategory.footwear;
+  }
   if (normalized.contains('fashion') ||
       normalized.contains('clothes') ||
       normalized.contains('wear')) {
@@ -40,6 +49,63 @@ BusinessCategory businessCategoryForNeedCategory(String category) {
       normalized.contains('phone') ||
       normalized.contains('computer')) {
     return BusinessCategory.electronics;
+  }
+  if (normalized.contains('automotive') ||
+      normalized.contains('vehicle') ||
+      normalized.contains('mechanic') ||
+      normalized.contains('garage') ||
+      normalized.contains('motor')) {
+    return BusinessCategory.automotive;
+  }
+  if (normalized.contains('sport') ||
+      normalized.contains('gym') ||
+      normalized.contains('fitness')) {
+    return BusinessCategory.sports;
+  }
+  if (normalized.contains('kid') ||
+      normalized.contains('toy') ||
+      normalized.contains('baby')) {
+    return BusinessCategory.kids;
+  }
+  if (normalized.contains('arcade') || normalized.contains('game')) {
+    return BusinessCategory.arcade;
+  }
+  if (normalized.contains('travel') ||
+      normalized.contains('tour') ||
+      normalized.contains('hotel')) {
+    return BusinessCategory.travel;
+  }
+  if (normalized.contains('real estate') ||
+      normalized.contains('property') ||
+      normalized.contains('rent') ||
+      normalized.contains('land')) {
+    return BusinessCategory.realEstate;
+  }
+  if (normalized.contains('pet') ||
+      normalized.contains('vet') ||
+      normalized.contains('animal')) {
+    return BusinessCategory.pets;
+  }
+  if (normalized.contains('finance') ||
+      normalized.contains('bank') ||
+      normalized.contains('loan')) {
+    return BusinessCategory.finance;
+  }
+  if (normalized.contains('agriculture') ||
+      normalized.contains('farm') ||
+      normalized.contains('crop')) {
+    return BusinessCategory.agriculture;
+  }
+  if (normalized.contains('wholesale') || normalized.contains('bulk')) {
+    return BusinessCategory.wholesale;
+  }
+  if (normalized.contains('manufactur') || normalized.contains('factory')) {
+    return BusinessCategory.manufacturing;
+  }
+  if (normalized.contains('construction') ||
+      normalized.contains('hardware') ||
+      normalized.contains('building')) {
+    return BusinessCategory.construction;
   }
   if (normalized.contains('home') ||
       normalized.contains('plumb') ||
@@ -167,11 +233,25 @@ const _categoryRules = [
       'fashion': 3,
       'clothes': 4,
       'dress': 4,
-      'shoes': 3,
       'wear': 3,
       'tailor': 4,
       'suit': 3,
       'bags': 2,
+    },
+  ),
+  _CategoryRule(
+    category: BusinessCategory.footwear,
+    label: 'Footwear',
+    keywords: {
+      // 'shoe' (not 'shoes') so it matches both singular and plural, e.g.
+      // "shoe shop" — that previously matched nothing here and fell
+      // through to Retail's 'shop' keyword instead.
+      'shoe': 4,
+      'footwear': 5,
+      'boot': 4,
+      'sneaker': 4,
+      'sandal': 4,
+      'heels': 3,
     },
   ),
   _CategoryRule(
@@ -247,8 +327,7 @@ final businessLeadsProvider =
   // below entirely — the sender explicitly picked this business, so it
   // shouldn't matter how far away they were or whether the AI-inferred
   // category string happens to match.
-  final targetedNeeds =
-      await repository.getNeedsTargetingBusiness(business.id);
+  final targetedNeeds = await repository.getNeedsTargetingBusiness(business.id);
 
   final needsById = <String, Need>{};
   for (final need in nearbyNeeds) {

@@ -43,6 +43,18 @@ class B2bMatchesScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+            onPressed: business == null
+                ? null
+                : () {
+                    ref.invalidate(b2bPartnerCandidatesProvider(business.id));
+                    AppToast.show(context, 'Refreshing matches...',
+                        type: ToastType.info);
+                  },
+          ),
+        ],
       ),
       body: myBusinessesAsync.when(
         data: (businesses) {
@@ -55,17 +67,20 @@ class B2bMatchesScreen extends ConsumerWidget {
           }
 
           if (business == null) {
-            return const Center(child: Text('No business linked to your account.'));
+            return const Center(
+                child: Text('No business linked to your account.'));
           }
 
-          final candidatesAsync = ref.watch(b2bPartnerCandidatesProvider(business.id));
+          final candidatesAsync =
+              ref.watch(b2bPartnerCandidatesProvider(business.id));
 
           return candidatesAsync.when(
             data: (candidates) {
               if (candidates.isEmpty) {
                 return const EmptyStateWidget(
                   title: 'No B2B Matches Yet',
-                  message: 'We\'ll suggest potential partners as more businesses join the platform.',
+                  message:
+                      'We\'ll suggest potential partners as more businesses join the platform.',
                   icon: Icons.handshake_outlined,
                 );
               }
@@ -122,7 +137,8 @@ class _B2bMatchCardState extends ConsumerState<_B2bMatchCard> {
   Future<void> _onConnect() async {
     final currentUser = ref.read(currentUserProvider);
     if (currentUser == null) {
-      AppToast.show(context, 'Please log in to connect.', type: ToastType.warning);
+      AppToast.show(context, 'Please log in to connect.',
+          type: ToastType.warning);
       return;
     }
 
@@ -131,19 +147,18 @@ class _B2bMatchCardState extends ConsumerState<_B2bMatchCard> {
 
     setState(() => _isConnecting = true);
     try {
-      final chat = await ref
-          .read(chatRemoteDataSourceProvider)
-          .getOrCreateB2BChat(
-            businessId: widget.business.id,
-            partnerBusinessId: widget.partner.id,
-          );
+      final chat =
+          await ref.read(chatRemoteDataSourceProvider).getOrCreateB2BChat(
+                businessId: widget.business.id,
+                partnerBusinessId: widget.partner.id,
+              );
 
       if (introMessage.isNotEmpty) {
         await ref.read(chatRemoteDataSourceProvider).sendMessage(
-          chatId: chat.id,
-          senderId: currentUser.id,
-          content: introMessage,
-        );
+              chatId: chat.id,
+              senderId: currentUser.id,
+              content: introMessage,
+            );
       }
 
       ref.invalidate(b2bPartnerCandidatesProvider(widget.business.id));
@@ -188,7 +203,8 @@ class _B2bMatchCardState extends ConsumerState<_B2bMatchCard> {
             ),
             Text(
               widget.partner.name,
-              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+              style:
+                  GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -205,7 +221,8 @@ class _B2bMatchCardState extends ConsumerState<_B2bMatchCard> {
               controller: controller,
               maxLines: 4,
               decoration: InputDecoration(
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 filled: true,
                 fillColor: Colors.grey[50],
                 contentPadding: const EdgeInsets.all(12),
@@ -217,16 +234,19 @@ class _B2bMatchCardState extends ConsumerState<_B2bMatchCard> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: GoogleFonts.outfit(color: Colors.grey[600])),
+            child: Text('Cancel',
+                style: GoogleFonts.outfit(color: Colors.grey[600])),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
             style: ElevatedButton.styleFrom(
               backgroundColor: _darkGreen,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
-            child: Text('Send & Connect', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            child: Text('Send & Connect',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -306,7 +326,8 @@ class _B2bMatchCardState extends ConsumerState<_B2bMatchCard> {
                 const SizedBox(height: 2),
                 Text(
                   widget.partner.category.name,
-                  style: GoogleFonts.outfit(fontSize: 12, color: Colors.grey[600]),
+                  style:
+                      GoogleFonts.outfit(fontSize: 12, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 6),
                 Row(
@@ -320,7 +341,8 @@ class _B2bMatchCardState extends ConsumerState<_B2bMatchCard> {
                       style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                     ),
                     const SizedBox(width: 10),
-                    Icon(Icons.handshake_outlined, size: 13, color: Colors.amber[700]),
+                    Icon(Icons.handshake_outlined,
+                        size: 13, color: Colors.amber[700]),
                     const SizedBox(width: 3),
                     Text(
                       '${(widget.compatibilityScore * 100).toInt()}% match',
@@ -345,18 +367,22 @@ class _B2bMatchCardState extends ConsumerState<_B2bMatchCard> {
                 backgroundColor: _darkGreen,
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: _darkGreen.withValues(alpha: 0.5),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
               child: _isConnecting
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
                     )
                   : Text(
                       'Connect',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold, fontSize: 13),
                     ),
             ),
           ),
