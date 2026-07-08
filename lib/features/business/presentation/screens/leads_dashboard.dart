@@ -579,34 +579,23 @@ class _StatsSection extends ConsumerWidget {
                 label: 'Customer Inquiries',
                 accent: const Color(0xFFF59E0B),
               ),
-              _StatItem(
-                icon: Icons.person_add_alt_1_outlined,
-                value: contacts,
-                label: 'Contacts',
-                accent: const Color(0xFF8B5CF6),
-              ),
-              _StatItem(
-                icon: Icons.handshake_outlined,
-                value: b2bMatches,
-                label: 'B2B Matches',
-                accent: const Color(0xFF10B981),
-              ),
             ];
-            return GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.55,
+            return Row(
               children: items.asMap().entries.map((entry) {
-                return _StatCard(item: entry.value)
-                    .animate()
-                    .fadeIn(delay: (entry.key * 80).ms)
-                    .scale(
-                        begin: const Offset(0.92, 0.92),
-                        duration: 350.ms,
-                        curve: Curves.easeOutBack);
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                        left: entry.key == 0 ? 0 : 6,
+                        right: entry.key == items.length - 1 ? 0 : 6),
+                    child: _StatCard(item: entry.value)
+                        .animate()
+                        .fadeIn(delay: (entry.key * 80).ms)
+                        .scale(
+                            begin: const Offset(0.92, 0.92),
+                            duration: 350.ms,
+                            curve: Curves.easeOutBack),
+                  ),
+                );
               }).toList(),
             );
           },
