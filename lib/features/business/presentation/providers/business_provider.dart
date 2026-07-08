@@ -9,6 +9,7 @@ import 'package:ifind/features/business/domain/entities/business.dart';
 import 'package:ifind/features/business/domain/repositories/business_repository.dart';
 import 'package:ifind/features/business/domain/usecases/get_nearby_businesses.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 // Storage Service Provider
 final storageServiceProvider = Provider<StorageService>((ref) {
@@ -48,6 +49,7 @@ class BusinessListNotifier extends StateNotifier<AsyncValue<List<Business>>> {
   final double radius;
   final BusinessCategory? category;
   final Ref ref;
+  RealtimeChannel? _channel;
 
   BusinessListNotifier({
     required this.getNearbyBusinesses,
@@ -56,6 +58,31 @@ class BusinessListNotifier extends StateNotifier<AsyncValue<List<Business>>> {
     this.category,
   }) : super(const AsyncValue.loading()) {
     loadBusinesses();
+    _subscribeToNewBusinesses();
+  }
+
+  void _subscribeToNewBusinesses() {
+    _channel = Supabase.instance.client
+        .channel('public-businesses-changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'businesses',
+          callback: (_) => loadBusinesses(),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'businesses',
+          callback: (_) => loadBusinesses(),
+        )
+        .subscribe();
+  }
+
+  @override
+  void dispose() {
+    _channel?.unsubscribe();
+    super.dispose();
   }
 
   Future<void> loadBusinesses() async {
@@ -151,11 +178,13 @@ final featuredBusinessesProvider = FutureProvider<List<Business>>((ref) async {
   final repository = ref.watch(businessRepositoryProvider);
   final currentUser = ref.watch(currentUserProvider);
 
+  // Re-run whenever the nearby list refreshes (e.g. real-time insert).
+  ref.watch(nearbyBusinessesProvider);
+
   final result = await repository.getFeaturedBusinesses();
   return result.fold(
     (failure) => [],
     (businesses) {
-      // Filter out current user's own businesses
       if (currentUser != null) {
         return businesses.where((b) => b.ownerId != currentUser.id).toList();
       }

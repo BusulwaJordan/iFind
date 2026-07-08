@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -13,13 +12,15 @@ import 'package:ifind/core/widgets/app_toast.dart';
 import 'package:ifind/core/widgets/error_retry_widget.dart';
 import 'package:ifind/core/widgets/ifind_loader.dart';
 import 'package:ifind/core/widgets/empty_state_widget.dart';
+import 'package:ifind/features/auth/domain/entities/user.dart';
+import 'package:ifind/features/auth/presentation/providers/auth_provider.dart';
 import 'package:ifind/features/chat/presentation/providers/chat_provider.dart';
 import 'package:ifind/features/chat/domain/entities/chat.dart';
 import 'package:ifind/core/widgets/app_drawer.dart';
 import 'package:ifind/features/notifications/utils/notification_preview_formatter.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
-enum _ChatFilter { all, customers, businesses, unread }
+enum _ChatFilter { all, customers, businesses, unread, archived }
 
 class ChatListScreen extends ConsumerStatefulWidget {
   const ChatListScreen({super.key});
@@ -32,48 +33,39 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
   _ChatFilter _filter = _ChatFilter.all;
   final _searchController = TextEditingController();
   String _searchQuery = '';
-  Timer? _pollTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    // No realtime channel for chats/messages yet (messagesStreamProvider
-    // itself just polls) — periodically refetch so a message that arrived
-    // from another party while this screen is open updates the unread
-    // badge/tab without the user having to pull-to-refresh.
-    _pollTimer = Timer.periodic(const Duration(seconds: 6), (_) {
-      if (mounted) ref.invalidate(myChatsProvider);
-    });
-  }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
-  List<Chat> _applyFilter(List<Chat> chats) {
+  List<Chat> _applyFilter(List<Chat> chats, bool isBusinessOwner) {
     var list = chats;
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
       list = list.where((c) {
-        final name =
-            (c.businessName ?? c.customerName ?? c.partnerBusinessName ?? '')
-                .toLowerCase();
+        final name = (c.businessName ?? c.customerName ?? c.partnerBusinessName ?? '').toLowerCase();
         final msg = (c.lastMessage ?? '').toLowerCase();
         return name.contains(q) || msg.contains(q);
       }).toList();
     }
     switch (_filter) {
       case _ChatFilter.customers:
-        // A plain customer has no business of their own, so
-        // otherPartyBusinessId is null — see Chat.otherPartyBusinessId.
-        return list.where((c) => c.otherPartyBusinessId == null).toList();
+        // Business owners: customer inquiries (B2C chats where they are the business)
+        return list.where((c) => !c.isB2B && c.businessId != null).toList();
       case _ChatFilter.businesses:
-        return list.where((c) => c.otherPartyBusinessId != null).toList();
+        if (isBusinessOwner) {
+          // Business owners: B2B chats with other businesses
+          return list.where((c) => c.isB2B).toList();
+        } else {
+          // Customers: all chats with shops
+          return list.where((c) => c.businessId != null).toList();
+        }
       case _ChatFilter.unread:
         return list.where((c) => c.unreadCount > 0).toList();
+      case _ChatFilter.archived:
+        return [];
       case _ChatFilter.all:
         return list;
     }
@@ -82,6 +74,8 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
   @override
   Widget build(BuildContext context) {
     final chatsAsync = ref.watch(myChatsProvider);
+    final currentUser = ref.watch(currentUserProvider);
+    final isBusinessOwner = currentUser?.role == UserRole.businessOwner;
     final topPad = MediaQuery.of(context).padding.top;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -99,29 +93,33 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
               searchQuery: _searchQuery,
               onSearchChanged: (v) => setState(() => _searchQuery = v),
               onRefresh: () => ref.refresh(myChatsProvider),
+              isBusinessOwner: isBusinessOwner,
             ),
 
             // ── Category chips ─────────────────────────────────────────────
             _CategoryChips(
               selected: _filter,
               onSelected: (f) => setState(() => _filter = f),
+              isBusinessOwner: isBusinessOwner,
             ),
 
             // ── List ───────────────────────────────────────────────────────
             Expanded(
               child: chatsAsync.when(
-                loading: () => const Center(child: IFindLoaderInline(size: 60)),
+                loading: () =>
+                    const Center(child: IFindLoaderInline(size: 60)),
                 error: (e, _) => ErrorRetryWidget(
                   message: friendlyError(e),
                   onRetry: () => ref.invalidate(myChatsProvider),
                 ),
                 data: (chats) {
-                  final filtered = _applyFilter(chats);
+                  final filtered = _applyFilter(chats, isBusinessOwner);
                   if (filtered.isEmpty) {
-                    return const EmptyStateWidget(
+                    return EmptyStateWidget(
                       title: 'No conversations',
-                      message:
-                          'Start a conversation with a business or wait for customer inquiries.',
+                      message: isBusinessOwner
+                          ? 'Wait for customer inquiries or start a B2B conversation.'
+                          : 'Browse businesses and tap "Chat Now" to start a conversation.',
                       icon: Icons.forum_rounded,
                     );
                   }
@@ -129,18 +127,18 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
                     color: AppColors.primaryGreen,
                     onRefresh: () async => ref.refresh(myChatsProvider),
                     child: ListView.builder(
-                      padding: EdgeInsets.fromLTRB(16, 8, 16,
-                          MediaQuery.of(context).padding.bottom + 100),
+                      padding: EdgeInsets.fromLTRB(
+                          16, 8, 16, MediaQuery.of(context).padding.bottom + 100),
                       itemCount: filtered.length,
                       itemBuilder: (context, i) => _ChatCard(
                         chat: filtered[i],
                         index: i,
                         // TODO: back these with real fields on Chat once
-                        // available (pinned flag, typing presence) — wiring
-                        // is in place below, just pass the live values here
-                        // instead of these defaults.
+                        // available (pinned flag, unread counter, typing
+                        // presence) — wiring is in place below, just pass
+                        // the live values here instead of these defaults.
                         isPinned: false,
-                        unreadCount: filtered[i].unreadCount,
+                        unreadCount: 0,
                         isTyping: false,
                         onDelete: () async {
                           final chat = filtered[i];
@@ -215,12 +213,9 @@ class _WavePainter extends CustomPainter {
     final path = Path();
     path.moveTo(0, size.height * 0.55);
     path.cubicTo(
-      size.width * 0.25,
-      size.height * 0.35,
-      size.width * 0.55,
-      size.height * 0.75,
-      size.width,
-      size.height * 0.50,
+      size.width * 0.25, size.height * 0.35,
+      size.width * 0.55, size.height * 0.75,
+      size.width, size.height * 0.50,
     );
     path.lineTo(size.width, size.height);
     path.lineTo(0, size.height);
@@ -233,12 +228,9 @@ class _WavePainter extends CustomPainter {
     final path2 = Path();
     path2.moveTo(0, size.height * 0.70);
     path2.cubicTo(
-      size.width * 0.30,
-      size.height * 0.50,
-      size.width * 0.65,
-      size.height * 0.90,
-      size.width,
-      size.height * 0.65,
+      size.width * 0.30, size.height * 0.50,
+      size.width * 0.65, size.height * 0.90,
+      size.width, size.height * 0.65,
     );
     path2.lineTo(size.width, size.height);
     path2.lineTo(0, size.height);
@@ -258,6 +250,7 @@ class _WaveHeader extends StatelessWidget {
   final String searchQuery;
   final ValueChanged<String> onSearchChanged;
   final VoidCallback onRefresh;
+  final bool isBusinessOwner;
 
   const _WaveHeader({
     required this.topPad,
@@ -266,6 +259,7 @@ class _WaveHeader extends StatelessWidget {
     required this.searchQuery,
     required this.onSearchChanged,
     required this.onRefresh,
+    required this.isBusinessOwner,
   });
 
   @override
@@ -357,6 +351,30 @@ class _WaveHeader extends StatelessWidget {
                                     fontWeight: FontWeight.w800)),
                           ],
                         ),
+                        const Spacer(),
+                        _HeaderIconBtn(
+                          icon: Icons.search_rounded,
+                          onTap: () {},
+                        ),
+                        const SizedBox(width: 8),
+                        _HeaderIconBtn(
+                          icon: Icons.notifications_outlined,
+                          onTap: () {},
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.14),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.3),
+                                width: 1.5),
+                          ),
+                          child: const Icon(Icons.person_rounded,
+                              color: Colors.white, size: 18),
+                        ),
                       ],
                     ).animate().fadeIn(duration: 400.ms),
 
@@ -364,61 +382,63 @@ class _WaveHeader extends StatelessWidget {
 
                     // Title
                     Text('Messages',
-                            style: GoogleFonts.outfit(
-                                color: Colors.white,
-                                fontSize: 30,
-                                fontWeight: FontWeight.w900,
-                                height: 1.1))
+                        style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontSize: 30,
+                            fontWeight: FontWeight.w900,
+                            height: 1.1))
                         .animate()
                         .fadeIn(delay: 80.ms, duration: 400.ms)
                         .slideX(begin: -0.06),
                     const SizedBox(height: 4),
-                    chatsAsync
-                        .when(
-                          data: (chats) => Text(
-                            'Stay connected with your customers.',
-                            style: GoogleFonts.outfit(
-                                color: Colors.white.withValues(alpha: 0.65),
-                                fontSize: 13),
-                          ),
-                          loading: () => const SizedBox.shrink(),
-                          error: (_, __) => const SizedBox.shrink(),
-                        )
-                        .animate()
-                        .fadeIn(delay: 140.ms),
+                    Text(
+                      isBusinessOwner
+                          ? 'Stay connected with your customers.'
+                          : 'Chat with businesses near you.',
+                      style: GoogleFonts.outfit(
+                          color: Colors.white.withValues(alpha: 0.65),
+                          fontSize: 13),
+                    ).animate().fadeIn(delay: 140.ms),
 
                     const SizedBox(height: 18),
 
                     // Search bar
-                    Container(
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.92),
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.08),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Container(
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.92),
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          controller: searchController,
+                          onChanged: onSearchChanged,
+                          style: GoogleFonts.outfit(fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText:
+                                'Search businesses, customers or messages...',
+                            hintStyle: GoogleFonts.outfit(
+                                color: Colors.grey[400], fontSize: 13),
+                            prefixIcon: Icon(Icons.search_rounded,
+                                color: Colors.grey[400], size: 20),
+                            suffixIcon: const Icon(Icons.tune_rounded,
+                                color: AppColors.primaryGreen, size: 20),
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            filled: true,
+                            fillColor: Colors.transparent,
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 14),
                           ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: searchController,
-                        onChanged: onSearchChanged,
-                        style: GoogleFonts.outfit(fontSize: 14),
-                        decoration: InputDecoration(
-                          hintText:
-                              'Search businesses, customers or messages...',
-                          hintStyle: GoogleFonts.outfit(
-                              color: Colors.grey[400], fontSize: 13),
-                          prefixIcon: Icon(Icons.search_rounded,
-                              color: Colors.grey[400], size: 20),
-                          suffixIcon: const Icon(Icons.tune_rounded,
-                              color: AppColors.primaryGreen, size: 20),
-                          border: InputBorder.none,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 14),
                         ),
                       ),
                     ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
@@ -433,40 +453,82 @@ class _WaveHeader extends StatelessWidget {
   }
 }
 
+class _HeaderIconBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _HeaderIconBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: Colors.white, size: 19),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Category chips ─────────────────────────────────────────────────────────
 class _CategoryChips extends StatelessWidget {
   final _ChatFilter selected;
   final ValueChanged<_ChatFilter> onSelected;
+  final bool isBusinessOwner;
 
-  const _CategoryChips({required this.selected, required this.onSelected});
-
-  static const _items = [
-    (_ChatFilter.all, Icons.all_inclusive_rounded, 'All'),
-    (_ChatFilter.customers, Icons.person_outline_rounded, 'Customers'),
-    (_ChatFilter.businesses, Icons.storefront_outlined, 'Businesses'),
-    (_ChatFilter.unread, Icons.mark_chat_unread_outlined, 'Unread'),
-  ];
+  const _CategoryChips({
+    required this.selected,
+    required this.onSelected,
+    required this.isBusinessOwner,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final items = isBusinessOwner
+        ? const [
+            (_ChatFilter.all, Icons.all_inclusive_rounded, 'All'),
+            (_ChatFilter.customers, Icons.person_outline_rounded, 'Customers'),
+            (_ChatFilter.businesses, Icons.storefront_outlined, 'Businesses'),
+            (_ChatFilter.unread, Icons.mark_chat_unread_outlined, 'Unread'),
+            (_ChatFilter.archived, Icons.archive_outlined, 'Archived'),
+          ]
+        : const [
+            (_ChatFilter.all, Icons.all_inclusive_rounded, 'All'),
+            (_ChatFilter.unread, Icons.mark_chat_unread_outlined, 'Unread'),
+            (_ChatFilter.archived, Icons.archive_outlined, 'Archived'),
+          ];
+
     return Container(
       height: 52,
       margin: const EdgeInsets.only(top: 14),
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
-        itemCount: _items.length,
+        itemCount: items.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
-          final (filter, icon, label) = _items[i];
+          final (filter, icon, label) = items[i];
           final isSelected = selected == filter;
           return GestureDetector(
             onTap: () => onSelected(filter),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primaryGreen : Colors.white,
+                color: isSelected
+                    ? AppColors.primaryGreen
+                    : Colors.white,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: isSelected
@@ -477,7 +539,8 @@ class _CategoryChips extends StatelessWidget {
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: AppColors.primaryGreen.withValues(alpha: 0.25),
+                          color: AppColors.primaryGreen
+                              .withValues(alpha: 0.25),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         )
@@ -495,15 +558,18 @@ class _CategoryChips extends StatelessWidget {
                 children: [
                   Icon(icon,
                       size: 15,
-                      color: isSelected ? Colors.white : Colors.grey[500]),
+                      color:
+                          isSelected ? Colors.white : Colors.grey[500]),
                   const SizedBox(width: 6),
                   Text(
                     label,
                     style: GoogleFonts.outfit(
                       fontSize: 13,
-                      fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? Colors.white : Colors.grey[600],
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color:
+                          isSelected ? Colors.white : Colors.grey[600],
                     ),
                   ),
                   if (filter == _ChatFilter.unread) ...[
@@ -512,7 +578,9 @@ class _CategoryChips extends StatelessWidget {
                       width: 6,
                       height: 6,
                       decoration: BoxDecoration(
-                        color: isSelected ? Colors.white : Colors.redAccent,
+                        color: isSelected
+                            ? Colors.white
+                            : Colors.redAccent,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -529,6 +597,7 @@ class _CategoryChips extends StatelessWidget {
 
 // ── Chat card ────────────────────────────────────────────────────────────────
 class _ChatCard extends ConsumerWidget {
+
   final Chat chat;
   final int index;
   final VoidCallback onDelete;
@@ -556,7 +625,7 @@ class _ChatCard extends ConsumerWidget {
         : (chat.businessLogoUrl ?? chat.customerAvatarUrl);
     final initials =
         displayName.isNotEmpty ? displayName[0].toUpperCase() : 'B';
-    final isBusiness = chat.otherPartyBusinessId != null;
+    final isBusiness = chat.businessId != null || isB2B;
     final preview = _previewMessage(chat.lastMessage);
 
     // Deterministic accent color per chat
@@ -567,8 +636,7 @@ class _ChatCard extends ConsumerWidget {
       const Color(0xFFF59E0B),
       const Color(0xFF8B5CF6),
     ];
-    final accent = accentColors[
-        math.Random(chat.id.hashCode).nextInt(accentColors.length)];
+    final accent = accentColors[math.Random(chat.id.hashCode).nextInt(accentColors.length)];
 
     return Dismissible(
       key: Key('chat_${chat.id}'),
@@ -626,7 +694,8 @@ class _ChatCard extends ConsumerWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                            color: accent.withValues(alpha: 0.25), width: 2),
+                            color: accent.withValues(alpha: 0.25),
+                            width: 2),
                       ),
                       child: displayLogo != null
                           ? ClipOval(
@@ -648,7 +717,8 @@ class _ChatCard extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: const Color(0xFF22C55E),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
+                          border:
+                              Border.all(color: Colors.white, width: 2),
                         ),
                       ),
                     ),
@@ -662,7 +732,8 @@ class _ChatCard extends ConsumerWidget {
                           decoration: BoxDecoration(
                             color: AppColors.primaryGreen,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
+                            border:
+                                Border.all(color: Colors.white, width: 2),
                           ),
                           child: const Icon(Icons.push_pin_rounded,
                               color: Colors.white, size: 9),
@@ -695,8 +766,10 @@ class _ChatCard extends ConsumerWidget {
                                 ),
                                 if (isBusiness) ...[
                                   const SizedBox(width: 4),
-                                  const Icon(Icons.verified_rounded,
-                                      color: AppColors.primaryGreen, size: 15),
+                                  const Icon(
+                                      Icons.verified_rounded,
+                                      color: AppColors.primaryGreen,
+                                      size: 15),
                                 ],
                                 if (isB2B) ...[
                                   const SizedBox(width: 6),
@@ -706,7 +779,8 @@ class _ChatCard extends ConsumerWidget {
                                     decoration: BoxDecoration(
                                       color: AppColors.primaryGreen
                                           .withValues(alpha: 0.10),
-                                      borderRadius: BorderRadius.circular(6),
+                                      borderRadius:
+                                          BorderRadius.circular(6),
                                     ),
                                     child: Text('B2B',
                                         style: GoogleFonts.outfit(
@@ -725,21 +799,9 @@ class _ChatCard extends ConsumerWidget {
                               timeago.format(chat.lastMessageAt!,
                                   locale: 'en_short'),
                               style: GoogleFonts.outfit(
-                                  fontSize: 11, color: Colors.grey[400]),
+                                  fontSize: 11,
+                                  color: Colors.grey[400]),
                             ),
-                          const SizedBox(width: 8),
-                          GestureDetector(
-                            onTap: onDelete,
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: Colors.red.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.delete_outline_rounded,
-                                  color: Colors.redAccent, size: 16),
-                            ),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 5),
@@ -753,7 +815,8 @@ class _ChatCard extends ConsumerWidget {
                                           style: GoogleFonts.outfit(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w600,
-                                              color: AppColors.primaryGreen)),
+                                              color:
+                                                  AppColors.primaryGreen)),
                                       const SizedBox(width: 6),
                                       const _TypingDots(),
                                     ],
@@ -774,7 +837,8 @@ class _ChatCard extends ConsumerWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 6, vertical: 2),
-                              constraints: const BoxConstraints(minWidth: 20),
+                              constraints:
+                                  const BoxConstraints(minWidth: 20),
                               decoration: const BoxDecoration(
                                 color: Colors.redAccent,
                                 shape: BoxShape.circle,
@@ -866,8 +930,7 @@ class _TypingDotsState extends State<_TypingDots>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(3, (i) {
               final t = (_controller.value - (i * 0.2)) % 1.0;
-              final scale =
-                  0.5 + 0.5 * (1 - (t - 0.5).abs() * 2).clamp(0.0, 1.0);
+              final scale = 0.5 + 0.5 * (1 - (t - 0.5).abs() * 2).clamp(0.0, 1.0);
               return Transform.scale(
                 scale: scale,
                 child: Container(
