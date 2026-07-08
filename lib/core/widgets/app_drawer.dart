@@ -23,7 +23,7 @@ class AppDrawer extends ConsumerWidget {
           // ── Nav items ──────────────────────────────────────────────────
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               children: [
                 if (user?.role == UserRole.businessOwner) ...[
                   _DrawerItem(
@@ -31,7 +31,7 @@ class AppDrawer extends ConsumerWidget {
                     label: 'My Shop Profile',
                     onTap: () => _push(context, '/shop-profile'),
                   ),
-                  const Divider(height: 16, indent: 16, endIndent: 16),
+                  const Divider(height: 8, indent: 16, endIndent: 16),
                 ],
                 _DrawerItem(
                   icon: Icons.auto_awesome_rounded,
@@ -58,9 +58,7 @@ class AppDrawer extends ConsumerWidget {
                   label: 'Help & Support',
                   onTap: () => _push(context, '/help'),
                 ),
-
-                const Divider(height: 24, indent: 16, endIndent: 16),
-
+                const Divider(height: 12, indent: 16, endIndent: 16),
                 _DrawerItem(
                   icon: Icons.logout_rounded,
                   label: 'Log Out',
@@ -117,13 +115,13 @@ class _DrawerHeader extends StatelessWidget {
         ),
       ),
       padding: EdgeInsets.fromLTRB(
-          20, MediaQuery.of(context).padding.top + 24, 20, 24),
+          16, MediaQuery.of(context).padding.top + 12, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Avatar
           CircleAvatar(
-            radius: 32,
+            radius: 22,
             backgroundColor: Colors.white.withValues(alpha: 0.2),
             backgroundImage:
                 user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty
@@ -134,47 +132,45 @@ class _DrawerHeader extends StatelessWidget {
                     initials,
                     style: GoogleFonts.outfit(
                       color: Colors.white,
-                      fontSize: 24,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   )
                 : null,
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 8),
           // Name
           Text(
             name,
             style: GoogleFonts.outfit(
               color: Colors.white,
-              fontSize: 18,
+              fontSize: 15,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 2),
           // Email
           Text(
             email,
             style: GoogleFonts.outfit(
               color: Colors.white70,
-              fontSize: 12,
+              fontSize: 11,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           // Role badge
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.3)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
             ),
             child: Text(
               roleLabel,
               style: GoogleFonts.outfit(
                 color: Colors.white,
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -205,29 +201,29 @@ class _DrawerItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = iconColor ?? AppColors.primaryGreen;
-    final textColor =
-        labelColor ?? Theme.of(context).colorScheme.onSurface;
+    final textColor = labelColor ?? Theme.of(context).colorScheme.onSurface;
 
     return ListTile(
+      dense: true,
+      visualDensity: const VisualDensity(vertical: -3),
       leading: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, color: color, size: 20),
+        child: Icon(icon, color: color, size: 16),
       ),
       title: Text(
         label,
         style: GoogleFonts.outfit(
-          fontSize: 14,
+          fontSize: 12.5,
           fontWeight: FontWeight.w500,
           color: textColor,
         ),
       ),
       onTap: onTap,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }

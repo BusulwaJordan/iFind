@@ -814,8 +814,6 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
         const SizedBox(height: 12),
         _buildQuickActionsWidget(context, business),
         const SizedBox(height: 12),
-        _buildPromotionBannerWidget(context),
-        const SizedBox(height: 12),
         _buildDangerZoneWidget(context, business),
       ],
     );
@@ -1217,10 +1215,8 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
   Widget _buildQuickActionsWidget(BuildContext context, Business business) {
     const tileColors = [
       Color(0xFF10B981), // Add Product — green
-      Color(0xFF3B82F6), // Post Update — blue
       Color(0xFFF59E0B), // View Inquiries — amber
       Color(0xFF8B5CF6), // Manage Products — purple
-      Color(0xFFEC4899), // Promote Shop — pink
       Color(0xFF6366F1), // Shop Settings — indigo
     ];
 
@@ -1233,12 +1229,6 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
             context,
             MaterialPageRoute(
                 builder: (_) => AddProductScreen(businessId: business.id)))
-      ),
-      (
-        icon: Icons.campaign_outlined,
-        label: 'Post Update',
-        badge: null as int?,
-        onTap: () {}
       ),
       (
         icon: Icons.chat_bubble_outline_rounded,
@@ -1260,12 +1250,6 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
                     ProductManagementScreen(businessId: business.id)))
       ),
       (
-        icon: Icons.rocket_launch_outlined,
-        label: 'Promote Shop',
-        badge: null as int?,
-        onTap: () {}
-      ),
-      (
         icon: Icons.settings_outlined,
         label: 'Shop Settings',
         badge: null as int?,
@@ -1284,10 +1268,10 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
+          crossAxisCount: 4,
           mainAxisSpacing: 6,
           crossAxisSpacing: 6,
-          childAspectRatio: 1.8,
+          childAspectRatio: 1.1,
         ),
         itemCount: actions.length,
         itemBuilder: (ctx, i) {
@@ -1347,61 +1331,6 @@ class _MyShopScreenState extends ConsumerState<MyShopScreen>
     );
   }
 
-  Widget _buildPromotionBannerWidget(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primaryGreen.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(16),
-        border:
-            Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.12)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(
-                color: AppColors.primaryGreen, shape: BoxShape.circle),
-            child: const Icon(Icons.workspace_premium_outlined,
-                color: Colors.white, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Get More Visibility',
-                    style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.bold, fontSize: 14)),
-                const SizedBox(height: 2),
-                Text(
-                  'Promote your shop to reach more customers in your area.',
-                  style: GoogleFonts.outfit(
-                      fontSize: 11, color: Colors.grey[600], height: 1.3),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          ElevatedButton(
-            onPressed: () =>
-                AppToast.show(context, 'Coming soon!', type: ToastType.info),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryGreen,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-            child: Text('Promote Now',
-                style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.bold, fontSize: 12)),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildDangerZoneWidget(BuildContext context, Business business) {
     return Container(
